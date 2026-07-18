@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bar à Cocktail — Seb</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== ÉCRAN LOGIN ===== -->
+  <div id="screen-login" class="login-screen hidden">
+    <div class="login-card">
+      <div class="login-logo">🍸</div>
+      <h1 class="login-title">Bar à Cocktail</h1>
+      <p class="login-sub">Connexion à votre cave</p>
+
+      <div id="login-error" class="login-error hidden"></div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="input-email" placeholder="seb@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-full" id="btn-login">Se connecter</button>
+      <button class="btn btn-outline btn-full" id="btn-signup" style="margin-top:10px">Créer un compte</button>
+    </div>
+  </div>
+
+  <!-- ===== APP PRINCIPALE ===== -->
+  <div id="screen-app" class="hidden">
+
+    <!-- HEADER -->
+    <header>
+      <span style="font-size:1.4rem">🍸</span>
+      <h1>Bar à Cocktail</h1>
+      <span class="subtitle">v0.2 — Ma Cave</span>
+      <button class="btn-logout" id="btn-logout" title="Déconnexion">⏏</button>
+    </header>
+
+    <!-- NAVIGATION -->
+    <nav>
+      <button class="active">🍶 Ma Cave</button>
+      <button disabled title="Bientôt">🍹 Recettes</button>
+      <button disabled title="Bientôt">📊 Dashboard</button>
+      <button disabled title="Bientôt">⚗️ Concoctions</button>
+      <button disabled title="Bientôt">🎓 École</button>
+      <button disabled title="Bientôt">🛒 À acheter</button>
+    </nav>
+
+    <!-- CONTENU PRINCIPAL -->
+    <main>
+      <div id="section-cave">
+        <div class="cave-header">
+          <h2>🍶 Ma Cave</h2>
+        </div>
+        <div id="cave-container">
+          <div class="loading-state">Chargement de la cave…</div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- MODAL : OUVERTURE BOUTEILLE -->
+  <div class="modal-overlay" id="modal-ouverture">
+    <div class="modal">
+      <h3 id="modal-ouverture-titre"></h3>
+      <p id="modal-ouverture-texte"></p>
+      <div class="modal-conservation" id="modal-conservation-info" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="fermerModal('modal-ouverture')">Annuler</button>
+        <button class="btn" id="btn-confirmer-ouverture">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : CONTENANCE -->
+  <div class="modal-overlay" id="modal-contenance">
+    <div class="modal">
+      <h3 id="modal-contenance-titre"></h3>
+      <p>Renseignez la taille et le niveau de cette bouteille.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Contenance totale (cl)</label>
+          <input type="number" id="input-cl-total" placeholder="ex: 70">
+        </div>
+        <div class="form-group">
+          <label>Quantité restante (cl)</label>
+          <input type="number" id="input-cl-restants" placeholder="ex: 45">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="fermerModal('modal-contenance')">Annuler</button>
+        <button class="btn" id="btn-sauver-contenance">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : INFO -->
+  <div class="modal-overlay" id="modal-info">
+    <div class="modal">
+      <h3 id="modal-info-titre"></h3>
+      <p id="modal-info-texte"></p>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal('modal-info')">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : AJOUT -->
+  <div class="modal-overlay" id="modal-ajout">
+    <div class="modal">
+      <h3>Ajouter un élément</h3>
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select id="select-categorie-ajout"></select>
+      </div>
+      <div class="form-group">
+        <label>Nom</label>
+        <input type="text" id="input-nom-ajout" placeholder="ex: Chartreuse Verte">
+      </div>
+      <div class="form-group">
+        <label>Description (optionnel)</label>
+        <input type="text" id="input-detail-ajout" placeholder="ex: Liqueur alpine 55%">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="fermerModal('modal-ajout')">Annuler</button>
+        <button class="btn" id="btn-confirmer-ajout">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
