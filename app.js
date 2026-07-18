@@ -138,6 +138,18 @@ function renderCave() {
 
   renderConservations();
 
+  // Barre de navigation rapide par catégorie
+  const navCats = document.createElement('div');
+  navCats.className = 'cave-nav-cats';
+  navCats.innerHTML = cave.categories
+    .filter(cat => !cat.id.startsWith('a-acheter'))
+    .map(cat => `
+      <button class="cave-nav-btn" onclick="scrollToCategorie('${cat.id}')">
+        ${cat.icon} <span>${cat.label}</span>
+      </button>
+    `).join('');
+  container.appendChild(navCats);
+
   // Prix total cave
   const prixTotal = cave.categories.reduce((sum, cat) =>
     sum + cat.items.filter(i => i.detenu !== false && i.prix_estime)
@@ -266,6 +278,13 @@ function renderConservations() {
 }
 
 function toggleCategorie(id) { document.getElementById('cat-' + id)?.classList.toggle('open'); }
+
+function scrollToCategorie(id) {
+  const el = document.getElementById('cat-' + id);
+  if (!el) return;
+  if (!el.classList.contains('open')) el.classList.add('open');
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 function toggleConservations(btn) {
   btn.classList.toggle('open');
   btn.nextElementSibling.classList.toggle('visible');
