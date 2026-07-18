@@ -47,6 +47,7 @@ function afficherApp() {
   document.getElementById('screen-app').classList.remove('hidden');
   chargerCave();
   chargerRecettes();
+  chargerEquipements();
 }
 
 // --- Login ---
@@ -190,6 +191,7 @@ function renderItem(item, catId) {
         ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
       </div>
       <span class="item-statut ${statutClass}">${statutLabel}</span>
+      ${detenu && item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
       <div class="item-actions">
         <button class="btn-icon" title="Infos" onclick="event.stopPropagation(); ouvrirModalInfo('${item.id}', '${catId}')">ℹ</button>
         ${detenu ? `<button class="btn-icon" title="Contenance" onclick="event.stopPropagation(); ouvrirModalContenance('${item.id}', '${catId}')">📊</button>` : ''}
@@ -841,6 +843,26 @@ function ouvrirModalAjout() {
   afficherModal('modal-ajout');
 }
 
+// --- ONGLET À ACHETER ---
+function onTabChange(tab) {
+  if (tab === 'aacheter') chargerAAcheter();
+}
+
+// Surcharger la navigation pour déclencher chargement
+document.querySelectorAll('nav button[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => onTabChange(btn.dataset.tab));
+});
+
+// --- ÉQUIPEMENTS TOGGLE ---
+function onEquipToggle(details) {
+  const stats = document.getElementById('equip-summary-stats');
+  if (details.open && stats) {
+    const chezSoi = equipements.filter(e => e.chez_soi).length;
+    const kit     = equipements.filter(e => e.en_deplacement).length;
+    stats.textContent = `${chezSoi} chez soi · ${kit} en kit`;
+  }
+}
+
 // --- TOGGLE DÉTENU ---
 async function toggleDetenu(itemId, catId) {
   const item = trouverItem(itemId, catId);
@@ -867,6 +889,219 @@ function fermerModal(id)   { document.getElementById(id).classList.remove('visib
 document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('visible');
 });
+
+// =============================================
+// ÉQUIPEMENTS
+// =============================================
+
+let equipements = [];
+
+async function chargerEquipements() {
+  const { data } = await db.from('equipements').select('*').order('categorie').order('nom');
+  equipements = data || [];
+  renderEquipements();
+}
+
+function renderEquipements() {
+  const container = document.getElementById('equipements-container');
+  if (!container) return;
+
+  const categories = {
+    essentiel: { label: 'Essentiels', items: [] },
+    utile:     { label: 'Utiles',     items: [] },
+    folklore:  { label: 'Folklore',   items: [] }
+  };
+
+  equipements.forEach(e => {
+    if (categories[e.categorie]) categories[e.categorie].items.push(e);
+  });
+
+  const chezSoiCount = equipements.filter(e => e.chez_soi).length;
+  const kitCount     = equipements.filter(e => e.en_deplacement).length;
+
+  container.innerHTML = `
+    <div class="equip-header">
+      <div class="equip-stats">
+        <span class="equip-stat">🏠 ${chezSoiCount} chez soi</span>
+        <span class="equip-stat">🎒 ${kitCount} en déplacement</span>
+      </div>
+    </div>
+    ${Object.entries(categories).map(([key, cat]) => `
+      <div class="equip-categorie">
+        <div class="equip-cat-label">${cat.label}</div>
+        <div class="equip-items">
+          ${cat.items.map(e => `
+            <div class="equip-item">
+              <div class="equip-nom">${e.nom}</div>
+              ${e.prix_estime ? `<span class="item-prix">~${e.prix_estime}€</span>` : ''}
+              <div class="equip-checkboxes">
+                <label class="equip-check" title="Chez soi">
+                  <input type="checkbox" ${e.chez_soi ? 'checked' : ''}
+                    onchange="toggleEquipement('${e.id}', 'chez_soi', this.checked)">
+                  🏠
+                </label>
+                <label class="equip-check" title="En déplacement">
+                  <input type="checkbox" ${e.en_deplacement ? 'checked' : ''}
+                    onchange="toggleEquipement('${e.id}', 'en_deplacement', this.checked)">
+                  🎒
+                </label>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function toggleEquipement(id, champ, valeur) {
+  const equip = equipements.find(e => e.id === id);
+  if (!equip) return;
+  await db.from('equipements').update({ [champ]: valeur }).eq('id', id).eq('user_id', currentUser.id);
+  equip[champ] = valeur;
+  // Mettre à jour juste les stats sans re-render complet
+  const chezSoiCount = equipements.filter(e => e.chez_soi).length;
+  const kitCount     = equipements.filter(e => e.en_deplacement).length;
+  const stats = document.querySelector('.equip-stats');
+  if (stats) stats.innerHTML = `
+    <span class="equip-stat">🏠 ${chezSoiCount} chez soi</span>
+    <span class="equip-stat">🎒 ${kitCount} en déplacement</span>
+  `;
+}
+
+// =============================================
+// À ACHETER
+// =============================================
+
+async function chargerAAcheter() {
+  const container = document.getElementById('aacheter-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-state">Calcul en cours…</div>';
+
+  // Récupérer toutes les recettes avec leurs ingrédients
+  const caveIds = getItemsCave();
+  const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu').eq('user_id', currentUser.id);
+
+  // Calculer quels ingrédients débloquent le plus de recettes
+  const scoreMap = {};
+  recettes.forEach(r => {
+    const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
+    manquants.forEach(ing => {
+      if (!scoreMap[ing.item_cave_id]) {
+        const itemData = allItems?.find(i => i.id === ing.item_cave_id);
+        scoreMap[ing.item_cave_id] = { nom: ing.nom, count: 0, prix: itemData?.prix_estime || null, recettes: [] };
+      }
+      scoreMap[ing.item_cave_id].count++;
+      scoreMap[ing.item_cave_id].recettes.push(r.nom);
+    });
+  });
+
+  // Trier par score
+  const sorted = Object.entries(scoreMap)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 15);
+
+  // Éléments de la liste a_acheter
+  const { data: aAcheter } = await db.from('a_acheter').select('*').eq('user_id', currentUser.id);
+
+  container.innerHTML = `
+    ${sorted.length > 0 ? `
+    <div class="aacheter-section">
+      <h3 class="aacheter-titre">🔓 Débloquent le plus de recettes</h3>
+      <div class="aacheter-liste">
+        ${sorted.map(([id, item]) => `
+          <div class="aacheter-item">
+            <div class="aacheter-info">
+              <div class="aacheter-nom">${item.nom}</div>
+              <div class="aacheter-recettes">${item.recettes.slice(0,3).join(', ')}${item.recettes.length > 3 ? ` +${item.recettes.length-3}` : ''}</div>
+            </div>
+            <div class="aacheter-right">
+              ${item.prix ? `<span class="item-prix">~${item.prix}€</span>` : ''}
+              <span class="aacheter-badge">${item.count} recette${item.count > 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : '<div class="empty-state">🎉 Ta cave couvre toutes les recettes !</div>'}
+
+    ${aAcheter && aAcheter.length > 0 ? `
+    <div class="aacheter-section">
+      <h3 class="aacheter-titre">⭐ Liste prioritaire</h3>
+      <div class="aacheter-liste">
+        ${aAcheter.map(item => `
+          <div class="aacheter-item">
+            <div class="aacheter-info">
+              <div class="aacheter-nom">${item.nom}</div>
+              <div class="aacheter-recettes">${item.raison}</div>
+            </div>
+            ${item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="aacheter-section">
+      <button class="btn btn-outline btn-apport" id="btn-apport-gustatif"
+        onclick="chargerApportGustatif()">
+        ✨ Analyser l'apport gustatif (Claude)
+      </button>
+      <div id="apport-gustatif-result"></div>
+    </div>
+  `;
+}
+
+async function chargerApportGustatif() {
+  const btn = document.getElementById('btn-apport-gustatif');
+  const result = document.getElementById('apport-gustatif-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyse en cours…';
+
+  const caveIds = getItemsCave();
+  const { data: allItems } = await db.from('items').select('id, nom, detenu').eq('user_id', currentUser.id);
+  const caveNoms = allItems?.filter(i => i.detenu !== false).map(i => i.nom).join(', ') || '';
+  const scoreMap = {};
+  recettes.forEach(r => {
+    (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel).forEach(ing => {
+      scoreMap[ing.nom] = (scoreMap[ing.nom] || 0) + 1;
+    });
+  });
+  const manquantsTop = Object.entries(scoreMap).sort((a,b) => b[1]-a[1]).slice(0,8).map(([nom]) => nom).join(', ');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Tu es un expert bartender. Cave actuelle de Seb : ${caveNoms}. Ingrédients manquants qui débloquent le plus de recettes : ${manquantsTop}. Pour chaque ingrédient manquant, explique en 1-2 phrases l'apport gustatif qu'il apporterait à la cave et quels accords il ouvrirait avec les alcools déjà présents. Réponds en JSON : [{"nom": "...", "apport": "..."}]. Uniquement le JSON, sans markdown.`
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '[]';
+    const items = JSON.parse(text);
+    result.innerHTML = `
+      <div class="apport-liste">
+        ${items.map(i => `
+          <div class="apport-item">
+            <div class="apport-nom">${i.nom}</div>
+            <div class="apport-texte">${i.apport}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch(e) {
+    result.innerHTML = '<div class="apport-error">Erreur lors de l\'analyse.</div>';
+  }
+
+  btn.disabled = false;
+  btn.textContent = "✨ Rafraîchir l'analyse (Claude)";
+}
 
 // =============================================
 // LANCEMENT

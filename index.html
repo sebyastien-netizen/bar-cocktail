@@ -46,7 +46,7 @@
       <button disabled title="Bientôt">📊 Dashboard</button>
       <button disabled title="Bientôt">⚗️ Concoctions</button>
       <button disabled title="Bientôt">🎓 École</button>
-      <button disabled title="Bientôt">🛒 À acheter</button>
+      <button data-tab="aacheter">🛒 À acheter</button>
     </nav>
 
     <main>
@@ -62,6 +62,23 @@
         <div class="cave-header"><h2>🍹 Recettes</h2></div>
         <div id="recettes-container"><div class="loading-state">Chargement…</div></div>
       </div>
+
+      <!-- À ACHETER -->
+      <div id="section-aacheter" class="tab-section hidden">
+        <div class="cave-header"><h2>🛒 À acheter</h2></div>
+        <div id="aacheter-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
+      <!-- ÉQUIPEMENTS (section dépliable) -->
+      <details class="equip-details" id="equip-details" ontoggle="onEquipToggle(this)">
+        <summary class="equip-summary">
+          🔧 Équipements
+          <span class="equip-summary-stats" id="equip-summary-stats"></span>
+        </summary>
+        <div id="equipements-container" class="equip-body">
+          <div class="loading-state">Chargement…</div>
+        </div>
+      </details>
 
     </main>
   </div>
