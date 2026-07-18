@@ -1295,3 +1295,42 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .pesee-details[open] summary { color: var(--accent-light); }
 
 .pesee-details .pesee-section { border: none; border-radius: 0; margin: 0; padding: 0 14px 14px; }
+
+/* =============================================
+   ÉTAT DÉTENU / NON DÉTENU
+   ============================================= */
+
+.item-non-detenu {
+  opacity: 0.45;
+}
+
+.item-non-detenu .item-nom {
+  color: var(--text-muted);
+}
+
+.item-ouverture-dot.non-detenu {
+  background: transparent;
+  border: 1.5px solid var(--text-muted);
+  opacity: 0.4;
+}
+
+.statut-non-detenu {
+  background: rgba(138,155,176,0.08);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.btn-toggle-detenu {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.item-non-detenu .btn-toggle-detenu {
+  color: var(--vert);
+  background: rgba(76,175,125,0.1);
+}
+
+.item-non-detenu .btn-toggle-detenu:hover {
+  background: rgba(76,175,125,0.25);
+  color: var(--vert);
+}

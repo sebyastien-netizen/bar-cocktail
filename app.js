@@ -115,7 +115,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(btn => {
 async function chargerCave() {
   const [{ data: cats }, { data: items }, { data: aAcheter }] = await Promise.all([
     db.from('categories').select('*').order('ordre'),
-    db.from('items').select('*'),
+    db.from('items').select('*, detenu'),
     db.from('a_acheter').select('*')
   ]);
 
@@ -168,17 +168,23 @@ function renderCave() {
 }
 
 function renderItem(item, catId) {
-  const statutLabel = item.statut === 'en_cours' ? 'En cours'
+  const detenu = item.detenu !== false; // true par défaut si null
+  const statutLabel = !detenu ? 'Non détenu'
+    : item.statut === 'en_cours' ? 'En cours'
     : item.cl_restants !== null ? (item.cl_restants === item.cl_total ? 'Plein' : `${item.cl_restants} cl`)
-    : '?';
-  const statutClass = item.statut === 'en_cours' ? 'statut-en-cours'
+    : 'En stock';
+  const statutClass = !detenu ? 'statut-non-detenu'
+    : item.statut === 'en_cours' ? 'statut-en-cours'
     : item.cl_restants === null ? 'statut-inconnu'
     : item.cl_restants === item.cl_total ? 'statut-plein'
     : 'statut-entame';
 
+  const dotClass = !detenu ? 'non-detenu'
+    : item.ouvert ? 'ouvert' : '';
+
   return `
-    <div class="item-cave" onclick="ouvrirModalItem('${item.id}', '${catId}')">
-      <div class="item-ouverture-dot ${item.ouvert ? 'ouvert' : ''}"></div>
+    <div class="item-cave ${!detenu ? 'item-non-detenu' : ''}" onclick="ouvrirModalItem('${item.id}', '${catId}')">
+      <div class="item-ouverture-dot ${dotClass}"></div>
       <div class="item-info">
         <div class="item-nom">${item.nom}</div>
         ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
@@ -186,7 +192,11 @@ function renderItem(item, catId) {
       <span class="item-statut ${statutClass}">${statutLabel}</span>
       <div class="item-actions">
         <button class="btn-icon" title="Infos" onclick="event.stopPropagation(); ouvrirModalInfo('${item.id}', '${catId}')">ℹ</button>
-        <button class="btn-icon" title="Contenance" onclick="event.stopPropagation(); ouvrirModalContenance('${item.id}', '${catId}')">📊</button>
+        ${detenu ? `<button class="btn-icon" title="Contenance" onclick="event.stopPropagation(); ouvrirModalContenance('${item.id}', '${catId}')">📊</button>` : ''}
+        <button class="btn-icon btn-toggle-detenu" title="${detenu ? 'Marquer non détenu' : 'Marquer détenu'}"
+          onclick="event.stopPropagation(); toggleDetenu('${item.id}', '${catId}')">
+          ${detenu ? '✓' : '+'}
+        </button>
       </div>
     </div>
   `;
@@ -257,7 +267,9 @@ function filtrerItems(items) {
 function getItemsCave() {
   if (!cave) return new Set();
   const ids = new Set();
-  cave.categories.forEach(cat => cat.items.forEach(item => ids.add(item.id)));
+  cave.categories.forEach(cat => cat.items.forEach(item => {
+    if (item.detenu !== false) ids.add(item.id); // seuls les détenus
+  }));
   return ids;
 }
 
@@ -827,6 +839,17 @@ function ouvrirModalAjout() {
   };
 
   afficherModal('modal-ajout');
+}
+
+// --- TOGGLE DÉTENU ---
+async function toggleDetenu(itemId, catId) {
+  const item = trouverItem(itemId, catId);
+  if (!item) return;
+  const detenu = item.detenu !== false;
+  const nouvelEtat = !detenu;
+  await db.from('items').update({ detenu: nouvelEtat }).eq('id', itemId).eq('user_id', currentUser.id);
+  item.detenu = nouvelEtat;
+  renderCave();
 }
 
 // =============================================
