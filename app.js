@@ -160,6 +160,9 @@ function renderCave() {
   container.appendChild(searchBar);
 
   cave.categories.forEach(cat => {
+    // Masquer les catégories "À acquérir" de la vue cave
+    if (cat.id.startsWith('a-acheter')) return;
+
     const items = filtrerItems(cat.items);
     if (filtreRecherche && items.length === 0) return;
 
