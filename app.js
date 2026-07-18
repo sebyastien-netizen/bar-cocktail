@@ -409,6 +409,7 @@ function renderCarteRecette(r) {
       </div>
       <div class="carte-footer">
         ${badgeDisponibilite(nbManquants)}
+        ${r.prix_portion ? `<span class="carte-prix">~${r.prix_portion.toFixed(2)}€</span>` : ''}
       </div>
     </div>
   `;
