@@ -934,30 +934,7 @@ function ouvrirModalAjout() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nom })
       });
-      const _skipOld = false && fetch('https://skip', {
-        body: JSON.stringify({
-          messages: [{
-            role: 'user',
-            content: `Tu es expert en spiritueux placeholder "${nom}".
-Réponds UNIQUEMENT en JSON valide, sans markdown :
-{
-  "identifie": true/false,
-  "trop_vague": true/false,
-  "categorie_id": "une parmi : liqueurs, gin, vodka, whisky, mezcal-tequila, rhum, eaux-de-vie, bulles, bitters, vermouth, triples-secs, sirops",
-  "degre": nombre ou null,
-  "description": "1-2 phrases max" ou null,
-  "origine": "1-2 phrases max" ou null,
-  "anecdote": "1-2 phrases max" ou null
-}
-Si le produit est trop vague (juste "gin", "whisky"...), mets trop_vague: true et identifie: false.
-Si inconnu, mets identifie: false et les autres champs à null.`
-          }]
-        })
-      });
- 
-      const data = await response.json();
-      const text = data.content?.[0]?.text || '{}';
-      const info = JSON.parse(text);
+      const info = await response.json();
  
       if (info.trop_vague) {
         result.innerHTML = '<div class="ajout-claude-warning">⚠️ Nom trop vague — précisez la marque complète.</div>';
