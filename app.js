@@ -137,6 +137,19 @@ function renderCave() {
 
   renderConservations();
 
+  // Prix total cave
+  const prixTotal = cave.categories.reduce((sum, cat) =>
+    sum + cat.items.filter(i => i.detenu !== false && i.prix_estime)
+                   .reduce((s, i) => s + parseFloat(i.prix_estime), 0), 0);
+
+  const prixBanner = document.createElement('div');
+  prixBanner.className = 'cave-prix-total';
+  prixBanner.innerHTML = `
+    <span class="cave-prix-label">Valeur estimée de la cave</span>
+    <span class="cave-prix-val">${prixTotal.toFixed(0)} €</span>
+  `;
+  document.getElementById('cave-container').appendChild(prixBanner);
+
   const searchBar = document.createElement('div');
   searchBar.className = 'search-bar';
   searchBar.innerHTML = `
