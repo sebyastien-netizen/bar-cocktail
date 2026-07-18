@@ -12,6 +12,7 @@ let cave        = null;
 let recettes    = [];
 let currentUser = null;
 let filtreRecherche = '';
+let filtreCategorieActive = null;
 let ongletActif = 'cave';
 
 // Section recettes
@@ -138,16 +139,22 @@ function renderCave() {
 
   renderConservations();
 
-  // Barre de navigation rapide par catégorie
+  // Barre de navigation rapide par catégorie (sticky + filtre)
   const navCats = document.createElement('div');
   navCats.className = 'cave-nav-cats';
-  navCats.innerHTML = cave.categories
-    .filter(cat => !cat.id.startsWith('a-acheter'))
-    .map(cat => `
-      <button class="cave-nav-btn" onclick="scrollToCategorie('${cat.id}')">
-        ${cat.icon} <span>${cat.label}</span>
-      </button>
-    `).join('');
+  navCats.innerHTML = `
+    <button class="cave-nav-btn ${!filtreCategorieActive ? 'active' : ''}" onclick="filtrerCategorie(null)">
+      🍸 <span>Tout</span>
+    </button>
+    ${cave.categories
+      .filter(cat => !cat.id.startsWith('a-acheter'))
+      .map(cat => `
+        <button class="cave-nav-btn ${filtreCategorieActive === cat.id ? 'active' : ''}"
+          onclick="filtrerCategorie('${cat.id}')">
+          ${cat.icon} <span>${cat.label}</span>
+        </button>
+      `).join('')}
+  `;
   container.appendChild(navCats);
 
   // Prix total cave
@@ -172,8 +179,10 @@ function renderCave() {
   container.appendChild(searchBar);
 
   cave.categories.forEach(cat => {
-    // Masquer les catégories "À acquérir" de la vue cave
+    // Masquer les catégories "À acquérir"
     if (cat.id.startsWith('a-acheter')) return;
+    // Filtre catégorie active
+    if (filtreCategorieActive && cat.id !== filtreCategorieActive) return;
 
     const items = filtrerItems(cat.items);
     if (filtreRecherche && items.length === 0) return;
@@ -279,11 +288,11 @@ function renderConservations() {
 
 function toggleCategorie(id) { document.getElementById('cat-' + id)?.classList.toggle('open'); }
 
-function scrollToCategorie(id) {
-  const el = document.getElementById('cat-' + id);
-  if (!el) return;
-  if (!el.classList.contains('open')) el.classList.add('open');
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function filtrerCategorie(id) {
+  filtreCategorieActive = id;
+  renderCave();
+  // Scroll en haut de la cave
+  document.getElementById('cave-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function toggleConservations(btn) {
   btn.classList.toggle('open');

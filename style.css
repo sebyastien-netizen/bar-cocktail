@@ -980,7 +980,12 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  padding: 10px 0 12px;
+  position: sticky;
+  top: 120px; /* header + nav */
+  z-index: 80;
+  background: var(--bg-base);
+  margin-bottom: 8px;
 }
 
 .cave-nav-btn {
@@ -992,15 +997,13 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   border-radius: 20px;
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 0.72rem;
-  font-weight: 500;
-  padding: 4px 10px;
+  font-size: 0.8rem;
+  padding: 5px 10px;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+  line-height: 1;
 }
-
-.cave-nav-btn span { display: none; }
 
 .cave-nav-btn:hover {
   background: rgba(201,150,58,0.15);
@@ -1008,8 +1011,21 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   color: var(--accent-light);
 }
 
-/* Sur desktop : afficher le label */
+.cave-nav-btn.active {
+  background: rgba(201,150,58,0.2);
+  border-color: var(--accent);
+  color: var(--accent-light);
+  font-weight: 600;
+}
+
+/* Mobile : emoji + label court visible */
+.cave-nav-btn span {
+  display: inline;
+  font-size: 0.72rem;
+}
+
+/* Desktop : label plus grand */
 @media (min-width: 601px) {
-  .cave-nav-btn span { display: inline; }
-  .cave-nav-btn { font-size: 0.78rem; padding: 5px 12px; }
+  .cave-nav-btn { font-size: 0.82rem; padding: 6px 14px; }
+  .cave-nav-btn span { font-size: 0.82rem; }
 }
