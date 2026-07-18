@@ -441,13 +441,29 @@ function renderFiche(portions) {
   const caveIds = getItemsCave();
   const diffLabel = { facile:'Facile', moyen:'Moyen', avance:'Avancé' }[r.difficulte] || r.difficulte;
 
-  // Conseil organisation si portions >= 2
-  const conseilOrga = portions >= 2 ? `
-    <div class="conseil-orga">
-      <span class="conseil-icon">🍹</span>
-      <span>Pour ${portions} verres : préparez tous les ingrédients à l'avance. Shakez en plusieurs fois (max 2 portions par shaker). Servez rapidement.</span>
-    </div>
-  ` : '';
+  // Conseil organisation selon type de recette
+  let conseilOrga = '';
+  if (portions >= 2) {
+    if (r.type === 'preparation') {
+      conseilOrga = `
+        <div class="conseil-orga">
+          <span class="conseil-icon">⚗️</span>
+          <span>Pour ${portions} fois la recette : multipliez les quantités. Les préparations se conservent — faites un batch plus grand pour en avoir d'avance.</span>
+        </div>`;
+    } else if (r.type === 'mocktail') {
+      conseilOrga = `
+        <div class="conseil-orga">
+          <span class="conseil-icon">🧃</span>
+          <span>Pour ${portions} verres : préparez le mélange de base en avance, ajoutez l'eau gazeuse au dernier moment pour conserver les bulles.</span>
+        </div>`;
+    } else {
+      conseilOrga = `
+        <div class="conseil-orga">
+          <span class="conseil-icon">🍹</span>
+          <span>Pour ${portions} verres : préparez tous les ingrédients à l'avance. Shakez en 2 fois max (shaker limité à 2 portions). Servez immédiatement.</span>
+        </div>`;
+    }
+  }
 
   // Prix estimé
   const prixHtml = r.prix_portion ? `
@@ -1111,8 +1127,9 @@ function renderConcoction(c, typeLabels, statutLabels, statutClass) {
       ${c.notes ? `<div class="conc-notes">💡 ${c.notes}</div>` : ''}
 
       <div class="conc-actions">
-        ${c.statut === 'en_cours' ? `<button class="btn btn-outline btn-sm" onclick="marquerPret('${c.id}')">Marquer prêt</button>` : ''}
-        <button class="btn-icon" onclick="supprimerConcoction('${c.id}')" title="Supprimer">🗑</button>
+        ${c.statut === 'en_cours' ? `<button class="btn btn-outline btn-sm" onclick="marquerPret('${c.id}')">✅ Marquer prêt</button>` : ''}
+        ${c.statut === 'pret' ? `<button class="btn btn-outline btn-sm" onclick="marquerEnCours('${c.id}')">↩ Remettre en cours</button>` : ''}
+        <button class="btn-icon btn-supprimer" onclick="supprimerConcoction('${c.id}')" title="Supprimer définitivement">🗑</button>
       </div>
     </div>
   `;
@@ -1141,8 +1158,16 @@ async function marquerPret(concId) {
   renderConcoctions();
 }
 
+async function marquerEnCours(concId) {
+  await db.from('concoctions').update({ statut: 'en_cours' }).eq('id', concId).eq('user_id', currentUser.id);
+  const conc = concoctions.find(c => c.id === concId);
+  if (conc) conc.statut = 'en_cours';
+  renderConcoctions();
+}
+
 async function supprimerConcoction(concId) {
-  if (!confirm('Supprimer cette concoction ?')) return;
+  const conc = concoctions.find(c => c.id === concId);
+  if (!confirm(`Supprimer définitivement "${conc?.nom}" ? Cette action est irréversible.`)) return;
   await db.from('concoctions').delete().eq('id', concId).eq('user_id', currentUser.id);
   concoctions = concoctions.filter(c => c.id !== concId);
   renderConcoctions();
