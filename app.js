@@ -115,7 +115,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(btn => {
 async function chargerCave() {
   const [{ data: cats }, { data: items }, { data: aAcheter }] = await Promise.all([
     db.from('categories').select('*').order('ordre'),
-    db.from('items').select('*, tare_g, poids_actuel_g, degre'),
+    db.from('items').select('*'),
     db.from('a_acheter').select('*')
   ]);
 
@@ -710,74 +710,52 @@ function ouvrirModalItem(itemId, catId) {
 }
 
 
-// --- MODAL CONTENANCE / PESÉE ---
-function calculerClDepuisPoids(poids_actuel, tare, degre) {
-  if (!poids_actuel || !tare) return null;
-  const poidsLiquide = poids_actuel - tare;
-  if (poidsLiquide <= 0) return 0;
-  const abv = degre ? degre / 100 : 0.37;
-  const densite = 0.789 * abv + 1.0 * (1 - abv);
-  return Math.round((poidsLiquide / (densite * 10)) * 10) / 10;
-}
+// --- MODAL CONTENANCE ---
 
 function ouvrirModalContenance(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
 
-  const titre = document.getElementById('modal-contenance-titre');
-  const body  = document.querySelector('.modal-contenance-body');
-  titre.textContent = item.nom;
+  document.getElementById('modal-contenance-titre').textContent = item.nom;
+  const body = document.querySelector('.modal-contenance-body');
 
   body.innerHTML = `
-    <div class="pesee-section">
-      <div class="pesee-badge">⚖️ Mode pesée${item.degre ? ' — ' + item.degre + '% ABV' : ' — densité ~0.93 (défaut)'}</div>
-      <div class="form-group">
-        <label>Tare bouteille vide (g) <span class="label-hint">peser une fois à vide</span></label>
-        <input type="number" id="input-tare" placeholder="ex: 480" value="${item.tare_g ?? ''}" step="0.1"
-          oninput="updateCalcPesee('${itemId}', '${catId}')">
-      </div>
-      <div class="form-group">
-        <label>Poids actuel bouteille + contenu (g)</label>
-        <input type="number" id="input-poids-actuel" placeholder="ex: 820" value="${item.poids_actuel_g ?? ''}" step="0.1"
-          oninput="updateCalcPesee('${itemId}', '${catId}')">
-      </div>
-      <div id="pesee-resultat" class="pesee-resultat">
-        ${item.tare_g && item.poids_actuel_g
-          ? '≈ <strong>' + calculerClDepuisPoids(item.poids_actuel_g, item.tare_g, item.degre) + ' cl</strong> restants'
-          : 'Saisissez tare + poids actuel'}
-      </div>
-    </div>
-    <div class="pesee-ou">ou saisie manuelle</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Contenance totale (cl)</label>
-        <input type="number" id="input-cl-total" placeholder="ex: 70" value="${item.cl_total ?? ''}">
-      </div>
-      <div class="form-group">
-        <label>Quantité restante (cl)</label>
-        <input type="number" id="input-cl-restants" placeholder="ex: 45" value="${item.cl_restants ?? ''}">
-      </div>
-    </div>
-    ${!item.degre ? `
+    <!-- MODE RAPIDE -->
     <div class="form-group">
-      <label>Degré alcool (%) <span class="label-hint">pour calcul précis</span></label>
-      <input type="number" id="input-degre" placeholder="ex: 40" step="0.1" value="">
+      <label>Contenance totale (cl)</label>
+      <div class="contenance-presets">
+        ${[20, 35, 50, 70, 100].map(v => `
+          <button class="preset-btn ${item.cl_total === v ? 'active' : ''}"
+            onclick="setCl('cl-total', ${v})">${v}cl</button>
+        `).join('')}
+        <input type="number" id="input-cl-total" placeholder="autre" value="${item.cl_total ?? ''}"
+          oninput="syncNiveau()">
+      </div>
     </div>
-    ` : ''}
+
+    <div class="form-group">
+      <label>Niveau actuel</label>
+      <div class="niveau-btns">
+        <button class="niveau-btn" onclick="setNiveau(1)">Plein</button>
+        <button class="niveau-btn" onclick="setNiveau(0.75)">¾</button>
+        <button class="niveau-btn" onclick="setNiveau(0.5)">½</button>
+        <button class="niveau-btn" onclick="setNiveau(0.25)">¼</button>
+        <button class="niveau-btn" onclick="setNiveau(0)">Vide</button>
+      </div>
+      <div class="form-row" style="margin-top:10px">
+        <div class="form-group" style="margin:0">
+          <label>ou cl restants exacts</label>
+          <input type="number" id="input-cl-restants" placeholder="ex: 45"
+            value="${item.cl_restants ?? ''}" oninput="syncNiveau()">
+        </div>
+      </div>
+    </div>
   `;
 
   document.getElementById('btn-sauver-contenance').onclick = async () => {
-    const tare         = parseFloat(document.getElementById('input-tare')?.value)         || null;
-    const poids_actuel = parseFloat(document.getElementById('input-poids-actuel')?.value) || null;
-    const degre        = parseFloat(document.getElementById('input-degre')?.value)        || item.degre || null;
-    let cl_total    = parseInt(document.getElementById('input-cl-total')?.value)    || null;
-    let cl_restants = parseFloat(document.getElementById('input-cl-restants')?.value) || null;
-
-    if (tare && poids_actuel) {
-      cl_restants = calculerClDepuisPoids(poids_actuel, tare, degre);
-    }
-
-    const updates = { cl_total, cl_restants, tare_g: tare, poids_actuel_g: poids_actuel, degre };
+    const cl_total    = parseInt(document.getElementById('input-cl-total')?.value)    || null;
+    const cl_restants = parseFloat(document.getElementById('input-cl-restants')?.value) || null;
+    const updates = { cl_total, cl_restants };
     await db.from('items').update(updates).eq('id', itemId).eq('user_id', currentUser.id);
     Object.assign(item, updates);
     fermerModal('modal-contenance');
@@ -787,26 +765,26 @@ function ouvrirModalContenance(itemId, catId) {
   afficherModal('modal-contenance');
 }
 
-function updateCalcPesee(itemId, catId) {
-  const item  = trouverItem(itemId, catId);
-  const tare  = parseFloat(document.getElementById('input-tare')?.value);
-  const poids = parseFloat(document.getElementById('input-poids-actuel')?.value);
-  const degre = parseFloat(document.getElementById('input-degre')?.value) || item?.degre;
-  const res   = document.getElementById('pesee-resultat');
-  if (!res) return;
-
-  if (tare && poids) {
-    const cl = calculerClDepuisPoids(poids, tare, degre);
-    res.innerHTML = '≈ <strong>' + cl + ' cl</strong> restants';
-    res.classList.add('visible');
-    const inputCl = document.getElementById('input-cl-restants');
-    if (inputCl) inputCl.value = cl;
-  } else {
-    res.innerHTML = 'Saisissez tare + poids actuel';
-    res.classList.remove('visible');
-  }
+function setCl(fieldId, val) {
+  const input = document.getElementById('input-' + fieldId.replace('-', '-'));
+  if (input) { input.value = val; syncNiveau(); }
+  // Highlight preset actif
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
 }
 
+function setNiveau(ratio) {
+  const total = parseFloat(document.getElementById('input-cl-total')?.value);
+  const inputR = document.getElementById('input-cl-restants');
+  if (total && inputR) inputR.value = Math.round(total * ratio * 10) / 10;
+  document.querySelectorAll('.niveau-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function syncNiveau() {
+  // Désactiver les boutons niveau si saisie manuelle
+  document.querySelectorAll('.niveau-btn').forEach(b => b.classList.remove('active'));
+}
 
 
 function ouvrirModalInfo(itemId, catId) {
