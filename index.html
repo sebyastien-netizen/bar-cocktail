@@ -37,7 +37,13 @@
       <span style="font-size:1.4rem">🍸</span>
       <h1>Bar à Cocktail</h1>
       <span class="subtitle">v0.3</span>
+      <button class="btn-qr" id="btn-qr" title="QR Code mobile" onclick="toggleQR()">📱</button>
       <button class="btn-logout" id="btn-logout" title="Déconnexion">⏏</button>
+      <div class="qr-popup" id="qr-popup">
+        <div class="qr-titre">Ouvrir sur mobile</div>
+        <canvas id="qr-canvas"></canvas>
+        <div class="qr-url">super-mousse-70068b.netlify.app</div>
+      </div>
     </header>
 
     <nav>
@@ -233,6 +239,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
