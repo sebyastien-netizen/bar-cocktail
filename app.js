@@ -139,7 +139,6 @@ function renderCave() {
 
   renderConservations();
 
-  // Barre de navigation rapide par catégorie (sticky + filtre)
   const navCats = document.createElement('div');
   navCats.className = 'cave-nav-cats';
   navCats.innerHTML = `
@@ -157,7 +156,6 @@ function renderCave() {
   `;
   container.appendChild(navCats);
 
-  // Prix total cave
   const prixTotal = cave.categories.reduce((sum, cat) =>
     sum + cat.items.filter(i => i.detenu !== false && i.prix_estime)
                    .reduce((s, i) => s + parseFloat(i.prix_estime), 0), 0);
@@ -179,9 +177,7 @@ function renderCave() {
   container.appendChild(searchBar);
 
   cave.categories.forEach(cat => {
-    // Masquer les catégories "À acquérir"
     if (cat.id.startsWith('a-acheter')) return;
-    // Filtre catégorie active
     if (filtreCategorieActive && cat.id !== filtreCategorieActive) return;
 
     const items = filtrerItems(cat.items);
@@ -207,7 +203,7 @@ function renderCave() {
 }
 
 function renderItem(item, catId) {
-  const detenu = item.detenu !== false; // true par défaut si null
+  const detenu = item.detenu !== false;
   const statutLabel = !detenu ? 'Non détenu'
     : item.statut === 'en_cours' ? 'En cours'
     : item.cl_restants !== null ? (item.cl_restants === item.cl_total ? 'Plein' : `${item.cl_restants} cl`)
@@ -291,7 +287,6 @@ function toggleCategorie(id) { document.getElementById('cat-' + id)?.classList.t
 function filtrerCategorie(id) {
   filtreCategorieActive = id;
   renderCave();
-  // Scroll en haut de la cave
   document.getElementById('cave-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function toggleConservations(btn) {
@@ -315,7 +310,7 @@ function getItemsCave() {
   if (!cave) return new Set();
   const ids = new Set();
   cave.categories.forEach(cat => cat.items.forEach(item => {
-    if (item.detenu !== false) ids.add(item.id); // seuls les détenus
+    if (item.detenu !== false) ids.add(item.id);
   }));
   return ids;
 }
@@ -340,7 +335,7 @@ function badgeDisponibilite(nbManquants) {
 
 async function chargerRecettes() {
   const [{ data: recs }, { data: ings }, { data: etapes }, { data: mats }] = await Promise.all([
-    db.from('recettes').select('*, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi, variante_alcool, variante_prestige, variante_mocktail_id, variante_notes, prix_portion, kit_portable'),
+    db.from('recettes').select('*, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi, variante_alcool, variante_prestige, variante_mocktail_id, variante_notes, prix_portion, kit_portable, photo_url'),
     db.from('recette_ingredients').select('*').order('ordre'),
     db.from('recette_etapes').select('*').order('ordre'),
     db.from('recette_materiels').select('*')
@@ -360,29 +355,20 @@ function renderRecettes() {
   const container = document.getElementById('recettes-container');
   if (!container) return;
 
-  // Filtrer par section
   let liste = recettes.filter(r => r.type === sectionRecette);
 
-  // Filtre base alcool
   if (filtreBase) liste = liste.filter(r => r.base_alcool === filtreBase);
-
-  // Filtre goût
   if (filtreGout) liste = liste.filter(r => r.gouts && r.gouts.includes(filtreGout));
-
-  // Filtre difficulté
   if (filtreDiff) liste = liste.filter(r => r.difficulte === filtreDiff);
 
-  // Tri : réalisables en premier si demandé
   if (filtreDisponible) {
     liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
   }
 
-  // Bases disponibles pour les filtres
   const bases = [...new Set(recettes.filter(r => r.type === sectionRecette && r.base_alcool).map(r => r.base_alcool))].sort();
   const gouts = [...new Set(recettes.filter(r => r.type === sectionRecette).flatMap(r => r.gouts || []))].sort();
 
   container.innerHTML = `
-    <!-- Sous-navigation sections -->
     <div class="recettes-sections">
       <button class="section-btn ${sectionRecette === 'cocktail' ? 'active' : ''}" onclick="changerSection('cocktail')">
         🍹 Cocktails <span class="section-count">${recettes.filter(r=>r.type==='cocktail').length}</span>
@@ -395,7 +381,6 @@ function renderRecettes() {
       </button>
     </div>
 
-    <!-- Filtres -->
     <div class="recettes-filtres">
       <select onchange="filtreBase=this.value; renderRecettes()">
         <option value="">Toutes les bases</option>
@@ -416,7 +401,6 @@ function renderRecettes() {
       </button>
     </div>
 
-    <!-- Grille de cartes -->
     <div class="recettes-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune recette trouvée.</div>' : ''}
       ${liste.map(r => renderCarteRecette(r)).join('')}
@@ -424,24 +408,42 @@ function renderRecettes() {
   `;
 }
 
+// =============================================
+// CARTE RECETTE — avec photo_url
+// =============================================
+
 function renderCarteRecette(r) {
   const nbManquants = calculerDisponibilite(r);
   const diffLabel   = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
   const diffClass   = { facile: 'diff-facile', moyen: 'diff-moyen', avance: 'diff-avance' }[r.difficulte] || '';
 
+  // Image ou fallback initiale
+  const imgHtml = r.photo_url
+    ? `<div class="carte-img-wrap">
+        <img src="${r.photo_url}" alt="${r.nom}" class="carte-img" loading="lazy"
+          onerror="this.parentElement.innerHTML='<span class=carte-img-initiale>${r.nom.charAt(0)}</span>'; this.parentElement.classList.add('carte-img--fallback')">
+        <span class="carte-badge-dispo">${badgeDisponibilite(nbManquants)}</span>
+       </div>`
+    : `<div class="carte-img-wrap carte-img--fallback">
+        <span class="carte-img-initiale">${r.nom.charAt(0)}</span>
+        <span class="carte-badge-dispo">${badgeDisponibilite(nbManquants)}</span>
+       </div>`;
+
   return `
     <div class="carte-recette" onclick="ouvrirFicheRecette('${r.id}')">
-      <div class="carte-top">
-        <div class="carte-nom">${r.nom}</div>
-        <span class="carte-diff ${diffClass}">${diffLabel}</span>
-      </div>
-      ${r.base_alcool ? `<div class="carte-base">🥃 ${r.base_alcool}</div>` : ''}
-      <div class="carte-gouts">
-        ${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}
-      </div>
-      <div class="carte-footer">
-        ${badgeDisponibilite(nbManquants)}
-        ${r.prix_portion ? `<span class="carte-prix">~${r.prix_portion.toFixed(2)}€</span>` : ''}
+      ${imgHtml}
+      <div class="carte-body">
+        <div class="carte-top">
+          <div class="carte-nom">${r.nom}</div>
+          <span class="carte-diff ${diffClass}">${diffLabel}</span>
+        </div>
+        ${r.base_alcool ? `<div class="carte-base">🥃 ${r.base_alcool}</div>` : ''}
+        <div class="carte-gouts">
+          ${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}
+        </div>
+        <div class="carte-footer">
+          ${r.prix_portion ? `<span class="carte-prix">~${r.prix_portion.toFixed(2)}€</span>` : ''}
+        </div>
       </div>
     </div>
   `;
@@ -454,9 +456,7 @@ function changerSection(section) {
 }
 
 // =============================================
-// FICHE RECETTE — Rendu complet v2
-// Sélecteur portions, profil gustatif,
-// dégustation, variantes, prix, bouton Réalisée
+// FICHE RECETTE — avec photo_url en en-tête
 // =============================================
 
 function ouvrirFicheRecette(id) {
@@ -472,7 +472,6 @@ function renderFiche(portions) {
   const caveIds = getItemsCave();
   const diffLabel = { facile:'Facile', moyen:'Moyen', avance:'Avancé' }[r.difficulte] || r.difficulte;
 
-  // Conseil organisation selon type de recette
   let conseilOrga = '';
   if (portions >= 2) {
     if (r.type === 'preparation') {
@@ -496,17 +495,23 @@ function renderFiche(portions) {
     }
   }
 
-  // Prix estimé
   const prixHtml = r.prix_portion ? `
     <span class="tag-prix">~${(r.prix_portion * portions).toFixed(2)}€${portions > 1 ? ` (${portions} verres)` : ''}</span>
   ` : '';
 
-  // Badge kit portable
   const kitHtml = r.kit_portable ? `<span class="tag-kit">✓ KIT</span>` : '';
+
+  // Image en-tête fiche
+  const ficheImgHtml = r.photo_url ? `
+    <div class="fiche-img-wrap">
+      <img src="${r.photo_url}" alt="${r.nom}" class="fiche-img" loading="lazy"
+        onerror="this.parentElement.style.display='none'">
+    </div>` : '';
 
   document.querySelector('.fiche-contenu').innerHTML = `
 
-    <!-- EN-TÊTE -->
+    ${ficheImgHtml}
+
     <div class="fiche-header">
       <div>
         <h2 class="fiche-titre">${r.nom}</h2>
@@ -523,7 +528,6 @@ function renderFiche(portions) {
       </div>
     </div>
 
-    <!-- SÉLECTEUR PORTIONS -->
     <div class="fiche-portions">
       <span class="portions-label">Portions</span>
       <div class="portions-ctrl">
@@ -534,7 +538,6 @@ function renderFiche(portions) {
     </div>
     ${conseilOrga}
 
-    <!-- INGRÉDIENTS -->
     <div class="fiche-section">
       <h3>Ingrédients <span class="fiche-portion">pour ${portions} verre${portions > 1 ? 's' : ''}</span></h3>
       <ul class="fiche-ingredients">
@@ -556,7 +559,6 @@ function renderFiche(portions) {
       </ul>
     </div>
 
-    <!-- MATÉRIELS -->
     ${r.materiels && r.materiels.length > 0 ? `
     <div class="fiche-section">
       <h3>Matériels</h3>
@@ -566,7 +568,6 @@ function renderFiche(portions) {
     </div>
     ` : ''}
 
-    <!-- ÉTAPES -->
     <div class="fiche-section">
       <h3>Préparation</h3>
       <ol class="fiche-etapes">
@@ -579,7 +580,6 @@ function renderFiche(portions) {
       </ol>
     </div>
 
-    <!-- PROFIL GUSTATIF -->
     ${hasProfil(r) ? `
     <div class="fiche-section">
       <h3>Profil gustatif</h3>
@@ -596,7 +596,6 @@ function renderFiche(portions) {
     </div>
     ` : ''}
 
-    <!-- GUIDE DÉGUSTATION -->
     ${r.degustation_voir ? `
     <div class="fiche-section">
       <h3>Guide de dégustation</h3>
@@ -627,7 +626,6 @@ function renderFiche(portions) {
     </div>
     ` : ''}
 
-    <!-- VARIANTES -->
     ${hasVariantes(r) ? `
     <div class="fiche-section">
       <h3>Variantes</h3>
@@ -658,7 +656,6 @@ function renderFiche(portions) {
     </div>
     ` : ''}
 
-    <!-- ANECDOTE -->
     ${r.anecdote ? `
     <div class="fiche-section fiche-anecdote">
       <h3>📖 Histoire</h3>
@@ -666,7 +663,6 @@ function renderFiche(portions) {
     </div>
     ` : ''}
 
-    <!-- BOUTON RÉALISÉE -->
     <div class="fiche-action">
       <button class="btn btn-realiser" onclick="marquerRealisee(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
@@ -708,14 +704,12 @@ async function marquerRealisee(portions) {
   const r = recetteOuverte;
   const caveIds = getItemsCave();
 
-  // Décrémenter les cl_restants pour chaque ingrédient présent en cave
   const updates = [];
   for (const ing of (r.ingredients || [])) {
     if (!ing.item_cave_id || !ing.quantite || !ing.unite) continue;
     if (!caveIds.has(ing.item_cave_id)) continue;
-    if (ing.unite !== 'cl') continue; // seulement les cl
+    if (ing.unite !== 'cl') continue;
 
-    // Trouver l'item dans la cave
     for (const cat of cave.categories) {
       const item = cat.items.find(i => i.id === ing.item_cave_id);
       if (item && item.cl_restants !== null) {
@@ -725,7 +719,6 @@ async function marquerRealisee(portions) {
     }
   }
 
-  // Appliquer les mises à jour
   for (const { item, nouveau } of updates) {
     await db.from('items').update({ cl_restants: nouveau }).eq('id', item.id).eq('user_id', currentUser.id);
     item.cl_restants = nouveau;
@@ -733,7 +726,6 @@ async function marquerRealisee(portions) {
 
   fermerModal('modal-fiche-recette');
 
-  // Feedback visuel
   const feedback = document.createElement('div');
   feedback.className = 'toast-feedback';
   feedback.textContent = updates.length > 0
@@ -745,7 +737,6 @@ async function marquerRealisee(portions) {
 
   renderCave();
 }
-
 
 // =============================================
 // MODALS CAVE
@@ -785,9 +776,6 @@ function ouvrirModalItem(itemId, catId) {
   afficherModal('modal-ouverture');
 }
 
-
-// --- MODAL CONTENANCE ---
-
 function ouvrirModalContenance(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
@@ -796,7 +784,6 @@ function ouvrirModalContenance(itemId, catId) {
   const body = document.querySelector('.modal-contenance-body');
 
   body.innerHTML = `
-    <!-- MODE RAPIDE -->
     <div class="form-group">
       <label>Contenance totale (cl)</label>
       <div class="contenance-presets">
@@ -844,7 +831,6 @@ function ouvrirModalContenance(itemId, catId) {
 function setCl(fieldId, val) {
   const input = document.getElementById('input-' + fieldId.replace('-', '-'));
   if (input) { input.value = val; syncNiveau(); }
-  // Highlight preset actif
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
 }
@@ -858,10 +844,8 @@ function setNiveau(ratio) {
 }
 
 function syncNiveau() {
-  // Désactiver les boutons niveau si saisie manuelle
   document.querySelectorAll('.niveau-btn').forEach(b => b.classList.remove('active'));
 }
-
 
 function ouvrirModalInfo(itemId, catId) {
   const item = trouverItem(itemId, catId);
@@ -898,14 +882,12 @@ function ouvrirModalInfo(itemId, catId) {
 function ouvrirModalAjout() {
   const modal = document.getElementById('modal-ajout');
 
-  // Remplir le select catégories (sans les "à acquérir")
   const select = document.getElementById('select-categorie-ajout');
   select.innerHTML = cave.categories
     .filter(c => !c.id.startsWith('a-acheter') && !c.id.startsWith('ingredients'))
     .map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`)
     .join('');
 
-  // Reset
   modal.querySelector('#input-nom-ajout').value         = '';
   modal.querySelector('#input-detail-ajout').value      = '';
   modal.querySelector('#input-degre-ajout').value       = '';
@@ -916,7 +898,6 @@ function ouvrirModalAjout() {
   modal.querySelector('#ajout-claude-result').innerHTML = '';
   modal.querySelector('#ajout-claude-result').classList.remove('visible');
 
-  // Bouton identifier
   modal.querySelector('#btn-identifier-claude').onclick = async () => {
     const nom = modal.querySelector('#input-nom-ajout').value.trim();
     if (!nom) { alert("Saisissez d'abord le nom du produit."); return; }
@@ -943,7 +924,6 @@ function ouvrirModalAjout() {
         result.innerHTML = '<div class="ajout-claude-warning">❓ Produit non identifié — remplissez les champs manuellement.</div>';
         result.classList.add('visible');
       } else {
-        // Pré-remplir les champs
         if (info.categorie_id) select.value = info.categorie_id;
         if (info.degre) modal.querySelector('#input-degre-ajout').value = info.degre;
         if (info.description) modal.querySelector('#input-detail-ajout').value = info.description;
@@ -962,7 +942,6 @@ function ouvrirModalAjout() {
     btn.textContent = '✨ Identifier avec Claude';
   };
 
-  // Bouton confirmer
   modal.querySelector('#btn-confirmer-ajout').onclick = async () => {
     const catId   = select.value;
     const nom     = modal.querySelector('#input-nom-ajout').value.trim();
@@ -1004,18 +983,15 @@ function ouvrirModalAjout() {
   afficherModal('modal-ajout');
 }
 
-// --- ONGLET À ACHETER ---
 function onTabChange(tab) {
   if (tab === 'aacheter') chargerAAcheter();
   if (tab === 'concoctions') chargerConcoctions();
 }
 
-// Surcharger la navigation pour déclencher chargement
 document.querySelectorAll('nav button[data-tab]').forEach(btn => {
   btn.addEventListener('click', () => onTabChange(btn.dataset.tab));
 });
 
-// --- ÉQUIPEMENTS TOGGLE ---
 function onEquipToggle(details) {
   const stats = document.getElementById('equip-summary-stats');
   if (details.open && stats) {
@@ -1025,7 +1001,6 @@ function onEquipToggle(details) {
   }
 }
 
-// --- TOGGLE DÉTENU ---
 async function toggleDetenu(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
@@ -1121,7 +1096,6 @@ async function toggleEquipement(id, champ, valeur) {
   if (!equip) return;
   await db.from('equipements').update({ [champ]: valeur }).eq('id', id).eq('user_id', currentUser.id);
   equip[champ] = valeur;
-  // Mettre à jour juste les stats sans re-render complet
   const chezSoiCount = equipements.filter(e => e.chez_soi).length;
   const kitCount     = equipements.filter(e => e.en_deplacement).length;
   const stats = document.querySelector('.equip-stats');
@@ -1194,14 +1168,12 @@ function renderConcoction(c, typeLabels, statutLabels, statutClass) {
   const etapesFaites   = c.etapes?.filter(e => e.faite).length || 0;
   const etapesTotal    = c.etapes?.length || 0;
 
-  // Jours avant prochaine étape
   let joursEtape = null;
   if (prochaineEtape?.date_etape) {
     const d = new Date(prochaineEtape.date_etape);
     joursEtape = Math.ceil((d - today) / 86400000);
   }
 
-  // Jours avant fin
   let joursFin = null;
   if (c.date_fin) {
     const d = new Date(c.date_fin);
@@ -1229,7 +1201,6 @@ function renderConcoction(c, typeLabels, statutLabels, statutClass) {
 
       ${c.description ? `<p class="conc-desc">${c.description}</p>` : ''}
 
-      <!-- Étapes -->
       ${etapesTotal > 0 ? `
       <div class="conc-etapes">
         <div class="conc-etapes-progress">
@@ -1347,7 +1318,6 @@ async function chargerAAcheter() {
   const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu, category_id').eq('user_id', currentUser.id);
   const { data: aAcheter } = await db.from('a_acheter').select('*').eq('user_id', currentUser.id);
 
-  // Catégorisation des items à acquérir
   const catGroupes = {
     spiritueux:    { label: '🥃 Spiritueux',       ids: ['a-acheter-spirits'] },
     liqueurs:      { label: '🍯 Liqueurs',          ids: ['a-acheter-liqueurs'] },
@@ -1355,7 +1325,6 @@ async function chargerAAcheter() {
     sirops:        { label: '🍬 Sirops & Épicerie', ids: ['a-acheter-sirops', 'ingredients-frais'] }
   };
 
-  // Calcul score par item manquant
   const scoreMap = {};
   recettes.forEach(r => {
     const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
@@ -1378,7 +1347,6 @@ async function chargerAAcheter() {
 
   const allScored = Object.values(scoreMap).sort((a, b) => b.count - a.count);
 
-  // Rendu par groupe
   function renderGroupe(groupe, items) {
     if (items.length === 0) return '';
     return `
@@ -1412,7 +1380,6 @@ async function chargerAAcheter() {
     `;
   }
 
-  // Répartir par groupe
   const grouped = {};
   Object.keys(catGroupes).forEach(k => grouped[k] = []);
 
@@ -1423,11 +1390,9 @@ async function chargerAAcheter() {
         return;
       }
     }
-    // Items non catégorisés → spiritueux par défaut
     grouped['spiritueux'].push(item);
   });
 
-  // Liste prioritaire (a_acheter sans doublon avec scoreMap)
   const prioritaires = (aAcheter || []).filter(a => !scoreMap[a.id]);
 
   container.innerHTML = `
@@ -1525,7 +1490,6 @@ function toggleQR() {
   }
 }
 
-// Fermer en cliquant ailleurs
 document.addEventListener('click', e => {
   const popup = document.getElementById('qr-popup');
   const btn   = document.getElementById('btn-qr');
