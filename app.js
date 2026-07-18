@@ -1518,11 +1518,9 @@ function toggleQR() {
   popup.classList.toggle('visible');
 
   if (!qrGenerated && popup.classList.contains('visible')) {
-    QRCode.toCanvas(
-      document.getElementById('qr-canvas'),
-      'https://super-mousse-70068b.netlify.app',
-      { width: 180, margin: 1, color: { dark: '#f0e6d3', light: '#16213e' } }
-    );
+    const url = encodeURIComponent('https://super-mousse-70068b.netlify.app');
+    const img = document.getElementById('qr-img');
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&bgcolor=16213e&color=f0e6d3&data=${url}`;
     qrGenerated = true;
   }
 }
