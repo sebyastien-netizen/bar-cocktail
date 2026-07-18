@@ -44,7 +44,7 @@
       <button class="active" data-tab="cave">🍶 Ma Cave</button>
       <button data-tab="recettes">🍹 Recettes</button>
       <button disabled title="Bientôt">📊 Dashboard</button>
-      <button disabled title="Bientôt">⚗️ Concoctions</button>
+      <button data-tab="concoctions">⚗️ Concoctions</button>
       <button disabled title="Bientôt">🎓 École</button>
       <button data-tab="aacheter">🛒 À acheter</button>
     </nav>
@@ -61,6 +61,12 @@
       <div id="section-recettes" class="tab-section hidden">
         <div class="cave-header"><h2>🍹 Recettes</h2></div>
         <div id="recettes-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
+      <!-- CONCOCTIONS -->
+      <div id="section-concoctions" class="tab-section hidden">
+        <div class="cave-header"><h2>⚗️ Concoctions</h2></div>
+        <div id="concoctions-container"><div class="loading-state">Chargement…</div></div>
       </div>
 
       <!-- À ACHETER -->
@@ -146,6 +152,42 @@
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="fermerModal('modal-ajout')">Annuler</button>
         <button class="btn" id="btn-confirmer-ajout">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : AJOUT CONCOCTION -->
+  <div class="modal-overlay" id="modal-ajout-concoction">
+    <div class="modal">
+      <h3>Nouvelle concoction</h3>
+      <div class="form-group">
+        <label>Nom</label>
+        <input type="text" id="input-conc-nom" placeholder="ex: Limoncello maison">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="input-conc-type">
+          <option value="batch">🧊 Batch frigo</option>
+          <option value="maceration">🌿 Macération</option>
+          <option value="infusion">☕ Infusion</option>
+          <option value="liqueur">🍯 Liqueur maison</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="input-conc-desc" placeholder="ex: Zestes citrons + vodka + sucre">
+      </div>
+      <div class="form-group">
+        <label>Date de création</label>
+        <input type="date" id="input-conc-date">
+      </div>
+      <div class="form-group">
+        <label>Notes (optionnel)</label>
+        <input type="text" id="input-conc-notes" placeholder="ex: Ratio, températures, conseils...">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="fermerModal('modal-ajout-concoction')">Annuler</button>
+        <button class="btn" id="btn-sauver-concoction">Créer</button>
       </div>
     </div>
   </div>

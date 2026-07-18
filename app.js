@@ -48,6 +48,7 @@ function afficherApp() {
   chargerCave();
   chargerRecettes();
   chargerEquipements();
+  chargerConcoctions();
 }
 
 // --- Login ---
@@ -860,6 +861,7 @@ function ouvrirModalAjout() {
 // --- ONGLET À ACHETER ---
 function onTabChange(tab) {
   if (tab === 'aacheter') chargerAAcheter();
+  if (tab === 'concoctions') chargerConcoctions();
 }
 
 // Surcharger la navigation pour déclencher chargement
@@ -981,6 +983,200 @@ async function toggleEquipement(id, champ, valeur) {
     <span class="equip-stat">🏠 ${chezSoiCount} chez soi</span>
     <span class="equip-stat">🎒 ${kitCount} en déplacement</span>
   `;
+}
+
+// =============================================
+// CONCOCTIONS
+// =============================================
+
+let concoctions = [];
+
+async function chargerConcoctions() {
+  const container = document.getElementById('concoctions-container');
+  if (!container) return;
+
+  const [{ data: concs }, { data: etapes }] = await Promise.all([
+    db.from('concoctions').select('*').order('date_creation', { ascending: false }),
+    db.from('concoction_etapes').select('*').order('ordre')
+  ]);
+
+  concoctions = (concs || []).map(c => ({
+    ...c,
+    etapes: (etapes || []).filter(e => e.concoction_id === c.id)
+  }));
+
+  renderConcoctions();
+}
+
+function renderConcoctions() {
+  const container = document.getElementById('concoctions-container');
+  if (!container) return;
+
+  const typeLabels = { batch: '🧊 Batch', maceration: '🌿 Macération', infusion: '☕ Infusion', liqueur: '🍯 Liqueur' };
+  const statutLabels = { en_cours: 'En cours', pret: 'Prêt', termine: 'Terminé' };
+  const statutClass  = { en_cours: 'statut-en-cours', pret: 'statut-plein', termine: 'statut-inconnu' };
+
+  const enCours = concoctions.filter(c => c.statut === 'en_cours');
+  const prets   = concoctions.filter(c => c.statut === 'pret');
+
+  container.innerHTML = `
+    <div class="conc-toolbar">
+      <button class="btn btn-outline" onclick="ouvrirModalAjoutConcoction()">+ Ajouter</button>
+    </div>
+
+    ${enCours.length > 0 ? `
+    <div class="conc-section">
+      <h3 class="conc-section-titre">⏳ En cours (${enCours.length})</h3>
+      ${enCours.map(c => renderConcoction(c, typeLabels, statutLabels, statutClass)).join('')}
+    </div>` : ''}
+
+    ${prets.length > 0 ? `
+    <div class="conc-section">
+      <h3 class="conc-section-titre">✅ Prêts</h3>
+      ${prets.map(c => renderConcoction(c, typeLabels, statutLabels, statutClass)).join('')}
+    </div>` : ''}
+
+    ${concoctions.length === 0 ? '<div class="empty-state">Aucune concoction en cours. Commencez par le génépi !</div>' : ''}
+  `;
+}
+
+function renderConcoction(c, typeLabels, statutLabels, statutClass) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const prochaineEtape = c.etapes?.find(e => !e.faite);
+  const etapesFaites   = c.etapes?.filter(e => e.faite).length || 0;
+  const etapesTotal    = c.etapes?.length || 0;
+
+  // Jours avant prochaine étape
+  let joursEtape = null;
+  if (prochaineEtape?.date_etape) {
+    const d = new Date(prochaineEtape.date_etape);
+    joursEtape = Math.ceil((d - today) / 86400000);
+  }
+
+  // Jours avant fin
+  let joursFin = null;
+  if (c.date_fin) {
+    const d = new Date(c.date_fin);
+    joursFin = Math.ceil((d - today) / 86400000);
+  }
+
+  const urgenceClass = joursEtape !== null && joursEtape <= 3 ? 'conc-urgent' : '';
+
+  return `
+    <div class="conc-card ${urgenceClass}">
+      <div class="conc-card-header">
+        <div>
+          <div class="conc-nom">${c.nom}</div>
+          <div class="conc-meta">
+            <span class="conc-type">${typeLabels[c.type] || c.type}</span>
+            ${c.contenance_cl ? `<span class="conc-vol">${c.contenance_cl}cl</span>` : ''}
+            <span class="item-statut ${statutClass[c.statut]}">${statutLabels[c.statut]}</span>
+          </div>
+        </div>
+        ${joursFin !== null ? `
+        <div class="conc-countdown ${joursFin <= 7 ? 'countdown-soon' : ''}">
+          ${joursFin > 0 ? `<span class="countdown-val">${joursFin}</span><span class="countdown-label">jours</span>` : '<span class="countdown-val">🎉</span>'}
+        </div>` : ''}
+      </div>
+
+      ${c.description ? `<p class="conc-desc">${c.description}</p>` : ''}
+
+      <!-- Étapes -->
+      ${etapesTotal > 0 ? `
+      <div class="conc-etapes">
+        <div class="conc-etapes-progress">
+          <div class="conc-progress-bar">
+            <div class="conc-progress-fill" style="width:${Math.round((etapesFaites/etapesTotal)*100)}%"></div>
+          </div>
+          <span class="conc-progress-label">${etapesFaites}/${etapesTotal} étapes</span>
+        </div>
+        <div class="conc-etapes-list">
+          ${c.etapes.map(e => `
+            <div class="conc-etape ${e.faite ? 'etape-faite' : ''} ${e === prochaineEtape ? 'etape-prochaine' : ''}">
+              <button class="etape-check" onclick="toggleEtapeConcoction('${c.id}', ${e.id}, ${!e.faite})">
+                ${e.faite ? '✓' : '○'}
+              </button>
+              <div class="etape-content">
+                <div class="etape-titre-conc">${e.titre}</div>
+                <div class="etape-desc-conc">${e.description}</div>
+                ${e.date_etape ? '<div class="etape-date">' + formatDate(e.date_etape) + (joursEtape !== null && e === prochaineEtape ? ' <span class="etape-jours' + (joursEtape <= 3 ? ' jours-urgent' : '') + '">(' + (joursEtape > 0 ? 'dans ' + joursEtape + 'j' : "aujourd'hui !") + ')</span>' : '') + '</div>' : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      ${c.notes ? `<div class="conc-notes">💡 ${c.notes}</div>` : ''}
+
+      <div class="conc-actions">
+        ${c.statut === 'en_cours' ? `<button class="btn btn-outline btn-sm" onclick="marquerPret('${c.id}')">Marquer prêt</button>` : ''}
+        <button class="btn-icon" onclick="supprimerConcoction('${c.id}')" title="Supprimer">🗑</button>
+      </div>
+    </div>
+  `;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+async function toggleEtapeConcoction(concId, etapeId, faite) {
+  await db.from('concoction_etapes').update({ faite }).eq('id', etapeId).eq('user_id', currentUser.id);
+  const conc = concoctions.find(c => c.id === concId);
+  if (conc) {
+    const etape = conc.etapes.find(e => e.id === etapeId);
+    if (etape) etape.faite = faite;
+  }
+  renderConcoctions();
+}
+
+async function marquerPret(concId) {
+  await db.from('concoctions').update({ statut: 'pret' }).eq('id', concId).eq('user_id', currentUser.id);
+  const conc = concoctions.find(c => c.id === concId);
+  if (conc) conc.statut = 'pret';
+  renderConcoctions();
+}
+
+async function supprimerConcoction(concId) {
+  if (!confirm('Supprimer cette concoction ?')) return;
+  await db.from('concoctions').delete().eq('id', concId).eq('user_id', currentUser.id);
+  concoctions = concoctions.filter(c => c.id !== concId);
+  renderConcoctions();
+}
+
+function ouvrirModalAjoutConcoction() {
+  const modal = document.getElementById('modal-ajout-concoction');
+  if (!modal) return;
+  modal.querySelector('#input-conc-nom').value = '';
+  modal.querySelector('#input-conc-type').value = 'batch';
+  modal.querySelector('#input-conc-desc').value = '';
+  modal.querySelector('#input-conc-date').value = new Date().toISOString().split('T')[0];
+  modal.querySelector('#input-conc-notes').value = '';
+
+  modal.querySelector('#btn-sauver-concoction').onclick = async () => {
+    const nom   = modal.querySelector('#input-conc-nom').value.trim();
+    const type  = modal.querySelector('#input-conc-type').value;
+    const desc  = modal.querySelector('#input-conc-desc').value.trim();
+    const date  = modal.querySelector('#input-conc-date').value;
+    const notes = modal.querySelector('#input-conc-notes').value.trim();
+    if (!nom) return;
+
+    const id = 'custom-conc-' + Date.now();
+    const { data } = await db.from('concoctions').insert({
+      id, user_id: currentUser.id, nom, type, description: desc,
+      date_creation: date, statut: 'en_cours', notes
+    }).select().single();
+
+    if (data) concoctions.unshift({ ...data, etapes: [] });
+    fermerModal('modal-ajout-concoction');
+    renderConcoctions();
+  };
+
+  afficherModal('modal-ajout-concoction');
 }
 
 // =============================================
