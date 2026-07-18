@@ -4,7 +4,6 @@
 // =============================================
  
 exports.handler = async (event) => {
-  // CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -12,13 +11,8 @@ exports.handler = async (event) => {
     'Content-Type': 'application/json'
   };
  
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
- 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: '{}' };
  
   try {
     const { nom } = JSON.parse(event.body);
@@ -33,39 +27,48 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         max_tokens: 600,
+        response_format: { type: 'json_object' },
         messages: [{
           role: 'system',
-          content: 'Tu es expert en spiritueux et alcools du monde entier. Tu réponds uniquement en JSON valide, sans markdown ni backticks.'
+          content: 'Tu es expert en spiritueux. Tu identifies les alcools et retournes uniquement du JSON valide.'
         }, {
           role: 'user',
-          content: `Identifie ce produit alcoolisé : "${nom}".
-Réponds UNIQUEMENT en JSON :
+          content: `Identifie cet alcool : "${nom}".
+ 
+Retourne ce JSON (et rien d'autre) :
 {
-  "identifie": true/false,
-  "trop_vague": true/false,
-  "categorie_id": "une parmi : liqueurs, gin, vodka, whisky, mezcal-tequila, rhum, eaux-de-vie, bulles, bitters, vermouth, triples-secs, sirops",
-  "degre": nombre ou null,
-  "description": "1-2 phrases courtes" ou null,
-  "origine": "1-2 phrases courtes" ou null,
-  "anecdote": "1-2 phrases courtes originales" ou null
+  "identifie": true,
+  "trop_vague": false,
+  "categorie_id": "gin",
+  "degre": 40,
+  "description": "Description courte en 1-2 phrases.",
+  "origine": "Origine en 1-2 phrases.",
+  "anecdote": "Anecdote intéressante en 1-2 phrases."
 }
-Si nom trop vague (juste "gin", "whisky"...) : trop_vague true, identifie false.
-Si inconnu : identifie false, autres champs null.`
+ 
+Règles :
+- categorie_id doit être une parmi : liqueurs, gin, vodka, whisky, mezcal-tequila, rhum, eaux-de-vie, bulles, bitters, vermouth, triples-secs, sirops
+- Si le nom est trop vague (juste "gin", "vodka"...) : identifie=false, trop_vague=true
+- Si le produit est inconnu : identifie=false, trop_vague=false, autres champs null`
         }]
       })
     });
  
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || '{}';
-    const result = JSON.parse(text);
+ 
+    // Nettoyer les backticks markdown si présents
+    const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(clean);
  
     return { statusCode: 200, headers, body: JSON.stringify(result) };
  
   } catch (e) {
+    console.error('Erreur identifier:', e.message);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: e.message, identifie: false })
+      body: JSON.stringify({ identifie: false, trop_vague: false, error: e.message })
     };
   }
 };
