@@ -709,25 +709,105 @@ function ouvrirModalItem(itemId, catId) {
   afficherModal('modal-ouverture');
 }
 
+
+// --- MODAL CONTENANCE / PESÉE ---
+function calculerClDepuisPoids(poids_actuel, tare, degre) {
+  if (!poids_actuel || !tare) return null;
+  const poidsLiquide = poids_actuel - tare;
+  if (poidsLiquide <= 0) return 0;
+  const abv = degre ? degre / 100 : 0.37;
+  const densite = 0.789 * abv + 1.0 * (1 - abv);
+  return Math.round((poidsLiquide / (densite * 10)) * 10) / 10;
+}
+
 function ouvrirModalContenance(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
 
-  document.getElementById('modal-contenance-titre').textContent = item.nom;
-  document.getElementById('input-cl-total').value    = item.cl_total    ?? '';
-  document.getElementById('input-cl-restants').value = item.cl_restants ?? '';
+  const titre = document.getElementById('modal-contenance-titre');
+  const body  = document.querySelector('.modal-contenance-body');
+  titre.textContent = item.nom;
+
+  body.innerHTML = `
+    <div class="pesee-section">
+      <div class="pesee-badge">⚖️ Mode pesée${item.degre ? ' — ' + item.degre + '% ABV' : ' — densité ~0.93 (défaut)'}</div>
+      <div class="form-group">
+        <label>Tare bouteille vide (g) <span class="label-hint">peser une fois à vide</span></label>
+        <input type="number" id="input-tare" placeholder="ex: 480" value="${item.tare_g ?? ''}" step="0.1"
+          oninput="updateCalcPesee('${itemId}', '${catId}')">
+      </div>
+      <div class="form-group">
+        <label>Poids actuel bouteille + contenu (g)</label>
+        <input type="number" id="input-poids-actuel" placeholder="ex: 820" value="${item.poids_actuel_g ?? ''}" step="0.1"
+          oninput="updateCalcPesee('${itemId}', '${catId}')">
+      </div>
+      <div id="pesee-resultat" class="pesee-resultat">
+        ${item.tare_g && item.poids_actuel_g
+          ? '≈ <strong>' + calculerClDepuisPoids(item.poids_actuel_g, item.tare_g, item.degre) + ' cl</strong> restants'
+          : 'Saisissez tare + poids actuel'}
+      </div>
+    </div>
+    <div class="pesee-ou">ou saisie manuelle</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Contenance totale (cl)</label>
+        <input type="number" id="input-cl-total" placeholder="ex: 70" value="${item.cl_total ?? ''}">
+      </div>
+      <div class="form-group">
+        <label>Quantité restante (cl)</label>
+        <input type="number" id="input-cl-restants" placeholder="ex: 45" value="${item.cl_restants ?? ''}">
+      </div>
+    </div>
+    ${!item.degre ? `
+    <div class="form-group">
+      <label>Degré alcool (%) <span class="label-hint">pour calcul précis</span></label>
+      <input type="number" id="input-degre" placeholder="ex: 40" step="0.1" value="">
+    </div>
+    ` : ''}
+  `;
 
   document.getElementById('btn-sauver-contenance').onclick = async () => {
-    const cl_total    = parseInt(document.getElementById('input-cl-total').value)    || null;
-    const cl_restants = parseInt(document.getElementById('input-cl-restants').value) || null;
-    await db.from('items').update({ cl_total, cl_restants }).eq('id', itemId).eq('user_id', currentUser.id);
-    item.cl_total = cl_total; item.cl_restants = cl_restants;
+    const tare         = parseFloat(document.getElementById('input-tare')?.value)         || null;
+    const poids_actuel = parseFloat(document.getElementById('input-poids-actuel')?.value) || null;
+    const degre        = parseFloat(document.getElementById('input-degre')?.value)        || item.degre || null;
+    let cl_total    = parseInt(document.getElementById('input-cl-total')?.value)    || null;
+    let cl_restants = parseFloat(document.getElementById('input-cl-restants')?.value) || null;
+
+    if (tare && poids_actuel) {
+      cl_restants = calculerClDepuisPoids(poids_actuel, tare, degre);
+    }
+
+    const updates = { cl_total, cl_restants, tare_g: tare, poids_actuel_g: poids_actuel, degre };
+    await db.from('items').update(updates).eq('id', itemId).eq('user_id', currentUser.id);
+    Object.assign(item, updates);
     fermerModal('modal-contenance');
     renderCave();
   };
 
   afficherModal('modal-contenance');
 }
+
+function updateCalcPesee(itemId, catId) {
+  const item  = trouverItem(itemId, catId);
+  const tare  = parseFloat(document.getElementById('input-tare')?.value);
+  const poids = parseFloat(document.getElementById('input-poids-actuel')?.value);
+  const degre = parseFloat(document.getElementById('input-degre')?.value) || item?.degre;
+  const res   = document.getElementById('pesee-resultat');
+  if (!res) return;
+
+  if (tare && poids) {
+    const cl = calculerClDepuisPoids(poids, tare, degre);
+    res.innerHTML = '≈ <strong>' + cl + ' cl</strong> restants';
+    res.classList.add('visible');
+    const inputCl = document.getElementById('input-cl-restants');
+    if (inputCl) inputCl.value = cl;
+  } else {
+    res.innerHTML = 'Saisissez tare + poids actuel';
+    res.classList.remove('visible');
+  }
+}
+
+
 
 function ouvrirModalInfo(itemId, catId) {
   const item = trouverItem(itemId, catId);
