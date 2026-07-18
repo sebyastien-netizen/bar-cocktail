@@ -149,7 +149,7 @@ function renderCave() {
     if (filtreRecherche && items.length === 0) return;
 
     const div = document.createElement('div');
-    div.className = 'categorie' + (filtreRecherche ? ' open' : '');
+    div.className = 'categorie open';
     div.id = 'cat-' + cat.id;
 
     div.innerHTML = `
