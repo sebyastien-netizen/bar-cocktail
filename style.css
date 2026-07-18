@@ -523,3 +523,402 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   .form-row { flex-direction: column; }
   .login-card { padding: 28px 20px; }
 }
+
+/* =============================================
+   ONGLET RECETTES
+   ============================================= */
+
+.recettes-sections {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.section-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-btn:hover { color: var(--text-primary); border-color: var(--accent); }
+.section-btn.active {
+  background: rgba(201,150,58,0.15);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.section-count {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 0.75rem;
+}
+
+/* Filtres */
+.recettes-filtres {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.recettes-filtres select {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.recettes-filtres select:focus { outline: none; border-color: var(--accent); }
+.recettes-filtres select option { background: var(--bg-card); }
+
+.btn-filtre-dispo {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-filtre-dispo.active {
+  background: rgba(76,175,125,0.15);
+  border-color: var(--vert);
+  color: var(--vert);
+}
+
+/* Grille cartes */
+.recettes-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.carte-recette {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.carte-recette:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.carte-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.carte-nom {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.carte-base {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.carte-gouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tag-gout {
+  background: rgba(201,150,58,0.1);
+  border: 1px solid rgba(201,150,58,0.2);
+  border-radius: 6px;
+  color: var(--accent-light);
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+.carte-footer { margin-top: auto; }
+
+/* Badges disponibilité */
+.badge-dispo {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 8px;
+}
+
+.badge-ok  { background: rgba(76,175,125,0.15); color: var(--vert); }
+.badge-1   { background: rgba(245,166,35,0.15);  color: var(--orange); }
+.badge-2   { background: rgba(224,90,78,0.12);   color: #e8855a; }
+.badge-3   { background: rgba(138,155,176,0.1);  color: var(--text-muted); }
+
+/* Difficultés */
+.carte-diff, .tag-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.diff-facile { background: rgba(76,175,125,0.15); color: var(--vert); }
+.diff-moyen  { background: rgba(245,166,35,0.15); color: var(--orange); }
+.diff-avance { background: rgba(224,90,78,0.15);  color: var(--rouge); }
+
+.tag-meta {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-muted);
+}
+
+.empty-state {
+  grid-column: 1/-1;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px;
+  font-size: 0.9rem;
+}
+
+/* =============================================
+   FICHE RECETTE (MODAL LARGE)
+   ============================================= */
+
+.modal-large {
+  align-items: flex-start;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-fiche {
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  margin: auto;
+}
+
+.modal-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  width: 32px; height: 32px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  transition: background 0.15s, color 0.15s;
+}
+
+.modal-close:hover { background: rgba(224,90,78,0.2); color: var(--rouge); }
+
+.fiche-header {
+  margin-bottom: 24px;
+  padding-right: 40px;
+}
+
+.fiche-titre {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--accent-light);
+  margin-bottom: 10px;
+}
+
+.fiche-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.fiche-gouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fiche-section {
+  margin-bottom: 24px;
+}
+
+.fiche-section h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fiche-portion {
+  font-size: 0.7rem;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Ingrédients */
+.fiche-ingredients {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ing-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+}
+
+.ing-dot {
+  font-size: 0.6rem;
+  color: var(--vert);
+  flex-shrink: 0;
+}
+
+.ing-manquant .ing-dot { color: var(--rouge); }
+.ing-optionnel { opacity: 0.6; }
+
+.ing-manquant-label {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--rouge);
+  background: rgba(224,90,78,0.1);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.ing-opt-label {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Matériels */
+.fiche-materiels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-materiel {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: var(--text-detail);
+  font-size: 0.8rem;
+  padding: 4px 10px;
+}
+
+.materiel-optionnel { opacity: 0.55; font-style: italic; }
+
+/* Étapes */
+.fiche-etapes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  counter-reset: etape-counter;
+}
+
+.etape-item {
+  display: flex;
+  gap: 14px;
+  counter-increment: etape-counter;
+}
+
+.etape-item::before {
+  content: counter(etape-counter);
+  background: rgba(201,150,58,0.2);
+  color: var(--accent-light);
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.etape-titre {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.etape-desc {
+  font-size: 0.85rem;
+  color: var(--text-detail);
+  line-height: 1.55;
+}
+
+/* Anecdote */
+.fiche-anecdote {
+  background: rgba(201,150,58,0.06);
+  border: 1px solid rgba(201,150,58,0.15);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.fiche-anecdote p {
+  font-size: 0.85rem;
+  color: var(--text-detail);
+  line-height: 1.6;
+  margin: 0;
+  font-style: italic;
+}
+
+/* =============================================
+   RESPONSIVE RECETTES
+   ============================================= */
+
+@media (max-width: 600px) {
+  .recettes-grille { grid-template-columns: 1fr; }
+  .recettes-filtres { gap: 8px; }
+  .recettes-filtres select { font-size: 0.78rem; padding: 6px 10px; }
+  .modal-fiche { max-height: 95vh; }
+}

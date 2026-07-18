@@ -16,9 +16,7 @@
       <div class="login-logo">🍸</div>
       <h1 class="login-title">Bar à Cocktail</h1>
       <p class="login-sub">Connexion à votre cave</p>
-
       <div id="login-error" class="login-error hidden"></div>
-
       <div class="form-group">
         <label>Email</label>
         <input type="email" id="input-email" placeholder="seb@example.com" autocomplete="email">
@@ -27,7 +25,6 @@
         <label>Mot de passe</label>
         <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password">
       </div>
-
       <button class="btn btn-full" id="btn-login">Se connecter</button>
       <button class="btn btn-outline btn-full" id="btn-signup" style="margin-top:10px">Créer un compte</button>
     </div>
@@ -36,36 +33,45 @@
   <!-- ===== APP PRINCIPALE ===== -->
   <div id="screen-app" class="hidden">
 
-    <!-- HEADER -->
     <header>
       <span style="font-size:1.4rem">🍸</span>
       <h1>Bar à Cocktail</h1>
-      <span class="subtitle">v0.2 — Ma Cave</span>
+      <span class="subtitle">v0.3</span>
       <button class="btn-logout" id="btn-logout" title="Déconnexion">⏏</button>
     </header>
 
-    <!-- NAVIGATION -->
     <nav>
-      <button class="active">🍶 Ma Cave</button>
-      <button disabled title="Bientôt">🍹 Recettes</button>
+      <button class="active" data-tab="cave">🍶 Ma Cave</button>
+      <button data-tab="recettes">🍹 Recettes</button>
       <button disabled title="Bientôt">📊 Dashboard</button>
       <button disabled title="Bientôt">⚗️ Concoctions</button>
       <button disabled title="Bientôt">🎓 École</button>
       <button disabled title="Bientôt">🛒 À acheter</button>
     </nav>
 
-    <!-- CONTENU PRINCIPAL -->
     <main>
-      <div id="section-cave">
-        <div class="cave-header">
-          <h2>🍶 Ma Cave</h2>
-        </div>
-        <div id="cave-container">
-          <div class="loading-state">Chargement de la cave…</div>
-        </div>
-      </div>
-    </main>
 
+      <!-- MA CAVE -->
+      <div id="section-cave" class="tab-section">
+        <div class="cave-header"><h2>🍶 Ma Cave</h2></div>
+        <div id="cave-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
+      <!-- RECETTES -->
+      <div id="section-recettes" class="tab-section hidden">
+        <div class="cave-header"><h2>🍹 Recettes</h2></div>
+        <div id="recettes-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODAL : FICHE RECETTE -->
+  <div class="modal-overlay modal-large" id="modal-fiche-recette">
+    <div class="modal modal-fiche">
+      <button class="modal-close" onclick="fermerModal('modal-fiche-recette')">✕</button>
+      <div class="fiche-contenu"></div>
+    </div>
   </div>
 
   <!-- MODAL : OUVERTURE BOUTEILLE -->
@@ -137,7 +143,6 @@
     </div>
   </div>
 
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
