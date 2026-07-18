@@ -87,21 +87,11 @@
     </div>
   </div>
 
-  <!-- MODAL : CONTENANCE -->
+  <!-- MODAL : CONTENANCE / PESÉE -->
   <div class="modal-overlay" id="modal-contenance">
     <div class="modal">
       <h3 id="modal-contenance-titre"></h3>
-      <p>Renseignez la taille et le niveau de cette bouteille.</p>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Contenance totale (cl)</label>
-          <input type="number" id="input-cl-total" placeholder="ex: 70">
-        </div>
-        <div class="form-group">
-          <label>Quantité restante (cl)</label>
-          <input type="number" id="input-cl-restants" placeholder="ex: 45">
-        </div>
-      </div>
+      <div class="modal-contenance-body"></div>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="fermerModal('modal-contenance')">Annuler</button>
         <button class="btn" id="btn-sauver-contenance">Enregistrer</button>

@@ -115,7 +115,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(btn => {
 async function chargerCave() {
   const [{ data: cats }, { data: items }, { data: aAcheter }] = await Promise.all([
     db.from('categories').select('*').order('ordre'),
-    db.from('items').select('*'),
+    db.from('items').select('*, tare_g, poids_actuel_g, degre'),
     db.from('a_acheter').select('*')
   ]);
 
@@ -281,7 +281,7 @@ function badgeDisponibilite(nbManquants) {
 
 async function chargerRecettes() {
   const [{ data: recs }, { data: ings }, { data: etapes }, { data: mats }] = await Promise.all([
-    db.from('recettes').select('*'),
+    db.from('recettes').select('*, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi, variante_alcool, variante_prestige, variante_mocktail_id, variante_notes, prix_portion, kit_portable'),
     db.from('recette_ingredients').select('*').order('ordre'),
     db.from('recette_etapes').select('*').order('ordre'),
     db.from('recette_materiels').select('*')
@@ -394,27 +394,52 @@ function changerSection(section) {
 }
 
 // =============================================
-// FICHE DÉTAILLÉE RECETTE
+// FICHE RECETTE — Rendu complet v2
+// Sélecteur portions, profil gustatif,
+// dégustation, variantes, prix, bouton Réalisée
 // =============================================
 
 function ouvrirFicheRecette(id) {
   recetteOuverte = recettes.find(r => r.id === id);
   if (!recetteOuverte) return;
+  renderFiche(1);
+  afficherModal('modal-fiche-recette');
+}
 
+function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
   const caveIds = getItemsCave();
+  const diffLabel = { facile:'Facile', moyen:'Moyen', avance:'Avancé' }[r.difficulte] || r.difficulte;
 
-  const modal = document.getElementById('modal-fiche-recette');
-  modal.querySelector('.fiche-contenu').innerHTML = `
-    <!-- En-tête -->
+  // Conseil organisation si portions >= 2
+  const conseilOrga = portions >= 2 ? `
+    <div class="conseil-orga">
+      <span class="conseil-icon">🍹</span>
+      <span>Pour ${portions} verres : préparez tous les ingrédients à l'avance. Shakez en plusieurs fois (max 2 portions par shaker). Servez rapidement.</span>
+    </div>
+  ` : '';
+
+  // Prix estimé
+  const prixHtml = r.prix_portion ? `
+    <span class="tag-prix">~${(r.prix_portion * portions).toFixed(2)}€${portions > 1 ? ` (${portions} verres)` : ''}</span>
+  ` : '';
+
+  // Badge kit portable
+  const kitHtml = r.kit_portable ? `<span class="tag-kit">✓ KIT</span>` : '';
+
+  document.querySelector('.fiche-contenu').innerHTML = `
+
+    <!-- EN-TÊTE -->
     <div class="fiche-header">
       <div>
         <h2 class="fiche-titre">${r.nom}</h2>
         <div class="fiche-meta">
           ${r.base_alcool ? `<span class="tag-meta">🥃 ${r.base_alcool}</span>` : ''}
-          <span class="tag-meta diff-${r.difficulte}">${{ facile:'Facile', moyen:'Moyen', avance:'Avancé' }[r.difficulte]}</span>
+          <span class="tag-meta diff-${r.difficulte}">${diffLabel}</span>
           ${badgeDisponibilite(nbManquants)}
+          ${prixHtml}
+          ${kitHtml}
         </div>
         <div class="fiche-gouts">
           ${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}
@@ -422,17 +447,31 @@ function ouvrirFicheRecette(id) {
       </div>
     </div>
 
-    <!-- Ingrédients -->
+    <!-- SÉLECTEUR PORTIONS -->
+    <div class="fiche-portions">
+      <span class="portions-label">Portions</span>
+      <div class="portions-ctrl">
+        <button class="portions-btn" onclick="changerPortions(${portions - 1})" ${portions <= 1 ? 'disabled' : ''}>−</button>
+        <span class="portions-val">${portions}</span>
+        <button class="portions-btn" onclick="changerPortions(${portions + 1})" ${portions >= 10 ? 'disabled' : ''}>+</button>
+      </div>
+    </div>
+    ${conseilOrga}
+
+    <!-- INGRÉDIENTS -->
     <div class="fiche-section">
-      <h3>Ingrédients <span class="fiche-portion">pour 1 verre</span></h3>
+      <h3>Ingrédients <span class="fiche-portion">pour ${portions} verre${portions > 1 ? 's' : ''}</span></h3>
       <ul class="fiche-ingredients">
         ${(r.ingredients || []).map(ing => {
           const enCave = ing.item_cave_id ? caveIds.has(ing.item_cave_id) : true;
-          const quantite = ing.quantite ? `<strong>${ing.quantite} ${ing.unite || ''}</strong>` : '';
+          const qte = ing.quantite ? (ing.quantite * portions) : null;
+          const qteStr = qte !== null
+            ? `<strong>${Number.isInteger(qte) ? qte : qte.toFixed(1)} ${ing.unite || ''}</strong>`
+            : '';
           return `
             <li class="ing-item ${!enCave && !ing.optionnel ? 'ing-manquant' : ''} ${ing.optionnel ? 'ing-optionnel' : ''}">
               <span class="ing-dot">${enCave ? '●' : '○'}</span>
-              ${quantite} ${ing.nom}
+              <span class="ing-texte">${qteStr} ${ing.nom}</span>
               ${ing.optionnel ? '<span class="ing-opt-label">optionnel</span>' : ''}
               ${!enCave && !ing.optionnel ? '<span class="ing-manquant-label">manquant</span>' : ''}
             </li>
@@ -441,7 +480,7 @@ function ouvrirFicheRecette(id) {
       </ul>
     </div>
 
-    <!-- Matériels -->
+    <!-- MATÉRIELS -->
     ${r.materiels && r.materiels.length > 0 ? `
     <div class="fiche-section">
       <h3>Matériels</h3>
@@ -451,7 +490,7 @@ function ouvrirFicheRecette(id) {
     </div>
     ` : ''}
 
-    <!-- Étapes -->
+    <!-- ÉTAPES -->
     <div class="fiche-section">
       <h3>Préparation</h3>
       <ol class="fiche-etapes">
@@ -464,17 +503,173 @@ function ouvrirFicheRecette(id) {
       </ol>
     </div>
 
-    <!-- Anecdote -->
+    <!-- PROFIL GUSTATIF -->
+    ${hasProfil(r) ? `
+    <div class="fiche-section">
+      <h3>Profil gustatif</h3>
+      <div class="profil-barres">
+        ${renderBarre('Sucré',   r.gout_sucre)}
+        ${renderBarre('Amer',    r.gout_amer)}
+        ${renderBarre('Acide',   r.gout_acide)}
+        ${renderBarre('Fruité',  r.gout_fruite)}
+        ${renderBarre('Fumé',    r.gout_fume)}
+        ${renderBarre('Floral',  r.gout_floral)}
+        ${renderBarre('Épicé',   r.gout_epice)}
+        ${renderBarre('Crémeux', r.gout_cremeux)}
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- GUIDE DÉGUSTATION -->
+    ${r.degustation_voir ? `
+    <div class="fiche-section">
+      <h3>Guide de dégustation</h3>
+      <div class="degustation-steps">
+        <div class="degu-step">
+          <span class="degu-icon">👁</span>
+          <div><div class="degu-titre">Regardez</div><div class="degu-texte">${r.degustation_voir}</div></div>
+        </div>
+        <div class="degu-step">
+          <span class="degu-icon">👃</span>
+          <div><div class="degu-titre">Sentez</div><div class="degu-texte">${r.degustation_sentir}</div></div>
+        </div>
+        <div class="degu-step">
+          <span class="degu-icon">👅</span>
+          <div><div class="degu-titre">Goûtez</div><div class="degu-texte">${r.degustation_gout}</div></div>
+        </div>
+        <div class="degu-step">
+          <span class="degu-icon">✨</span>
+          <div><div class="degu-titre">Finish</div><div class="degu-texte">${r.degustation_finish}</div></div>
+        </div>
+        ${r.degustation_defi ? `
+        <div class="degu-step degu-defi">
+          <span class="degu-icon">🎯</span>
+          <div><div class="degu-titre">Défi détection</div><div class="degu-texte">${r.degustation_defi}</div></div>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- VARIANTES -->
+    ${hasVariantes(r) ? `
+    <div class="fiche-section">
+      <h3>Variantes</h3>
+      <div class="variantes-list">
+        ${r.variante_alcool ? `
+        <div class="variante-item">
+          <span class="variante-label">🔄 Autre alcool</span>
+          <p>${r.variante_alcool}</p>
+        </div>` : ''}
+        ${r.variante_prestige ? `
+        <div class="variante-item variante-prestige">
+          <span class="variante-label">⭐ Version Prestige</span>
+          <p>${r.variante_prestige}</p>
+        </div>` : ''}
+        ${r.variante_mocktail_id ? `
+        <div class="variante-item variante-mocktail">
+          <span class="variante-label">🧃 Mocktail associé</span>
+          <button class="btn-variante-link" onclick="fermerModal('modal-fiche-recette'); setTimeout(()=>{ changerSection('mocktail'); ouvrirFicheRecette('${r.variante_mocktail_id}'); }, 200)">
+            Voir ${recettes.find(x=>x.id===r.variante_mocktail_id)?.nom || r.variante_mocktail_id} →
+          </button>
+        </div>` : ''}
+        ${r.variante_notes ? `
+        <div class="variante-item">
+          <span class="variante-label">💡 Notes</span>
+          <p>${r.variante_notes}</p>
+        </div>` : ''}
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- ANECDOTE -->
     ${r.anecdote ? `
     <div class="fiche-section fiche-anecdote">
       <h3>📖 Histoire</h3>
       <p>${r.anecdote}</p>
     </div>
     ` : ''}
-  `;
 
-  afficherModal('modal-fiche-recette');
+    <!-- BOUTON RÉALISÉE -->
+    <div class="fiche-action">
+      <button class="btn btn-realiser" onclick="marquerRealisee(${portions})">
+        ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
+      </button>
+    </div>
+  `;
 }
+
+function changerPortions(n) {
+  if (n < 1 || n > 10) return;
+  renderFiche(n);
+}
+
+function hasProfil(r) {
+  return r.gout_sucre || r.gout_amer || r.gout_acide || r.gout_fruite ||
+         r.gout_fume  || r.gout_floral || r.gout_epice || r.gout_cremeux;
+}
+
+function hasVariantes(r) {
+  return r.variante_alcool || r.variante_prestige || r.variante_mocktail_id || r.variante_notes;
+}
+
+function renderBarre(label, valeur) {
+  if (!valeur) return '';
+  const pct = Math.round((valeur / 10) * 100);
+  const couleur = valeur >= 7 ? 'var(--accent)' : valeur >= 4 ? 'var(--accent-light)' : 'var(--text-muted)';
+  return `
+    <div class="barre-row">
+      <span class="barre-label">${label}</span>
+      <div class="barre-track">
+        <div class="barre-fill" style="width:${pct}%; background:${couleur}"></div>
+      </div>
+      <span class="barre-val">${valeur}/10</span>
+    </div>
+  `;
+}
+
+async function marquerRealisee(portions) {
+  const r = recetteOuverte;
+  const caveIds = getItemsCave();
+
+  // Décrémenter les cl_restants pour chaque ingrédient présent en cave
+  const updates = [];
+  for (const ing of (r.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || !ing.unite) continue;
+    if (!caveIds.has(ing.item_cave_id)) continue;
+    if (ing.unite !== 'cl') continue; // seulement les cl
+
+    // Trouver l'item dans la cave
+    for (const cat of cave.categories) {
+      const item = cat.items.find(i => i.id === ing.item_cave_id);
+      if (item && item.cl_restants !== null) {
+        const nouveau = Math.max(0, item.cl_restants - (ing.quantite * portions));
+        updates.push({ item, nouveau });
+      }
+    }
+  }
+
+  // Appliquer les mises à jour
+  for (const { item, nouveau } of updates) {
+    await db.from('items').update({ cl_restants: nouveau }).eq('id', item.id).eq('user_id', currentUser.id);
+    item.cl_restants = nouveau;
+  }
+
+  fermerModal('modal-fiche-recette');
+
+  // Feedback visuel
+  const feedback = document.createElement('div');
+  feedback.className = 'toast-feedback';
+  feedback.textContent = updates.length > 0
+    ? `✓ Cave mise à jour (${updates.length} bouteille${updates.length > 1 ? 's' : ''} décrémentée${updates.length > 1 ? 's' : ''})`
+    : '✓ Recette marquée comme réalisée';
+  document.body.appendChild(feedback);
+  setTimeout(() => feedback.classList.add('visible'), 50);
+  setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 2500);
+
+  renderCave();
+}
+
 
 // =============================================
 // MODALS CAVE

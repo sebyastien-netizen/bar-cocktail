@@ -922,3 +922,347 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   .recettes-filtres select { font-size: 0.78rem; padding: 6px 10px; }
   .modal-fiche { max-height: 95vh; }
 }
+
+/* =============================================
+   FICHE RECETTE v2 — Portions, Profil, Dégustation, Variantes
+   ============================================= */
+
+/* Sélecteur portions */
+.fiche-portions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.portions-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.portions-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.portions-btn {
+  background: rgba(201,150,58,0.15);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent-light);
+  width: 32px; height: 32px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+
+.portions-btn:hover:not(:disabled) { background: rgba(201,150,58,0.3); }
+.portions-btn:disabled { opacity: 0.3; cursor: default; }
+
+.portions-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Conseil organisation */
+.conseil-orga {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(201,150,58,0.08);
+  border: 1px solid rgba(201,150,58,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: var(--text-detail);
+}
+
+.conseil-icon { flex-shrink: 0; font-size: 1rem; }
+
+/* Tag prix et kit */
+.tag-prix {
+  background: rgba(76,175,125,0.12);
+  color: var(--vert);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+}
+
+.tag-kit {
+  background: rgba(201,150,58,0.15);
+  color: var(--accent-light);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  letter-spacing: 0.03em;
+}
+
+/* Profil gustatif */
+.profil-barres {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.barre-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.barre-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  width: 62px;
+  flex-shrink: 0;
+}
+
+.barre-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barre-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.barre-val {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Guide dégustation */
+.degustation-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.degu-step {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+}
+
+.degu-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+.degu-titre {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.degu-texte {
+  font-size: 0.85rem;
+  color: var(--text-detail);
+  line-height: 1.55;
+}
+
+.degu-defi {
+  background: rgba(201,150,58,0.08);
+  border: 1px solid rgba(201,150,58,0.2);
+}
+
+.degu-defi .degu-titre { color: var(--accent-light); }
+
+/* Variantes */
+.variantes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.variante-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.variante-prestige {
+  background: rgba(201,150,58,0.06);
+  border: 1px solid rgba(201,150,58,0.15);
+}
+
+.variante-mocktail { border: 1px solid rgba(76,175,125,0.15); }
+
+.variante-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.variante-prestige .variante-label { color: var(--accent-light); }
+.variante-mocktail .variante-label { color: var(--vert); }
+
+.variante-item p {
+  font-size: 0.85rem;
+  color: var(--text-detail);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.btn-variante-link {
+  background: rgba(76,175,125,0.12);
+  border: 1px solid rgba(76,175,125,0.25);
+  border-radius: 6px;
+  color: var(--vert);
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-variante-link:hover { background: rgba(76,175,125,0.2); }
+
+/* Bouton réalisée */
+.fiche-action {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.btn-realiser {
+  width: 100%;
+  justify-content: center;
+  background: rgba(76,175,125,0.15);
+  color: var(--vert);
+  border: 1px solid rgba(76,175,125,0.3);
+  font-size: 0.88rem;
+  padding: 12px;
+}
+
+.btn-realiser:hover {
+  background: rgba(76,175,125,0.25);
+  transform: none;
+}
+
+/* Toast feedback */
+.toast-feedback {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-card);
+  border: 1px solid rgba(76,175,125,0.4);
+  border-radius: 10px;
+  color: var(--vert);
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 12px 20px;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  white-space: nowrap;
+}
+
+.toast-feedback.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Texte ingrédient */
+.ing-texte { flex: 1; }
+
+/* =============================================
+   MODAL PESÉE BOUTEILLE
+   ============================================= */
+
+.pesee-section {
+  background: rgba(201,150,58,0.05);
+  border: 1px solid rgba(201,150,58,0.15);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.pesee-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pesee-resultat {
+  background: rgba(76,175,125,0.08);
+  border: 1px solid rgba(76,175,125,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.pesee-resultat.visible {
+  color: var(--vert);
+  background: rgba(76,175,125,0.12);
+}
+
+.pesee-resultat strong {
+  font-size: 1.1rem;
+  color: var(--vert);
+}
+
+.pesee-ou {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 14px 0 10px;
+  position: relative;
+}
+
+.pesee-ou::before, .pesee-ou::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 35%;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+
+.pesee-ou::before { left: 0; }
+.pesee-ou::after  { right: 0; }
+
+.label-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.modal-contenance-body .form-group { margin-bottom: 14px; }
