@@ -1029,3 +1029,50 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   .cave-nav-btn { font-size: 0.82rem; padding: 6px 14px; }
   .cave-nav-btn span { font-size: 0.82rem; }
 }
+
+/* =============================================
+   MODAL AJOUT ENRICHIE
+   ============================================= */
+
+.modal-ajout-large { max-width: 520px; max-height: 90vh; overflow-y: auto; }
+
+.ajout-nom-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.ajout-nom-row input { flex: 1; }
+
+.btn-identifier {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+
+.ajout-claude-result {
+  display: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+}
+
+.ajout-claude-result.visible { display: block; }
+
+.ajout-claude-success {
+  background: rgba(76,175,125,0.1);
+  border: 1px solid rgba(76,175,125,0.3);
+  color: var(--vert);
+  border-radius: 7px;
+  padding: 8px 12px;
+}
+
+.ajout-claude-warning {
+  background: rgba(245,166,35,0.1);
+  border: 1px solid rgba(245,166,35,0.3);
+  color: var(--orange);
+  border-radius: 7px;
+  padding: 8px 12px;
+}

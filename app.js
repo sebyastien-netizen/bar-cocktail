@@ -896,30 +896,127 @@ function ouvrirModalInfo(itemId, catId) {
 }
 
 function ouvrirModalAjout() {
+  const modal = document.getElementById('modal-ajout');
+
+  // Remplir le select catégories (sans les "à acquérir")
   const select = document.getElementById('select-categorie-ajout');
-  select.innerHTML = cave.categories.map(c =>
-    `<option value="${c.id}">${c.icon} ${c.label}</option>`
-  ).join('');
+  select.innerHTML = cave.categories
+    .filter(c => !c.id.startsWith('a-acheter') && !c.id.startsWith('ingredients'))
+    .map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`)
+    .join('');
 
-  document.getElementById('input-nom-ajout').value    = '';
-  document.getElementById('input-detail-ajout').value = '';
+  // Reset
+  modal.querySelector('#input-nom-ajout').value         = '';
+  modal.querySelector('#input-detail-ajout').value      = '';
+  modal.querySelector('#input-degre-ajout').value       = '';
+  modal.querySelector('#input-prix-paye-ajout').value   = '';
+  modal.querySelector('#input-cl-ajout').value          = '';
+  modal.querySelector('#input-origine-ajout').value     = '';
+  modal.querySelector('#input-anecdote-ajout').value    = '';
+  modal.querySelector('#ajout-claude-result').innerHTML = '';
+  modal.querySelector('#ajout-claude-result').classList.remove('visible');
 
-  document.getElementById('btn-confirmer-ajout').onclick = async () => {
-    const catId  = select.value;
-    const nom    = document.getElementById('input-nom-ajout').value.trim();
-    const detail = document.getElementById('input-detail-ajout').value.trim();
+  // Bouton identifier
+  modal.querySelector('#btn-identifier-claude').onclick = async () => {
+    const nom = modal.querySelector('#input-nom-ajout').value.trim();
+    if (!nom) { alert("Saisissez d'abord le nom du produit."); return; }
+
+    const btn = modal.querySelector('#btn-identifier-claude');
+    btn.disabled = true;
+    btn.textContent = '⏳ Identification…';
+
+    const result = modal.querySelector('#ajout-claude-result');
+    result.innerHTML = '';
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `Tu es expert en spiritueux. Identifie ce produit : "${nom}".
+Réponds UNIQUEMENT en JSON valide, sans markdown :
+{
+  "identifie": true/false,
+  "trop_vague": true/false,
+  "categorie_id": "une parmi : liqueurs, gin, vodka, whisky, mezcal-tequila, rhum, eaux-de-vie, bulles, bitters, vermouth, triples-secs, sirops",
+  "degre": nombre ou null,
+  "description": "1-2 phrases max" ou null,
+  "origine": "1-2 phrases max" ou null,
+  "anecdote": "1-2 phrases max" ou null
+}
+Si le produit est trop vague (juste "gin", "whisky"...), mets trop_vague: true et identifie: false.
+Si inconnu, mets identifie: false et les autres champs à null.`
+          }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content?.[0]?.text || '{}';
+      const info = JSON.parse(text);
+
+      if (info.trop_vague) {
+        result.innerHTML = '<div class="ajout-claude-warning">⚠️ Nom trop vague — précisez la marque complète.</div>';
+        result.classList.add('visible');
+      } else if (!info.identifie) {
+        result.innerHTML = '<div class="ajout-claude-warning">❓ Produit non identifié — remplissez les champs manuellement.</div>';
+        result.classList.add('visible');
+      } else {
+        // Pré-remplir les champs
+        if (info.categorie_id) select.value = info.categorie_id;
+        if (info.degre) modal.querySelector('#input-degre-ajout').value = info.degre;
+        if (info.description) modal.querySelector('#input-detail-ajout').value = info.description;
+        if (info.origine) modal.querySelector('#input-origine-ajout').value = info.origine;
+        if (info.anecdote) modal.querySelector('#input-anecdote-ajout').value = info.anecdote;
+
+        result.innerHTML = `<div class="ajout-claude-success">✅ Identifié — champs pré-remplis, vérifiez et complétez.</div>`;
+        result.classList.add('visible');
+      }
+    } catch(e) {
+      result.innerHTML = "<div class='ajout-claude-warning'>Erreur d'identification. Remplissez manuellement.</div>";
+      result.classList.add('visible');
+    }
+
+    btn.disabled = false;
+    btn.textContent = '✨ Identifier avec Claude';
+  };
+
+  // Bouton confirmer
+  modal.querySelector('#btn-confirmer-ajout').onclick = async () => {
+    const catId   = select.value;
+    const nom     = modal.querySelector('#input-nom-ajout').value.trim();
+    const detail  = modal.querySelector('#input-detail-ajout').value.trim();
+    const degre   = parseFloat(modal.querySelector('#input-degre-ajout').value) || null;
+    const prixPaye = parseFloat(modal.querySelector('#input-prix-paye-ajout').value) || null;
+    const cl_total = parseInt(modal.querySelector('#input-cl-ajout').value) || null;
+    const origine  = modal.querySelector('#input-origine-ajout').value.trim();
+    const anecdote = modal.querySelector('#input-anecdote-ajout').value.trim();
     if (!nom) return;
 
     const newItem = {
-      id: 'custom-' + Date.now(), user_id: currentUser.id,
-      category_id: catId, nom, detail,
-      ouvert: false, conservation: null, cl_total: null, cl_restants: null, prix_estime: null
+      id:               'custom-' + Date.now(),
+      user_id:          currentUser.id,
+      category_id:      catId,
+      nom, detail,
+      degre,
+      prix_estime:      prixPaye,
+      cl_total,
+      cl_restants:      cl_total,
+      ouvert:           false,
+      detenu:           true,
+      conservation:     null,
+      info_description: detail || null,
+      info_origine:     origine || null,
+      info_anecdote:    anecdote || null
     };
 
     const { data, error } = await db.from('items').insert(newItem).select().single();
     if (!error && data) {
       const cat = cave.categories.find(c => c.id === catId);
-      cat.items.push(data);
+      if (cat) cat.items.push(data);
     }
 
     fermerModal('modal-ajout');
