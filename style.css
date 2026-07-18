@@ -869,3 +869,105 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 }
 
 
+
+/* =============================================
+   À ACHETER — Refonte catégories + recettes
+   ============================================= */
+
+.aacheter-header { margin-bottom: 20px; }
+.aacheter-intro { font-size: 0.83rem; color: var(--text-muted); }
+
+.aacheter-groupe { margin-bottom: 28px; }
+
+.aacheter-groupe-titre {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.aacheter-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.aacheter-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.aacheter-nom {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.aacheter-raison {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Recettes débloquées */
+.aacheter-recettes-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aacheter-recette-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 7px;
+}
+
+.chip-nom {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.chip-base {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 1px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.chip-diff {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.chip-gouts {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chip-more {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 10px;
+}

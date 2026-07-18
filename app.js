@@ -1240,73 +1240,121 @@ async function chargerAAcheter() {
   if (!container) return;
   container.innerHTML = '<div class="loading-state">Calcul en cours…</div>';
 
-  // Récupérer toutes les recettes avec leurs ingrédients
   const caveIds = getItemsCave();
-  const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu').eq('user_id', currentUser.id);
+  const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu, category_id').eq('user_id', currentUser.id);
+  const { data: aAcheter } = await db.from('a_acheter').select('*').eq('user_id', currentUser.id);
 
-  // Calculer quels ingrédients débloquent le plus de recettes
+  // Catégorisation des items à acquérir
+  const catGroupes = {
+    spiritueux:    { label: '🥃 Spiritueux',       ids: ['a-acheter-spirits'] },
+    liqueurs:      { label: '🍯 Liqueurs',          ids: ['a-acheter-liqueurs'] },
+    vins_amers:    { label: '🍷 Vins & Amers',      ids: ['a-acheter-vins', 'a-acheter-bitters'] },
+    sirops:        { label: '🍬 Sirops & Épicerie', ids: ['a-acheter-sirops', 'ingredients-frais'] }
+  };
+
+  // Calcul score par item manquant
   const scoreMap = {};
   recettes.forEach(r => {
     const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
     manquants.forEach(ing => {
       if (!scoreMap[ing.item_cave_id]) {
         const itemData = allItems?.find(i => i.id === ing.item_cave_id);
-        scoreMap[ing.item_cave_id] = { nom: ing.nom, count: 0, prix: itemData?.prix_estime || null, recettes: [] };
+        scoreMap[ing.item_cave_id] = {
+          id: ing.item_cave_id,
+          nom: ing.nom,
+          count: 0,
+          prix: itemData?.prix_estime || null,
+          category_id: itemData?.category_id || null,
+          recettesDetail: []
+        };
       }
       scoreMap[ing.item_cave_id].count++;
-      scoreMap[ing.item_cave_id].recettes.push(r.nom);
+      scoreMap[ing.item_cave_id].recettesDetail.push(r);
     });
   });
 
-  // Trier par score
-  const sorted = Object.entries(scoreMap)
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 15);
+  const allScored = Object.values(scoreMap).sort((a, b) => b.count - a.count);
 
-  // Éléments de la liste a_acheter
-  const { data: aAcheter } = await db.from('a_acheter').select('*').eq('user_id', currentUser.id);
+  // Rendu par groupe
+  function renderGroupe(groupe, items) {
+    if (items.length === 0) return '';
+    return `
+      <div class="aacheter-groupe">
+        <h3 class="aacheter-groupe-titre">${groupe.label}</h3>
+        <div class="aacheter-liste">
+          ${items.map(item => `
+            <div class="aacheter-item">
+              <div class="aacheter-item-header">
+                <div class="aacheter-nom">${item.nom}</div>
+                <div class="aacheter-right">
+                  ${item.prix ? `<span class="item-prix">~${item.prix}€</span>` : ''}
+                  <span class="aacheter-badge">${item.count} recette${item.count > 1 ? 's' : ''}</span>
+                </div>
+              </div>
+              <div class="aacheter-recettes-detail">
+                ${item.recettesDetail.slice(0, 4).map(r => `
+                  <div class="aacheter-recette-chip">
+                    <span class="chip-nom">${r.nom}</span>
+                    ${r.base_alcool ? `<span class="chip-base">${r.base_alcool}</span>` : ''}
+                    <span class="chip-diff diff-${r.difficulte}">${{facile:'Facile',moyen:'Moyen',avance:'Avancé'}[r.difficulte]||''}</span>
+                    <div class="chip-gouts">${(r.gouts||[]).slice(0,3).map(g=>`<span class="tag-gout">${g}</span>`).join('')}</div>
+                  </div>
+                `).join('')}
+                ${item.recettesDetail.length > 4 ? `<div class="chip-more">+${item.recettesDetail.length-4} autres recettes</div>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Répartir par groupe
+  const grouped = {};
+  Object.keys(catGroupes).forEach(k => grouped[k] = []);
+
+  allScored.forEach(item => {
+    for (const [key, groupe] of Object.entries(catGroupes)) {
+      if (groupe.ids.includes(item.category_id)) {
+        grouped[key].push(item);
+        return;
+      }
+    }
+    // Items non catégorisés → spiritueux par défaut
+    grouped['spiritueux'].push(item);
+  });
+
+  // Liste prioritaire (a_acheter sans doublon avec scoreMap)
+  const prioritaires = (aAcheter || []).filter(a => !scoreMap[a.id]);
 
   container.innerHTML = `
-    ${sorted.length > 0 ? `
-    <div class="aacheter-section">
-      <h3 class="aacheter-titre">🔓 Débloquent le plus de recettes</h3>
-      <div class="aacheter-liste">
-        ${sorted.map(([id, item]) => `
-          <div class="aacheter-item">
-            <div class="aacheter-info">
-              <div class="aacheter-nom">${item.nom}</div>
-              <div class="aacheter-recettes">${item.recettes.slice(0,3).join(', ')}${item.recettes.length > 3 ? ` +${item.recettes.length-3}` : ''}</div>
-            </div>
-            <div class="aacheter-right">
-              ${item.prix ? `<span class="item-prix">~${item.prix}€</span>` : ''}
-              <span class="aacheter-badge">${item.count} recette${item.count > 1 ? 's' : ''}</span>
-            </div>
-          </div>
-        `).join('')}
-      </div>
+    <div class="aacheter-header">
+      <p class="aacheter-intro">Ingrédients qui débloquent des recettes supplémentaires, classés par catégorie.</p>
     </div>
-    ` : '<div class="empty-state">🎉 Ta cave couvre toutes les recettes !</div>'}
 
-    ${aAcheter && aAcheter.length > 0 ? `
-    <div class="aacheter-section">
-      <h3 class="aacheter-titre">⭐ Liste prioritaire</h3>
+    ${Object.entries(catGroupes).map(([key, groupe]) =>
+      renderGroupe(groupe, grouped[key])
+    ).join('')}
+
+    ${prioritaires.length > 0 ? `
+    <div class="aacheter-groupe">
+      <h3 class="aacheter-groupe-titre">⭐ Prioritaires (sans recette liée)</h3>
       <div class="aacheter-liste">
-        ${aAcheter.map(item => `
+        ${prioritaires.map(item => `
           <div class="aacheter-item">
-            <div class="aacheter-info">
+            <div class="aacheter-item-header">
               <div class="aacheter-nom">${item.nom}</div>
-              <div class="aacheter-recettes">${item.raison}</div>
+              ${item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
             </div>
-            ${item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
+            <div class="aacheter-raison">${item.raison}</div>
           </div>
         `).join('')}
       </div>
     </div>
     ` : ''}
 
-    <div class="aacheter-section">
-      <button class="btn btn-outline btn-apport" id="btn-apport-gustatif"
-        onclick="chargerApportGustatif()">
+    <div class="aacheter-groupe">
+      <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
         ✨ Analyser l'apport gustatif (Claude)
       </button>
       <div id="apport-gustatif-result"></div>
