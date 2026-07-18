@@ -929,15 +929,16 @@ function ouvrirModalAjout() {
     result.innerHTML = '';
  
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/.netlify/functions/identifier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom })
+      });
+      const _skipOld = false && fetch('https://skip', {
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
           messages: [{
             role: 'user',
-            content: `Tu es expert en spiritueux. Identifie ce produit : "${nom}".
+            content: `Tu es expert en spiritueux placeholder "${nom}".
 Réponds UNIQUEMENT en JSON valide, sans markdown :
 {
   "identifie": true/false,
@@ -1505,21 +1506,12 @@ async function chargerApportGustatif() {
   const manquantsTop = Object.entries(scoreMap).sort((a,b) => b[1]-a[1]).slice(0,8).map(([nom]) => nom).join(', ');
  
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const apportResponse = await fetch('/.netlify/functions/apport', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `Tu es un expert bartender. Cave actuelle de Seb : ${caveNoms}. Ingrédients manquants qui débloquent le plus de recettes : ${manquantsTop}. Pour chaque ingrédient manquant, explique en 1-2 phrases l'apport gustatif qu'il apporterait à la cave et quels accords il ouvrirait avec les alcools déjà présents. Réponds en JSON : [{"nom": "...", "apport": "..."}]. Uniquement le JSON, sans markdown.`
-        }]
-      })
+      body: JSON.stringify({ caveNoms, manquantsTop })
     });
-    const data = await response.json();
-    const text = data.content?.[0]?.text || '[]';
-    const items = JSON.parse(text);
+    const items = await apportResponse.json();
     result.innerHTML = `
       <div class="apport-liste">
         ${items.map(i => `
