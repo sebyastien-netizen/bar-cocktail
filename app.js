@@ -835,8 +835,32 @@ function syncNiveau() {
 function ouvrirModalInfo(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
+
   document.getElementById('modal-info-titre').textContent = item.nom;
-  document.getElementById('modal-info-texte').textContent = item.detail || 'Aucune description disponible.';
+
+  const corps = document.getElementById('modal-info-corps');
+  if (item.info_description || item.info_origine || item.info_anecdote) {
+    corps.innerHTML = `
+      ${item.info_description ? `
+        <div class="info-bloc">
+          <div class="info-bloc-titre">📋 Description</div>
+          <p>${item.info_description}</p>
+        </div>` : ''}
+      ${item.info_origine ? `
+        <div class="info-bloc">
+          <div class="info-bloc-titre">🌍 Origine</div>
+          <p>${item.info_origine}</p>
+        </div>` : ''}
+      ${item.info_anecdote ? `
+        <div class="info-bloc info-bloc-anecdote">
+          <div class="info-bloc-titre">💬 Anecdote</div>
+          <p>${item.info_anecdote}</p>
+        </div>` : ''}
+    `;
+  } else {
+    corps.innerHTML = `<p class="info-vide">${item.detail || 'Aucune information disponible.'}</p>`;
+  }
+
   afficherModal('modal-info');
 }
 
