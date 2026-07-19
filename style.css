@@ -2532,4 +2532,16 @@ main { overflow-x: hidden; }
   ✦ Appliquer à la fiche
 </button>
 -->
- 
+.adj-curseur-track { position: relative; }
+.adj-marqueur {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(255,255,255,0.25);
+  border-radius: 1px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+} 
