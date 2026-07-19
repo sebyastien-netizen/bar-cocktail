@@ -2804,13 +2804,12 @@ function updateMarqueursOriginaux() {
     const origVal = ajustementValsOriginaux[ax.id] || 0;
     const currentVal = ajustementVals[ax.id] || 0;
 
-    // Position en % sur l'échelle -3 à +3
-    // On compense les ~7px du thumb avec calc pour coller au track réel
+    // Position en % sur l'échelle -3 à +3 avec compensation thumb
     const pct = ((origVal + 3) / 6) * 100;
-    marqueur.style.left = `calc(${pct}% + (0.5 - ${pct}/100) * 14px)`;
+    marqueur.style.left = `calc(${pct}% + (0.5 - ${pct / 100}) * 14px)`;
 
-    // Visible uniquement si on a bougé
-    marqueur.style.opacity = currentVal !== origVal ? '1' : '0';
+    // Visible si origVal non nul OU si on a bougé depuis l'original
+    marqueur.style.opacity = (origVal !== 0 || currentVal !== origVal) ? '1' : '0';
   });
 }
 
