@@ -2138,3 +2138,14 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .fiche-base { font-size: 0.8rem; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
 .fiche-portion-label { font-weight: 400; color: rgba(255,255,255,0.35); }
   
+/* Fix débordement horizontal mobile */
+.carte-recette { overflow: hidden; }
+.fiche-badges { flex-wrap: wrap; max-width: 100%; }
+.tag-kit {
+  white-space: nowrap;
+  font-size: 0.65rem;
+  padding: 1px 6px;
+}
+body { overflow-x: hidden; }
+main { overflow-x: hidden; }
+.recettes-grille { overflow-x: hidden; }
