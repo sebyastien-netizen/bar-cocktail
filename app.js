@@ -2512,7 +2512,7 @@ init();
 const REGLES_GUSTATIVES = {
   amer: {
     moins: [
-      { seuil: -1, action: 'reduire', cible: ['campari','angostura','kahlua','bitter','amaro','fernet','kahlúa'], pct: 15, note: 'Réduire l\'amer principal' },
+      { seuil: -1, action: 'reduire', cible: ['campari','angostura','kahlua','bitter','amaro','fernet','kahlúa'], categorie_ids: ['bitters','a-acheter-bitters'], pct: 15, note: 'Réduire l\'amer principal' },
       { seuil: -2, action: 'sel', note: '1 pincée de sel fin — supprime la perception amère' },
       { seuil: -2, action: 'augmenter', cible: ['sirop','sucre','miel'], pct: 20, note: 'Compenser avec plus de sucrosité' },
       { seuil: -3, action: 'ai', note: 'Reformulation complète recommandée' }
@@ -2548,13 +2548,25 @@ const REGLES_GUSTATIVES = {
   },
   fort: {
     moins: [
-      { seuil: -1, action: 'reduire', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 10, note: 'Réduire le spiritueux de 10%' },
-      { seuil: -2, action: 'reduire', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 20, note: 'Réduire le spiritueux de 20%' },
+      { seuil: -1, action: 'reduire',
+        cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac','bourbon','rye','brandy','pisco','calvados'],
+        categorie_ids: ['vodka','gin','whisky','rhum','mezcal-tequila','eaux-de-vie','a-acheter-spirits'],
+        pct: 10, note: 'Réduire le spiritueux de 10%' },
+      { seuil: -2, action: 'reduire',
+        cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac','bourbon','rye','brandy','pisco','calvados'],
+        categorie_ids: ['vodka','gin','whisky','rhum','mezcal-tequila','eaux-de-vie','a-acheter-spirits'],
+        pct: 20, note: 'Réduire le spiritueux de 20%' },
       { seuil: -3, action: 'ai', note: 'Version allégée — compenser avec plus de mixer' }
     ],
     plus: [
-      { seuil: 1, action: 'augmenter', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 10, note: 'Augmenter le spiritueux de 10%' },
-      { seuil: 2, action: 'augmenter', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 20, note: 'Version plus corsée (+20%)' },
+      { seuil: 1, action: 'augmenter',
+        cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac','bourbon','rye','brandy','pisco','calvados'],
+        categorie_ids: ['vodka','gin','whisky','rhum','mezcal-tequila','eaux-de-vie','a-acheter-spirits'],
+        pct: 10, note: 'Augmenter le spiritueux de 10%' },
+      { seuil: 2, action: 'augmenter',
+        cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac','bourbon','rye','brandy','pisco','calvados'],
+        categorie_ids: ['vodka','gin','whisky','rhum','mezcal-tequila','eaux-de-vie','a-acheter-spirits'],
+        pct: 20, note: 'Version plus corsée (+20%)' },
       { seuil: 3, action: 'ai', note: 'Option overproof ou Navy Strength' }
     ]
   },
@@ -2652,7 +2664,16 @@ function calculerAjustements() {
       if (regle.cible) {
         ings.forEach(ing => {
           const nomLower = ing.nom.toLowerCase();
-          const match = regle.cible.some(c => nomLower.includes(c));
+          // Matching par nom ET par category_id de l'item en cave
+          const itemCave = ing.item_cave_id
+            ? cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id)
+            : null;
+          const catId = itemCave?.category_id || '';
+          const matchNom = regle.cible.some(c => nomLower.includes(c));
+          const matchCat = regle.categorie_ids
+            ? regle.categorie_ids.some(c => catId.includes(c))
+            : false;
+          const match = matchNom || matchCat;
           if (!match || !ing.quantite) return;
 
           if (regle.action === 'reduire') {
