@@ -1694,5 +1694,5 @@ async function rechargerConseil() {
       badge.textContent = categorieLabel[data.categorie] || '';
     }
   }
-  if (btn) btn.style.opacity = '1';
+  if (btn) btn.style.opacity = '1';} 
 init();
