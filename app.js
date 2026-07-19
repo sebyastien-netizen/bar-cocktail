@@ -1688,13 +1688,13 @@ async function rechargerConseil() {
     const categorieClass = { technique: 'badge-3', gestion: 'badge-ok', service: 'badge-1' };
     el.textContent = data.texte;
     const badge = el.previousElementSibling?.querySelector('.badge-dispo');
-    if (badge) {
+   if (badge) {
       badge.className = `badge-dispo ${categorieClass[data.categorie] || 'badge-ok'}`;
       badge.style.fontSize = '0.68rem';
       badge.textContent = categorieLabel[data.categorie] || '';
     }
   }
- if (btn) btn.style.opacity = '1';
-  }
+  if (btn) btn.style.opacity = '1';
 }
+
 init();
