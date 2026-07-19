@@ -1483,7 +1483,7 @@ function toggleQR() {
   popup.classList.toggle('visible');
  
   if (!qrGenerated && popup.classList.contains('visible')) {
-    const url = encodeURIComponent('https://super-mousse-70068b.netlify.app');
+   const url = encodeURIComponent('https://bar-cocktail-smoky.vercel.app');
     const img = document.getElementById('qr-img');
     img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&bgcolor=16213e&color=f0e6d3&data=${url}`;
     qrGenerated = true;
