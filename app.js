@@ -2772,7 +2772,6 @@ function resetAjustements() {
   });
   calculerAjustements();
 }
-}
 
 function onAdjPortions(val) {
   ajustementPortions = parseInt(val) || 1;
