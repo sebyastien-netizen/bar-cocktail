@@ -1313,22 +1313,202 @@ function ouvrirModalAjoutConcoction() {
 // À ACHETER
 // =============================================
  
+
+// =============================================
+// À ACHETER — Refonte complète
+// Remplace entièrement la fonction chargerAAcheter()
+// dans app.js
+// =============================================
+
+// Liste des ingrédients colorants
+const COLORANTS_BAR = [
+  'curaçao','curacao','grenadine','crème de violette','violette',
+  'sirop de framboise','sirop de cassis','sirop de menthe',
+  'blue curaçao','orgeat','falernum','sirop de rose','hibiscus'
+];
+
+function estColorant(nom) {
+  return COLORANTS_BAR.some(c => nom.toLowerCase().includes(c));
+}
+
+// Calcul score composite : recettes + diversité gustative + ratio prix/impact
+function calculerScoreItem(item) {
+  const recettes = item.recettesDetail.length;
+  const prix     = parseFloat(item.prix) || 0;
+  const gouts    = item.gouts?.length || 0;
+  if (!recettes) return 0;
+  const coutParRecette = prix > 0 ? prix / recettes : 0;
+  return Math.round((recettes * 10) + (gouts * 3) - coutParRecette);
+}
+
 async function chargerAAcheter() {
   const container = document.getElementById('aacheter-container');
   if (!container) return;
   container.innerHTML = '<div class="loading-state">Calcul en cours…</div>';
- 
+
+  // IDs des items détenus en cave
   const caveIds = getItemsCave();
+
   const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu, category_id').eq('user_id', currentUser.id);
-  const { data: aAcheter } = await db.from('a_acheter').select('*').eq('user_id', currentUser.id);
- 
+
+  // Calcul score par item MANQUANT (non détenu)
+  const scoreMap = {};
+  recettes.forEach(r => {
+    const manquants = (r.ingredients || []).filter(i =>
+      i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel
+    );
+    manquants.forEach(ing => {
+      if (!scoreMap[ing.item_cave_id]) {
+        const itemData = allItems?.find(i => i.id === ing.item_cave_id);
+        // Ignorer si l'item est détenu
+        if (itemData?.detenu !== false && caveIds.has(ing.item_cave_id)) return;
+        scoreMap[ing.item_cave_id] = {
+          id:            ing.item_cave_id,
+          nom:           ing.nom,
+          prix:          itemData?.prix_estime || null,
+          category_id:   itemData?.category_id || null,
+          recettesDetail: [],
+          gouts:         []
+        };
+      }
+      scoreMap[ing.item_cave_id].recettesDetail.push(r);
+      // Collecter les goûts uniques apportés
+      (r.gouts || []).forEach(g => {
+        if (!scoreMap[ing.item_cave_id].gouts.includes(g)) {
+          scoreMap[ing.item_cave_id].gouts.push(g);
+        }
+      });
+    });
+  });
+
+  const allScored = Object.values(scoreMap)
+    .filter(i => i.recettesDetail.length > 0)
+    .map(i => ({ ...i, score: calculerScoreItem(i) }))
+    .sort((a, b) => b.score - a.score);
+
+  if (allScored.length === 0) {
+    container.innerHTML = '<div class="empty-state">🎉 Tu as tous les ingrédients pour toutes tes recettes !</div>';
+    return;
+  }
+
+  // Catégories
   const catGroupes = {
-    spiritueux:    { label: '🥃 Spiritueux',       ids: ['a-acheter-spirits'] },
-    liqueurs:      { label: '🍯 Liqueurs',          ids: ['a-acheter-liqueurs'] },
-    vins_amers:    { label: '🍷 Vins & Amers',      ids: ['a-acheter-vins', 'a-acheter-bitters'] },
-    sirops:        { label: '🍬 Sirops & Épicerie', ids: ['a-acheter-sirops', 'ingredients-frais'] }
+    spiritueux: { label: '🥃 Spiritueux',       ids: ['a-acheter-spirits','gin','vodka','whisky','mezcal-tequila','rhum','eaux-de-vie'] },
+    liqueurs:   { label: '🍯 Liqueurs',          ids: ['a-acheter-liqueurs','liqueurs','triples-secs','vermouth','bitters'] },
+    vins_amers: { label: '🍷 Vins & Amers',      ids: ['a-acheter-vins','a-acheter-bitters','bulles'] },
+    sirops:     { label: '🍬 Sirops & Épicerie', ids: ['a-acheter-sirops','sirops','ingredients-frais'] }
   };
- 
+
+  // Répartir par groupe
+  const grouped = {};
+  Object.keys(catGroupes).forEach(k => grouped[k] = []);
+
+  allScored.forEach(item => {
+    let placed = false;
+    for (const [key, groupe] of Object.entries(catGroupes)) {
+      if (groupe.ids.includes(item.category_id)) {
+        grouped[key].push(item);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) grouped['spiritueux'].push(item);
+  });
+
+  // Meilleur achat = score le plus élevé toutes catégories
+  const meilleur = allScored[0];
+
+  // Filtre actif
+  const filtreActif = window.aacheterFiltreActif || 'tout';
+
+  container.innerHTML = `
+
+    <!-- FILTRES -->
+    <div class="aacheter-filtres">
+      <button class="aacheter-filtre-btn ${filtreActif === 'tout' ? 'active' : ''}"
+        onclick="window.aacheterFiltreActif='tout'; chargerAAcheter()">Tout</button>
+      ${Object.entries(catGroupes).map(([key, g]) => `
+        <button class="aacheter-filtre-btn ${filtreActif === key ? 'active' : ''}"
+          onclick="window.aacheterFiltreActif='${key}'; chargerAAcheter()">
+          ${g.label}
+        </button>
+      `).join('')}
+    </div>
+
+    <!-- MEILLEUR ACHAT -->
+    ${filtreActif === 'tout' ? `
+    <div class="aacheter-top-card">
+      <div class="aacheter-top-label">🥇 Meilleur achat — impact maximal</div>
+      ${renderItemAAcheter(meilleur, true)}
+    </div>` : ''}
+
+    <!-- PAR CATÉGORIE -->
+    ${Object.entries(catGroupes).map(([key, groupe]) => {
+      if (filtreActif !== 'tout' && filtreActif !== key) return '';
+      const items = grouped[key];
+      if (!items.length) return '';
+      return `
+        <div class="aacheter-groupe">
+          <div class="aacheter-groupe-titre">${groupe.label}</div>
+          ${items.map(item => renderItemAAcheter(item, false)).join('')}
+        </div>
+      `;
+    }).join('')}
+
+    <!-- APPORT GUSTATIF -->
+    <div class="aacheter-groupe">
+      <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
+        ✨ Analyser l'apport gustatif (Claude)
+      </button>
+      <div id="apport-gustatif-result"></div>
+    </div>
+  `;
+}
+
+function renderItemAAcheter(item, isTop) {
+  const nbRecettes      = item.recettesDetail.length;
+  const prix            = parseFloat(item.prix) || null;
+  const coutParRecette  = prix && nbRecettes ? (prix / nbRecettes).toFixed(1) : null;
+  const colorant        = estColorant(item.nom);
+
+  const badgeRecettes = nbRecettes >= 6
+    ? `<span class="aacheter-badge aacheter-badge--top">+${nbRecettes} recettes</span>`
+    : nbRecettes >= 3
+    ? `<span class="aacheter-badge aacheter-badge--mid">+${nbRecettes} recettes</span>`
+    : `<span class="aacheter-badge aacheter-badge--low">+${nbRecettes} recette${nbRecettes > 1 ? 's' : ''}</span>`;
+
+  return `
+    <div class="aacheter-item ${isTop ? 'aacheter-item--top' : ''}">
+      <div class="aacheter-item-header">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <div class="aacheter-nom">${item.nom}</div>
+          ${colorant ? '<span class="aacheter-colorant-badge">🎨</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          ${prix ? `<span class="item-prix">~${prix}€</span>` : ''}
+          ${badgeRecettes}
+          <div class="aacheter-score-num">${nbRecettes}</div>
+        </div>
+      </div>
+
+      <div class="aacheter-indicateurs">
+        ${item.gouts?.length ? `<span class="aacheter-indic">🎨 ${item.gouts.slice(0,3).join(' · ')}</span>` : ''}
+        ${coutParRecette ? `<span class="aacheter-indic">⚡ ${coutParRecette}€/recette</span>` : ''}
+      </div>
+
+      <div class="aacheter-recettes-chips">
+        ${item.recettesDetail.slice(0, 4).map(r => `
+          <span class="aacheter-chip">
+            ${r.nom}
+            <span class="aacheter-chip-diff diff-${r.difficulte}">${{facile:'F',moyen:'M',avance:'A'}[r.difficulte]||''}</span>
+          </span>
+        `).join('')}
+        ${item.recettesDetail.length > 4 ? `<span class="aacheter-chip-more">+${item.recettesDetail.length - 4}</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 async function chargerApportGustatif() {
   const btn = document.getElementById('btn-apport-gustatif');
   const result = document.getElementById('apport-gustatif-result');
@@ -1782,7 +1962,9 @@ function ouvrirFichePlante(id) {
   `;
  
   afficherModal('modal-fiche-plante');
- let ecoleData = { alcools: [], techniques: [], materiels: [], lexique: [] };
+}
+
+let ecoleData = { alcools: [], techniques: [], materiels: [], lexique: [] };
 let ecoleSection = 'alcools';
  
 // =============================================
@@ -2050,7 +2232,6 @@ function ouvrirFicheMateriel(id) {
   `;
   afficherModal('modal-ecole-fiche');
 }
-}
-}
+
 
 init();
