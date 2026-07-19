@@ -1534,7 +1534,7 @@ async function chargerDashboard() {
  
   // Anecdote + conseil aléatoires
   const [{ data: anecdote }, { data: conseil }] = await Promise.all([
-    db.from('anecdotes').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] }))
+    db.from('anecdotes').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
     db.from('conseils').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] }))
   ]);
  
