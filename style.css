@@ -1934,4 +1934,207 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .fiche-anecdote-texte { font-size: 0.84rem; color: var(--text-detail); line-height: 1.7; margin: 0; }
  
 .fiche-portion-label { font-weight: 400; color: var(--text-muted); }
+/* =============================================
+   CORRECTIF FICHE ENRICHIE — à ajouter dans style.css
+   Colle ce bloc à la fin du fichier
+   ============================================= */
  
+/* Fond de la modal fiche légèrement plus sombre que les cartes */
+.modal-fiche {
+  background: #0f1a2e !important;
+}
+ 
+/* Les cartes fiche ont un fond distinct du fond modal */
+.fiche-card {
+  background: #16213e !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+ 
+.fiche-card--anecdote {
+  border-color: rgba(201,150,58,0.25) !important;
+  background: rgba(201,150,58,0.06) !important;
+}
+ 
+/* Titre de section bien visible */
+.fiche-card-titre {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.35);
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+ 
+/* Grille 2 colonnes */
+.fiche-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+ 
+@media (max-width: 600px) {
+  .fiche-grid-2 { grid-template-columns: 1fr; }
+}
+ 
+/* Profil gustatif grille */
+.fiche-profil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+ 
+@media (max-width: 480px) {
+  .fiche-profil-grid { grid-template-columns: 1fr; }
+}
+ 
+/* Caractéristiques rows */
+.fiche-carac-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.8rem;
+  gap: 12px;
+}
+.fiche-carac-row:last-child { border-bottom: none; }
+.fiche-carac-row > span:first-child { color: rgba(255,255,255,0.4); flex-shrink: 0; font-size: 0.75rem; }
+.fiche-carac-row > span:last-child { color: var(--text-primary); text-align: right; font-size: 0.8rem; }
+ 
+/* Conseil bartender */
+.fiche-conseil {
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.fiche-conseil-titre { font-weight: 600; margin-bottom: 4px; font-size: 0.84rem; }
+ 
+/* Portions bloc */
+.fiche-portions-bloc {
+  background: #16213e;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.portions-label-row { display: flex; flex-direction: column; gap: 2px; }
+.fiche-prix-total { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+ 
+/* Batch info */
+.fiche-batch-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(74,158,255,0.08);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: #4a9eff;
+  line-height: 1.5;
+}
+ 
+/* Ingrédients */
+.fiche-ing-liste { display: flex; flex-direction: column; gap: 10px; }
+.fiche-ing-item { display: flex; align-items: center; gap: 12px; }
+.fiche-ing-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+.fiche-ing-icon--accent { background: rgba(74,158,255,0.15); color: #4a9eff; }
+.fiche-ing-icon--danger { background: rgba(224,90,78,0.15); color: #e24b4a; }
+.fiche-ing-icon--success { background: rgba(76,175,125,0.15); color: #4caf7d; }
+.fiche-ing-body { flex: 1; min-width: 0; }
+.fiche-ing-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.fiche-ing-nom { font-size: 0.88rem; font-weight: 500; color: var(--text-primary); }
+.fiche-ing-nom--manquant { color: #e24b4a; }
+.fiche-ing-qte { font-size: 0.88rem; font-weight: 500; color: var(--text-primary); flex-shrink: 0; }
+.fiche-ing-barre { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; margin-bottom: 3px; }
+.fiche-ing-barre-fill { height: 100%; border-radius: 2px; }
+.fiche-ing-barre-fill--accent { background: #4a9eff; }
+.fiche-ing-barre-fill--danger { background: #e24b4a; }
+.fiche-ing-barre-fill--success { background: #4caf7d; }
+.fiche-ing-warn { font-size: 0.7rem; color: var(--orange); }
+ 
+/* Étapes timeline */
+.fiche-etapes-timeline { display: flex; flex-direction: column; }
+.fiche-etape-row { display: flex; gap: 12px; padding-bottom: 14px; }
+.fiche-etape-row:last-child { padding-bottom: 0; }
+.fiche-etape-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.fiche-etape-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(74,158,255,0.15); color: #4a9eff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; flex-shrink: 0;
+}
+.fiche-etape-num--done { background: rgba(76,175,125,0.15); color: #4caf7d; }
+.fiche-etape-line { width: 1px; flex: 1; background: rgba(255,255,255,0.06); margin-top: 5px; }
+.fiche-etape-body { padding-top: 2px; flex: 1; }
+.fiche-etape-titre { font-size: 0.88rem; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; }
+.fiche-etape-desc { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.55; }
+ 
+/* Dégustation */
+.fiche-degu-steps { display: flex; flex-direction: column; gap: 6px; }
+.fiche-degu-step { display: flex; gap: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: 8px; }
+.fiche-degu-step--defi { background: rgba(201,150,58,0.06); }
+.fiche-degu-icon { font-size: 15px; flex-shrink: 0; width: 22px; text-align: center; margin-top: 1px; }
+.fiche-degu-label { font-size: 0.65rem; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.fiche-degu-texte { font-size: 0.8rem; color: rgba(255,255,255,0.6); line-height: 1.55; }
+ 
+/* Variantes */
+.fiche-variante {
+  border-left: 2px solid rgba(255,255,255,0.1);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.fiche-variante:last-child { margin-bottom: 0; }
+.fiche-variante--cave { border-left-color: #4a9eff; }
+.fiche-variante--prestige { border-left-color: #854F0B; }
+.fiche-variante-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(255,255,255,0.3); margin-bottom: 3px; }
+.fiche-variante-nom { font-size: 0.88rem; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; }
+.fiche-variante-desc { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.55; }
+ 
+/* Occasions */
+.fiche-occasions { display: flex; flex-wrap: wrap; gap: 6px; }
+.fiche-occasion-chip {
+  font-size: 0.75rem; padding: 3px 10px;
+  border-radius: 6px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.55);
+}
+ 
+/* Infos diét */
+.fiche-info-ok { color: #4caf7d; font-size: 0.8rem; font-weight: 500; }
+.fiche-info-no { color: rgba(255,255,255,0.3); font-size: 0.8rem; }
+ 
+/* Anecdote */
+.fiche-anecdote-texte {
+  font-size: 0.84rem; color: rgba(255,255,255,0.6);
+  line-height: 1.7; margin: 0; font-style: italic;
+}
+ 
+/* Description intro */
+.fiche-description {
+  font-size: 0.83rem; color: rgba(255,255,255,0.55);
+  line-height: 1.65; margin: 10px 0 0;
+}
+ 
+/* En-tête fiche */
+.fiche-entete { margin-bottom: 16px; }
+.fiche-entete-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px; margin-bottom: 6px;
+}
+.fiche-badges { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+.fiche-base { font-size: 0.8rem; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+.fiche-portion-label { font-weight: 400; color: rgba(255,255,255,0.35); }
+  
