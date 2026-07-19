@@ -363,6 +363,12 @@
     </div>
 
     <!-- RECETTE AJUSTÉE -->
+    <div class="adj-portions-row">
+  <span class="adj-portions-label">Portions</span>
+  <input type="range" id="adj-portions-slider" min="1" max="10" value="1" step="1"
+    style="flex:1" oninput="onAdjPortions(this.value)">
+  <span class="adj-portions-val" id="adj-portions-val">1</span>
+</div>
     <div class="adj-section-titre">Recette ajustée</div>
     <div class="adj-bloc" id="adj-recette"></div>
 
