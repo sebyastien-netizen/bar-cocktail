@@ -2618,6 +2618,9 @@ let ajustementPortions = 1;
 function ouvrirPanneauAjustement(recetteId) {
   ajustementRecette = recettes.find(r => r.id === recetteId);
   if (!ajustementRecette) return;
+  // Toujours repartir des ingrédients BDD — ignorer tout ajustement précédent
+  ajustementApplique = null;
+  if (recetteOuverte) recetteOuverte._ajuste = null;
 
   // Pré-remplir les curseurs selon le profil gustatif de la recette
   // Neutre = 5/10, on ramène sur échelle -3/+3
@@ -2690,12 +2693,14 @@ function calculerAjustements() {
   let ajoutSel = false;
 
   Object.entries(ajustementVals).forEach(([axe, val]) => {
-    if (val === 0) return;
-    const direction = val < 0 ? 'moins' : 'plus';
+    const origVal = ajustementValsOriginaux[axe] || 0;
+    const delta = val - origVal; // écart par rapport à la recette originale
+    if (delta === 0) return;
+    const direction = delta < 0 ? 'moins' : 'plus';
     const regles = REGLES_GUSTATIVES[axe]?.[direction] || [];
 
     regles.forEach(regle => {
-      const abs = Math.abs(val);
+      const abs = Math.abs(delta);
       if (abs < Math.abs(regle.seuil)) return;
 
       if (regle.action === 'ai') { needsAI = true; return; }
@@ -2790,19 +2795,24 @@ function resetAjustements() {
 }
 
 function updateMarqueursOriginaux() {
-  // Affiche un trait gris sur la position originale de chaque curseur
   AXES.forEach(ax => {
     const slider = document.getElementById(`adj-${ax.id}`);
     const marqueur = document.getElementById(`adj-marqueur-${ax.id}`);
     if (!slider || !marqueur) return;
 
     const origVal = ajustementValsOriginaux[ax.id] || 0;
-    // Convertir la valeur (-3 à +3) en pourcentage (0 à 100)
-    const pct = ((origVal + 3) / 6) * 100;
-    marqueur.style.left = `${pct}%`;
+    const currentVal = ajustementVals[ax.id] || 0;
 
-    // Masquer le marqueur si la position originale est au centre exact (0)
-    marqueur.style.opacity = origVal !== 0 ? '1' : '0';
+    // Convertir -3/+3 en % en tenant compte du thumb du slider (~7px de chaque côté)
+    const trackWidth = slider.offsetWidth || 200;
+    const thumbOffset = 7;
+    const usable = trackWidth - 2 * thumbOffset;
+    const pct = ((origVal + 3) / 6) * 100;
+    marqueur.style.left = `calc(${thumbOffset}px + ${pct}% * ${usable / trackWidth})`;
+
+    // Afficher le marqueur uniquement quand on a bougé depuis l'original
+    const aBouge = currentVal !== origVal;
+    marqueur.style.opacity = aBouge ? '1' : '0';
   });
 }
 
