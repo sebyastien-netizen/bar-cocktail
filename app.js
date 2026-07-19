@@ -50,6 +50,7 @@ function afficherApp() {
   chargerRecettes();
   chargerEquipements();
   chargerConcoctions();
+  chargerDashboard();
 }
  
 // --- Login ---
