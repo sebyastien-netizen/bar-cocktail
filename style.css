@@ -1642,3 +1642,152 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .ecole-terme { font-size: 0.92rem; font-weight: 600; color: var(--accent-light); margin-bottom: 4px; }
 .ecole-definition { font-size: 0.83rem; color: var(--text-detail); line-height: 1.55; }
 .ecole-exemple { font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-top: 4px; }
+
+.aacheter-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+ 
+.aacheter-filtre-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+ 
+.aacheter-filtre-btn:hover { border-color: var(--accent); color: var(--accent-light); }
+.aacheter-filtre-btn.active { background: rgba(201,150,58,0.2); border-color: var(--accent); color: var(--accent-light); font-weight: 600; }
+ 
+.aacheter-top-card {
+  background: rgba(201,150,58,0.06);
+  border: 1px solid rgba(201,150,58,0.25);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+ 
+.aacheter-top-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-light);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+ 
+.aacheter-groupe { margin-bottom: 24px; }
+ 
+.aacheter-groupe-titre {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+ 
+.aacheter-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+ 
+.aacheter-item--top {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+ 
+.aacheter-item:hover { border-color: rgba(201,150,58,0.3); }
+ 
+.aacheter-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+ 
+.aacheter-nom { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); }
+ 
+.aacheter-colorant-badge {
+  font-size: 0.75rem;
+  background: rgba(138,92,246,0.15);
+  border-radius: 6px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+ 
+.aacheter-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+ 
+.aacheter-badge--top { background: rgba(76,175,125,0.2); color: var(--vert); }
+.aacheter-badge--mid { background: rgba(201,150,58,0.2); color: var(--accent-light); }
+.aacheter-badge--low { background: rgba(138,155,176,0.12); color: var(--text-muted); }
+ 
+.aacheter-score-num {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  min-width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+ 
+.aacheter-indicateurs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+ 
+.aacheter-indic { font-size: 0.75rem; color: var(--text-muted); }
+ 
+.aacheter-recettes-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+ 
+.aacheter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: var(--text-detail);
+}
+ 
+.aacheter-chip-diff {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+ 
+.aacheter-chip-more {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  font-style: italic;
+}
