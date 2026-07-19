@@ -49,7 +49,7 @@
     <nav>
       <button class="active" data-tab="cave">🍶 Ma Cave</button>
       <button data-tab="recettes">🍹 Recettes</button>
-      <button disabled title="Bientôt">📊 Dashboard</button>
+      <button data-tab="dashboard">📊 Dashboard</button>
       <button data-tab="concoctions">⚗️ Concoctions</button>
       <button disabled title="Bientôt">🎓 École</button>
       <button data-tab="aacheter">🛒 À acheter</button>
@@ -67,6 +67,12 @@
       <div id="section-recettes" class="tab-section hidden">
         <div class="cave-header"><h2>🍹 Recettes</h2></div>
         <div id="recettes-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="section-dashboard" class="tab-section hidden">
+        <div class="cave-header"><h2>📊 Dashboard</h2></div>
+        <div id="dashboard-container"><div class="loading-state">Chargement…</div></div>
       </div>
 
       <!-- CONCOCTIONS -->
