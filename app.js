@@ -520,6 +520,8 @@ function renderFiche(portions) {
   const nbManquants = calculerDisponibilite(r);
   const caveIds = getItemsCave();
   const diffLabel = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
+  const ingsEffectifs = r._ajuste ? r._ajuste.ings : (r.ingredients || []);
+  const estAjuste = !!r._ajuste;
 
   const conseil = getConseilBartender(r, portions);
   const batch   = getBatchInfo(r, portions);
@@ -540,6 +542,11 @@ function renderFiche(portions) {
         </div>
         ${r.base_alcool ? `<div class="fiche-base">🥃 ${r.base_alcool}</div>` : ''}
         <div class="fiche-gouts">${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}</div>
+        ${estAjuste ? `
+        <div class="fiche-bandeau-ajuste">
+          <span>✦ Version ajustée active</span>
+          <button class="fiche-bandeau-reset" onclick="annulerAjustements()">↺ Recette originale</button>
+        </div>` : ''}
         ${r.description_courte ? `<p class="fiche-description">${r.description_courte}</p>` : ''}
       </div>
     </div>
@@ -618,13 +625,15 @@ function renderFiche(portions) {
     <div class="fiche-card">
       <div class="fiche-card-titre">Ingrédients <span class="fiche-portion-label">— ${portions} verre${portions > 1 ? 's' : ''}</span></div>
       <div class="fiche-ing-liste">
-        ${(r.ingredients || []).map(ing => {
+        ${ingsEffectifs.map(ing => {
           const enCave = ing.item_cave_id ? caveIds.has(ing.item_cave_id) : true;
-          const qte = ing.quantite ? Math.round(ing.quantite * portions * 10) / 10 : null;
+          const qteBase = ing.cl_ajuste !== undefined ? ing.cl_ajuste : ing.quantite;
+          const qte = qteBase ? Math.round(qteBase * portions * 10) / 10 : null;
+          const qteModif = ing.cl_ajuste !== undefined && Math.abs((ing.cl_ajuste || 0) - (ing.quantite || 0)) > 0.05;
           const pct = ing.quantite && r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0) > 0
             ? Math.round((ing.quantite / r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0)) * 100)
             : 0;
-          const couleur = enCave ? (ing.optionnel ? 'success' : 'accent') : 'danger';
+          const couleur = !enCave ? 'danger' : (ing.optionnel ? 'success' : (qteModif ? 'warning' : 'accent'));
           return `
             <div class="fiche-ing-item">
               <div class="fiche-ing-icon fiche-ing-icon--${couleur}">
@@ -2602,24 +2611,51 @@ const AXES = [
 
 let ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
 let ajustementRecette = null;
+let ajustementApplique = null; // { ings: [], portions: 1 } — null = recette originale
+let ajustementPortions = 1;
 
 function ouvrirPanneauAjustement(recetteId) {
   ajustementRecette = recettes.find(r => r.id === recetteId);
   if (!ajustementRecette) return;
 
-  ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+  // Pré-remplir les curseurs selon le profil gustatif de la recette
+  // Neutre = 5/10, on ramène sur échelle -3/+3
+  const r = ajustementRecette;
+  const toSlider = (val) => val ? Math.round((val - 5) * 3 / 5) : 0;
+  ajustementVals = {
+    amer:    toSlider(r.gout_amer),
+    sucre:   toSlider(r.gout_sucre),
+    acide:   toSlider(r.gout_acide),
+    fruite:  toSlider(r.gout_fruite),
+    fort:    0,
+    cremeux: toSlider(r.gout_cremeux)
+  };
+
+  // Portions
+  ajustementPortions = 1;
 
   const panneau = document.getElementById('panneau-ajustement');
   panneau.querySelector('.panneau-titre-recette').textContent = ajustementRecette.nom;
   panneau.classList.add('visible');
   document.getElementById('panneau-overlay').classList.add('visible');
 
+  // Mettre à jour les sliders
   AXES.forEach(ax => {
+    const v = ajustementVals[ax.id] || 0;
     const slider = document.getElementById(`adj-${ax.id}`);
-    if (slider) { slider.value = 0; }
-    const val = document.getElementById(`adj-val-${ax.id}`);
-    if (val) { val.textContent = '0'; val.style.color = 'var(--text-muted)'; }
+    if (slider) slider.value = v;
+    const valEl = document.getElementById(`adj-val-${ax.id}`);
+    if (valEl) {
+      valEl.textContent = v > 0 ? '+' + v : v;
+      valEl.style.color = v > 0 ? '#4caf7d' : v < 0 ? '#e24b4a' : 'var(--text-muted)';
+    }
   });
+
+  // Portions slider
+  const portSlider = document.getElementById('adj-portions-slider');
+  const portVal = document.getElementById('adj-portions-val');
+  if (portSlider) portSlider.value = 1;
+  if (portVal) portVal.textContent = '1';
 
   calculerAjustements();
 }
@@ -2694,17 +2730,20 @@ function calculerAjustements() {
   const totalModif = Object.values(ajustementVals).reduce((s, v) => s + Math.abs(v), 0);
   if (totalModif >= 8) needsAI = true;
 
-  // Rendu recette ajustée
+  // Rendu recette ajustée avec portions
   const recetteDiv = document.getElementById('adj-recette');
+  const p = ajustementPortions || 1;
   if (recetteDiv) {
     recetteDiv.innerHTML = ings.map(ing => {
       const modif = ing.cl_ajuste && Math.abs(ing.cl_ajuste - (ing.quantite || 0)) > 0.05;
+      const qte1 = ing.cl_ajuste ? ing.cl_ajuste.toFixed(1) : (ing.quantite || '—');
+      const qtep = ing.cl_ajuste ? (ing.cl_ajuste * p).toFixed(1) : (ing.quantite ? (ing.quantite * p).toFixed(1) : '—');
       return `<div class="adj-ing-row">
         <span class="adj-ing-nom">${ing.nom}</span>
-        <span class="adj-ing-qte ${modif ? 'adj-ing-qte--modif' : ''}">
-          ${ing.cl_ajuste ? ing.cl_ajuste.toFixed(1) + ' cl' : (ing.quantite ? ing.quantite + ' ' + (ing.unite || '') : '—')}
-          ${modif ? ' ↗' : ''}
-        </span>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <span class="adj-ing-qte ${modif ? 'adj-ing-qte--modif' : ''}">${qte1} cl</span>
+          ${p > 1 ? `<span class="adj-ing-qte-portions">${qtep} cl</span>` : ''}
+        </div>
       </div>`;
     }).join('');
   }
@@ -2724,14 +2763,79 @@ function calculerAjustements() {
 }
 
 function resetAjustements() {
-  ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+  if (ajustementRecette) {
+    const r = ajustementRecette;
+    const toSlider = (val) => val ? Math.round((val - 5) * 3 / 5) : 0;
+    ajustementVals = {
+      amer: toSlider(r.gout_amer), sucre: toSlider(r.gout_sucre),
+      acide: toSlider(r.gout_acide), fruite: toSlider(r.gout_fruite),
+      fort: 0, cremeux: toSlider(r.gout_cremeux)
+    };
+  } else {
+    ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+  }
   AXES.forEach(ax => {
+    const v = ajustementVals[ax.id] || 0;
     const s = document.getElementById(`adj-${ax.id}`);
-    if (s) s.value = 0;
-    const v = document.getElementById(`adj-val-${ax.id}`);
-    if (v) { v.textContent = '0'; v.style.color = 'var(--text-muted)'; }
+    if (s) s.value = v;
+    const el = document.getElementById(`adj-val-${ax.id}`);
+    if (el) { el.textContent = v > 0 ? '+' + v : v; el.style.color = v > 0 ? '#4caf7d' : v < 0 ? '#e24b4a' : 'var(--text-muted)'; }
   });
   calculerAjustements();
+}
+
+function onAdjPortions(val) {
+  ajustementPortions = parseInt(val) || 1;
+  document.getElementById('adj-portions-val').textContent = val;
+  calculerAjustements();
+}
+
+function appliquerAjustements() {
+  if (!ajustementRecette) return;
+  // Recalculer les ingrédients ajustés
+  const ings = (ajustementRecette.ingredients || []).map(i => ({ ...i, cl_ajuste: i.quantite }));
+  // Appliquer les règles (copie de calculerAjustements sans le rendu)
+  let ajoutSel = false;
+  Object.entries(ajustementVals).forEach(([axe, val]) => {
+    if (val === 0) return;
+    const direction = val < 0 ? 'moins' : 'plus';
+    const regles = REGLES_GUSTATIVES[axe]?.[direction] || [];
+    regles.forEach(regle => {
+      const abs = Math.abs(val);
+      if (abs < Math.abs(regle.seuil)) return;
+      if (['ai','sel','sub','ajouter_fixe'].includes(regle.action)) return;
+      if (regle.cible) {
+        ings.forEach(ing => {
+          const nomLower = ing.nom.toLowerCase();
+          const itemCave = ing.item_cave_id ? cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id) : null;
+          const catId = itemCave?.category_id || '';
+          const matchNom = regle.cible.some(c => nomLower.includes(c));
+          const matchCat = regle.categorie_ids ? regle.categorie_ids.some(c => catId.includes(c)) : false;
+          if (!(matchNom || matchCat) || !ing.quantite) return;
+          if (regle.action === 'reduire') ing.cl_ajuste = Math.max(0.2, ing.quantite * (1 - regle.pct / 100));
+          else if (regle.action === 'augmenter') ing.cl_ajuste = ing.quantite * (1 + regle.pct / 100);
+          else if (regle.action === 'supprimer') ing.cl_ajuste = 0;
+        });
+      }
+    });
+  });
+
+  ajustementApplique = { ings, portions: ajustementPortions };
+  fermerPanneauAjustement();
+  // Re-render la fiche avec la version ajustée
+  renderFicheAjustee(ajustementPortions);
+}
+
+function renderFicheAjustee(portions) {
+  // Re-render la fiche avec bandeau orange et dosages ajustés
+  recetteOuverte._ajuste = ajustementApplique;
+  renderFiche(portions);
+}
+
+function annulerAjustements() {
+  ajustementApplique = null;
+  recetteOuverte._ajuste = null;
+  renderFiche(1);
 }
 
 async function demanderAjustementAI() {
