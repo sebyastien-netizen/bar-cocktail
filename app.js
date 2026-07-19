@@ -2749,11 +2749,13 @@ function calculerAjustements() {
       const modif = ing.cl_ajuste && Math.abs(ing.cl_ajuste - (ing.quantite || 0)) > 0.05;
       const qte1 = ing.cl_ajuste ? ing.cl_ajuste.toFixed(1) : (ing.quantite || '—');
       const qtep = ing.cl_ajuste ? (ing.cl_ajuste * p).toFixed(1) : (ing.quantite ? (ing.quantite * p).toFixed(1) : '—');
+      const unite = ing.unite || '';
+      const isVol = unite === 'cl';
       return `<div class="adj-ing-row">
         <span class="adj-ing-nom">${ing.nom}</span>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-          <span class="adj-ing-qte ${modif ? 'adj-ing-qte--modif' : ''}">${qte1} cl</span>
-          ${p > 1 ? `<span class="adj-ing-qte-portions">${qtep} cl</span>` : ''}
+          <span class="adj-ing-qte ${modif ? 'adj-ing-qte--modif' : ''}">${isVol ? qte1 + ' cl' : (ing.quantite || '—') + (unite ? ' ' + unite : '')}</span>
+          ${p > 1 && isVol ? `<span class="adj-ing-qte-portions">${qtep} cl</span>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -2796,23 +2798,19 @@ function resetAjustements() {
 
 function updateMarqueursOriginaux() {
   AXES.forEach(ax => {
-    const slider = document.getElementById(`adj-${ax.id}`);
     const marqueur = document.getElementById(`adj-marqueur-${ax.id}`);
-    if (!slider || !marqueur) return;
+    if (!marqueur) return;
 
     const origVal = ajustementValsOriginaux[ax.id] || 0;
     const currentVal = ajustementVals[ax.id] || 0;
 
-    // Convertir -3/+3 en % en tenant compte du thumb du slider (~7px de chaque côté)
-    const trackWidth = slider.offsetWidth || 200;
-    const thumbOffset = 7;
-    const usable = trackWidth - 2 * thumbOffset;
+    // Position en % sur l'échelle -3 à +3
+    // On compense les ~7px du thumb avec calc pour coller au track réel
     const pct = ((origVal + 3) / 6) * 100;
-    marqueur.style.left = `calc(${thumbOffset}px + ${pct}% * ${usable / trackWidth})`;
+    marqueur.style.left = `calc(${pct}% + (0.5 - ${pct}/100) * 14px)`;
 
-    // Afficher le marqueur uniquement quand on a bougé depuis l'original
-    const aBouge = currentVal !== origVal;
-    marqueur.style.opacity = aBouge ? '1' : '0';
+    // Visible uniquement si on a bougé
+    marqueur.style.opacity = currentVal !== origVal ? '1' : '0';
   });
 }
 
