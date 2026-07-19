@@ -1672,27 +1672,20 @@ function renderDashboard({ realisables, prixTotal, conservations, concEnCours, a
 async function rechargerAnecdote() {
   const btn = document.querySelector('[onclick="rechargerAnecdote()"]');
   if (btn) btn.style.opacity = '0.4';
-  const { data } = await db.from('anecdotes').select('*').order('random()').limit(1).single();
+  const { data } = await db.from('anecdotes').select('*');
   const el = document.getElementById('dash-anecdote-texte');
-  if (el && data) el.textContent = data.texte;
+  if (el && data?.length) el.textContent = data[Math.floor(Math.random() * data.length)].texte;
   if (btn) btn.style.opacity = '1';
 }
- 
+
 async function rechargerConseil() {
   const btn = document.querySelector('[onclick="rechargerConseil()"]');
   if (btn) btn.style.opacity = '0.4';
-  const { data } = await db.from('conseils').select('*').order('random()').limit(1).single();
+  const { data } = await db.from('conseils').select('*');
   const el = document.getElementById('dash-conseil-texte');
-  if (el && data) {
-    const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
-    const categorieClass = { technique: 'badge-3', gestion: 'badge-ok', service: 'badge-1' };
-    el.textContent = data.texte;
-    const badge = el.previousElementSibling?.querySelector('.badge-dispo');
-   if (badge) {
-      badge.className = `badge-dispo ${categorieClass[data.categorie] || 'badge-ok'}`;
-      badge.style.fontSize = '0.68rem';
-      badge.textContent = categorieLabel[data.categorie] || '';
-    }
+  if (el && data?.length) {
+    const item = data[Math.floor(Math.random() * data.length)];
+    el.textContent = item.texte;
   }
   if (btn) btn.style.opacity = '1';
 }
