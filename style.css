@@ -2541,7 +2541,6 @@ main { overflow-x: hidden; }
   background: rgba(255,255,255,0.25);
   border-radius: 1px;
   pointer-events: none;
-  transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.2s;
 } 
