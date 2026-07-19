@@ -1366,4 +1366,176 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   line-height: 1.65;
   margin: 0;
 }
+ .herbo-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+  align-items: center;
+}
  
+.herbo-filtre-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+ 
+.herbo-filtre-btn:hover { border-color: var(--accent); color: var(--accent-light); }
+.herbo-filtre-btn.active { background: rgba(201,150,58,0.2); border-color: var(--accent); color: var(--accent-light); font-weight: 600; }
+.herbo-filtre-usage.active { background: rgba(76,175,125,0.15); border-color: var(--vert); color: var(--vert); }
+.herbo-filtre-sep { color: var(--text-muted); opacity: 0.3; font-size: 1.2rem; }
+ 
+.herbo-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+ 
+.herbo-carte {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+ 
+.herbo-carte:hover { border-color: var(--accent); transform: translateY(-2px); }
+ 
+.herbo-carte-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+ 
+.herbo-emoji { font-size: 1.6rem; flex-shrink: 0; }
+ 
+.herbo-carte-info { flex: 1; min-width: 0; }
+ 
+.herbo-nom { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); }
+.herbo-latin { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+ 
+.herbo-saison { font-size: 0.68rem; font-weight: 600; flex-shrink: 0; padding: 2px 7px; border-radius: 10px; }
+.herbo-saison--ok { color: var(--vert); background: rgba(76,175,125,0.12); }
+.herbo-saison--off { color: var(--text-muted); background: rgba(255,255,255,0.05); }
+ 
+.herbo-profil { font-size: 0.78rem; color: var(--text-muted); font-style: italic; line-height: 1.4; }
+ 
+.herbo-usages { display: flex; flex-wrap: wrap; gap: 4px; }
+ 
+.herbo-usage-tag {
+  background: rgba(76,175,125,0.1);
+  border: 1px solid rgba(76,175,125,0.2);
+  border-radius: 6px;
+  color: var(--vert);
+  font-size: 0.68rem;
+  padding: 2px 7px;
+}
+ 
+.herbo-usage-tag--large { font-size: 0.78rem; padding: 3px 10px; }
+ 
+.herbo-cocktails { font-size: 0.72rem; color: var(--text-muted); }
+ 
+.plante-fiche-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-right: 40px;
+}
+ 
+.plante-section { margin-bottom: 20px; }
+.plante-section h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.plante-section p { font-size: 0.85rem; color: var(--text-detail); line-height: 1.6; margin: 0; }
+ 
+.plante-notes-bar {
+  background: rgba(201,150,58,0.06);
+  border: 1px solid rgba(201,150,58,0.15);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  color: var(--text-detail);
+  line-height: 1.6;
+  margin: 0;
+}
+ 
+.plante-cocktails-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+.plante-cocktail-chip {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--text-detail);
+  padding: 3px 10px;
+}
+ 
+.plante-entretien-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+ 
+.plante-entretien-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+}
+ 
+.plante-entretien-icon { font-size: 1.1rem; flex-shrink: 0; }
+.plante-entretien-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.plante-entretien-val { font-size: 0.8rem; color: var(--text-detail); line-height: 1.4; }
+ 
+.plante-calendrier {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+ 
+.plante-mois {
+  text-align: center;
+  font-size: 0.65rem;
+  padding: 6px 2px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+}
+ 
+.plante-mois--dispo { background: rgba(76,175,125,0.2); color: var(--vert); font-weight: 600; }
+.plante-mois--actuel { outline: 2px solid var(--accent); outline-offset: 1px; }
+ 
+.plante-calendrier-legend { font-size: 0.75rem; color: var(--text-muted); }
+ 
+.plante-problemes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+ 
+.plante-problemes li {
+  font-size: 0.82rem;
+  color: var(--text-detail);
+  padding: 6px 10px;
+  background: rgba(224,90,78,0.06);
+  border-left: 2px solid var(--rouge);
+  border-radius: 0 6px 6px 0;
+}
