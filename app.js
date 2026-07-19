@@ -987,6 +987,7 @@ function ouvrirModalAjout() {
 function onTabChange(tab) {
   if (tab === 'aacheter') chargerAAcheter();
   if (tab === 'concoctions') chargerConcoctions();
+  if (tab === 'dashboard') chargerDashboard();
 }
  
 document.querySelectorAll('nav button[data-tab]').forEach(btn => {
