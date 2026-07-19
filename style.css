@@ -1539,3 +1539,106 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   border-left: 2px solid var(--rouge);
   border-radius: 0 6px 6px 0;
 }
+.ecole-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+ 
+.ecole-nav-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+ 
+.ecole-nav-btn:hover { border-color: var(--accent); color: var(--accent-light); }
+.ecole-nav-btn.active { background: rgba(201,150,58,0.2); border-color: var(--accent); color: var(--accent-light); font-weight: 600; }
+ 
+.ecole-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+ 
+.ecole-carte {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+ 
+.ecole-carte:hover { border-color: var(--accent); transform: translateY(-2px); }
+ 
+.ecole-carte-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+ 
+.ecole-emoji { font-size: 1.6rem; flex-shrink: 0; }
+.ecole-carte-info { flex: 1; min-width: 0; }
+.ecole-nom { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); }
+.ecole-sous-types { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.ecole-profil { font-size: 0.78rem; color: var(--text-muted); font-style: italic; line-height: 1.4; }
+.ecole-cocktails { font-size: 0.72rem; color: var(--text-muted); }
+ 
+.ecole-cave-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(76,175,125,0.15);
+  color: var(--vert);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+ 
+.ecole-groupe { margin-bottom: 24px; }
+ 
+.ecole-groupe-titre {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+ 
+.ecole-materiel-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+ 
+.ecole-materiel-item:hover { border-color: var(--accent); }
+.ecole-materiel-info { flex: 1; min-width: 0; }
+ 
+.ecole-lexique-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+ 
+.ecole-lexique-item:last-child { border-bottom: none; }
+.ecole-terme { font-size: 0.92rem; font-weight: 600; color: var(--accent-light); margin-bottom: 4px; }
+.ecole-definition { font-size: 0.83rem; color: var(--text-detail); line-height: 1.55; }
+.ecole-exemple { font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-top: 4px; }
