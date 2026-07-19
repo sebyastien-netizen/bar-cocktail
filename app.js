@@ -2600,6 +2600,7 @@ function ouvrirPanneauAjustement(recetteId) {
   const panneau = document.getElementById('panneau-ajustement');
   panneau.querySelector('.panneau-titre-recette').textContent = ajustementRecette.nom;
   panneau.classList.add('visible');
+  document.getElementById('panneau-overlay').classList.add('visible');
 
   AXES.forEach(ax => {
     const slider = document.getElementById(`adj-${ax.id}`);
@@ -2613,6 +2614,7 @@ function ouvrirPanneauAjustement(recetteId) {
 
 function fermerPanneauAjustement() {
   document.getElementById('panneau-ajustement').classList.remove('visible');
+  document.getElementById('panneau-overlay').classList.remove('visible');
 }
 
 function onAdjSlider(axe, val) {
