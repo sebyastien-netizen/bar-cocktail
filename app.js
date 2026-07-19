@@ -2763,25 +2763,15 @@ function calculerAjustements() {
 }
 
 function resetAjustements() {
-  if (ajustementRecette) {
-    const r = ajustementRecette;
-    const toSlider = (val) => val ? Math.round((val - 5) * 3 / 5) : 0;
-    ajustementVals = {
-      amer: toSlider(r.gout_amer), sucre: toSlider(r.gout_sucre),
-      acide: toSlider(r.gout_acide), fruite: toSlider(r.gout_fruite),
-      fort: 0, cremeux: toSlider(r.gout_cremeux)
-    };
-  } else {
-    ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
-  }
+  ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
   AXES.forEach(ax => {
-    const v = ajustementVals[ax.id] || 0;
     const s = document.getElementById(`adj-${ax.id}`);
-    if (s) s.value = v;
+    if (s) s.value = 0;
     const el = document.getElementById(`adj-val-${ax.id}`);
-    if (el) { el.textContent = v > 0 ? '+' + v : v; el.style.color = v > 0 ? '#4caf7d' : v < 0 ? '#e24b4a' : 'var(--text-muted)'; }
+    if (el) { el.textContent = '0'; el.style.color = 'var(--text-muted)'; }
   });
   calculerAjustements();
+}
 }
 
 function onAdjPortions(val) {
