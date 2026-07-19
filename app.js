@@ -466,7 +466,7 @@ function ouvrirFicheRecette(id) {
   renderFiche(1);
   afficherModal('modal-fiche-recette');
 }
- function getConseilBartender(r, p) {
+function getConseilBartender(r, p) {
   if (p === 1) return null;
   const nom = r.nom;
   if (p === 2) return {
@@ -495,11 +495,11 @@ function ouvrirFicheRecette(id) {
     bg: 'rgba(83,74,183,0.1)', color: '#7F77DD'
   };
 }
- 
+
 // =============================================
 // CALCUL BATCH
 // =============================================
- 
+
 function getBatchInfo(r, p) {
   if (p < 4) return null;
   const ratio = p >= 7 ? 0.25 : 0.20;
@@ -510,22 +510,22 @@ function getBatchInfo(r, p) {
   const total = Math.round((totalSpiritueux + eau) * 10) / 10;
   return { totalSpiritueux: Math.round(totalSpiritueux * 10) / 10, eau, total, ratio: Math.round(ratio * 100) };
 }
- 
+
 // =============================================
 // RENDU FICHE PRINCIPALE
 // =============================================
- 
+
 function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
   const caveIds = getItemsCave();
   const diffLabel = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
- 
+
   const conseil = getConseilBartender(r, portions);
   const batch   = getBatchInfo(r, portions);
- 
+
   document.querySelector('.fiche-contenu').innerHTML = `
- 
+
     <!-- EN-TÊTE -->
     <div class="fiche-entete">
       ${r.photo_url ? `<div class="fiche-img-wrap"><img src="${r.photo_url}" alt="${r.nom}" class="fiche-img" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
@@ -543,7 +543,7 @@ function renderFiche(portions) {
         ${r.description_courte ? `<p class="fiche-description">${r.description_courte}</p>` : ''}
       </div>
     </div>
- 
+
     <!-- SÉLECTEUR PORTIONS -->
     <div class="fiche-portions-bloc">
       <div class="portions-label-row">
@@ -556,14 +556,14 @@ function renderFiche(portions) {
         <button class="portions-btn" onclick="renderFiche(${portions + 1})" ${portions >= 10 ? 'disabled' : ''}>+</button>
       </div>
     </div>
- 
+
     <!-- CONSEIL BARTENDER -->
     ${conseil ? `
     <div class="fiche-conseil" style="background:${conseil.bg};color:${conseil.color}">
       <div class="fiche-conseil-titre">${conseil.icon} ${conseil.titre}</div>
       <div class="fiche-conseil-texte">${conseil.texte}</div>
     </div>` : ''}
- 
+
     <!-- GRILLE INFOS + SERVICE -->
     ${r.saveur_dominante || r.verre_type ? `
     <div class="fiche-grid-2">
@@ -590,7 +590,7 @@ function renderFiche(portions) {
         ${r.kit_portable ? `<div class="fiche-carac-row"><span>Kit portable</span><span>✓ Oui</span></div>` : ''}
       </div>` : ''}
     </div>` : ''}
- 
+
     <!-- PROFIL GUSTATIF -->
     ${hasProfil(r) ? `
     <div class="fiche-card">
@@ -610,7 +610,7 @@ function renderFiche(portions) {
         </div>
       </div>
     </div>` : ''}
- 
+
     <!-- INGRÉDIENTS -->
     <div class="fiche-card">
       <div class="fiche-card-titre">Ingrédients <span class="fiche-portion-label">— ${portions} verre${portions > 1 ? 's' : ''}</span></div>
@@ -643,7 +643,7 @@ function renderFiche(portions) {
         <strong>Batch :</strong> ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')} + ${batch.eau}cl eau = ${batch.total}cl total
       </div>` : ''}
     </div>
- 
+
     <!-- MATÉRIELS -->
     ${r.materiels && r.materiels.length > 0 ? `
     <div class="fiche-card">
@@ -652,7 +652,7 @@ function renderFiche(portions) {
         ${r.materiels.map(m => `<span class="tag-materiel ${m.essentiel ? '' : 'materiel-optionnel'}">${m.nom}</span>`).join('')}
       </div>
     </div>` : ''}
- 
+
     <!-- PRÉPARATION -->
     <div class="fiche-card">
       <div class="fiche-card-titre">Préparation${portions > 1 ? ` — ${portions} verres` : ''}</div>
@@ -673,7 +673,7 @@ function renderFiche(portions) {
         `).join('')}
       </div>
     </div>
- 
+
     <!-- DÉGUSTATION -->
     ${r.degustation_voir ? `
     <div class="fiche-card">
@@ -686,7 +686,7 @@ function renderFiche(portions) {
         ${r.degustation_defi ? `<div class="fiche-degu-step fiche-degu-step--defi"><span class="fiche-degu-icon">🎯</span><div><div class="fiche-degu-label">Défi détection</div><div class="fiche-degu-texte">${r.degustation_defi}</div></div></div>` : ''}
       </div>
     </div>` : ''}
- 
+
     <!-- VARIANTES -->
     ${hasVariantes(r) || r.variante_cave ? `
     <div class="fiche-card">
@@ -720,7 +720,7 @@ function renderFiche(portions) {
         <div class="fiche-variante-desc">${r.variante_notes}</div>
       </div>` : ''}
     </div>` : ''}
- 
+
     <!-- OCCASIONS + INFOS -->
     ${r.occasions?.length || r.anecdote ? `
     <div class="fiche-grid-2">
@@ -738,14 +738,14 @@ function renderFiche(portions) {
         <div class="fiche-carac-row"><span>Kit portable</span><span class="${r.kit_portable ? 'fiche-info-ok' : 'fiche-info-no'}">${r.kit_portable ? '✓ Oui' : '✗ Non'}</span></div>
       </div>
     </div>` : ''}
- 
+
     <!-- ANECDOTE -->
     ${r.anecdote ? `
     <div class="fiche-card fiche-card--anecdote">
       <div class="fiche-card-titre">Histoire</div>
       <p class="fiche-anecdote-texte">${r.anecdote}</p>
     </div>` : ''}
- 
+
     <!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
       <button class="btn btn-realiser" onclick="marquerRealisee(${portions})">
@@ -754,11 +754,12 @@ function renderFiche(portions) {
     </div>
   `;
 }
- 
+
 function changerPortions(n) {
   if (n < 1 || n > 10) return;
   renderFiche(n);
 }
+
  
 function hasProfil(r) {
   return r.gout_sucre || r.gout_amer || r.gout_acide || r.gout_fruite ||
