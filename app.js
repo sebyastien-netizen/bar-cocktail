@@ -1329,111 +1329,6 @@ async function chargerAAcheter() {
     sirops:        { label: '🍬 Sirops & Épicerie', ids: ['a-acheter-sirops', 'ingredients-frais'] }
   };
  
-  const scoreMap = {};
-  recettes.forEach(r => {
-    const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
-    manquants.forEach(ing => {
-      if (!scoreMap[ing.item_cave_id]) {
-        const itemData = allItems?.find(i => i.id === ing.item_cave_id);
-        scoreMap[ing.item_cave_id] = {
-          id: ing.item_cave_id,
-          nom: ing.nom,
-          count: 0,
-          prix: itemData?.prix_estime || null,
-          category_id: itemData?.category_id || null,
-          recettesDetail: []
-        };
-      }
-      scoreMap[ing.item_cave_id].count++;
-      scoreMap[ing.item_cave_id].recettesDetail.push(r);
-    });
-  });
- 
-  const allScored = Object.values(scoreMap).sort((a, b) => b.count - a.count);
- 
-  function renderGroupe(groupe, items) {
-    if (items.length === 0) return '';
-    return `
-      <div class="aacheter-groupe">
-        <h3 class="aacheter-groupe-titre">${groupe.label}</h3>
-        <div class="aacheter-liste">
-          ${items.map(item => `
-            <div class="aacheter-item">
-              <div class="aacheter-item-header">
-                <div class="aacheter-nom">${item.nom}</div>
-                <div class="aacheter-right">
-                  ${item.prix ? `<span class="item-prix">~${item.prix}€</span>` : ''}
-                  <span class="aacheter-badge">${item.count} recette${item.count > 1 ? 's' : ''}</span>
-                </div>
-              </div>
-              <div class="aacheter-recettes-detail">
-                ${item.recettesDetail.slice(0, 4).map(r => `
-                  <div class="aacheter-recette-chip">
-                    <span class="chip-nom">${r.nom}</span>
-                    ${r.base_alcool ? `<span class="chip-base">${r.base_alcool}</span>` : ''}
-                    <span class="chip-diff diff-${r.difficulte}">${{facile:'Facile',moyen:'Moyen',avance:'Avancé'}[r.difficulte]||''}</span>
-                    <div class="chip-gouts">${(r.gouts||[]).slice(0,3).map(g=>`<span class="tag-gout">${g}</span>`).join('')}</div>
-                  </div>
-                `).join('')}
-                ${item.recettesDetail.length > 4 ? `<div class="chip-more">+${item.recettesDetail.length-4} autres recettes</div>` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
- 
-  const grouped = {};
-  Object.keys(catGroupes).forEach(k => grouped[k] = []);
- 
-  allScored.forEach(item => {
-    for (const [key, groupe] of Object.entries(catGroupes)) {
-      if (groupe.ids.includes(item.category_id)) {
-        grouped[key].push(item);
-        return;
-      }
-    }
-    grouped['spiritueux'].push(item);
-  });
- 
-  const prioritaires = (aAcheter || []).filter(a => !scoreMap[a.id]);
- 
-  container.innerHTML = `
-    <div class="aacheter-header">
-      <p class="aacheter-intro">Ingrédients qui débloquent des recettes supplémentaires, classés par catégorie.</p>
-    </div>
- 
-    ${Object.entries(catGroupes).map(([key, groupe]) =>
-      renderGroupe(groupe, grouped[key])
-    ).join('')}
- 
-    ${prioritaires.length > 0 ? `
-    <div class="aacheter-groupe">
-      <h3 class="aacheter-groupe-titre">⭐ Prioritaires (sans recette liée)</h3>
-      <div class="aacheter-liste">
-        ${prioritaires.map(item => `
-          <div class="aacheter-item">
-            <div class="aacheter-item-header">
-              <div class="aacheter-nom">${item.nom}</div>
-              ${item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
-            </div>
-            <div class="aacheter-raison">${item.raison}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-    ` : ''}
- 
-    <div class="aacheter-groupe">
-      <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
-        ✨ Analyser l'apport gustatif (Claude)
-      </button>
-      <div id="apport-gustatif-result"></div>
-    </div>
-  `;
-}
- 
 async function chargerApportGustatif() {
   const btn = document.getElementById('btn-apport-gustatif');
   const result = document.getElementById('apport-gustatif-result');
@@ -1887,7 +1782,6 @@ function ouvrirFichePlante(id) {
   `;
  
   afficherModal('modal-fiche-plante');
- }
  let ecoleData = { alcools: [], techniques: [], materiels: [], lexique: [] };
 let ecoleSection = 'alcools';
  
@@ -2154,7 +2048,9 @@ function ouvrirFicheMateriel(id) {
     ${m.pourquoi ? `<div class="plante-section"><h3>Pourquoi c'est important</h3><p class="plante-notes-bar">${m.pourquoi}</p></div>` : ''}
     ${m.prix_estime ? `<div class="plante-section"><h3>Prix indicatif</h3><p>${m.prix_estime}</p></div>` : ''}
   `;
-afficherModal('modal-ecole-fiche');
+  afficherModal('modal-ecole-fiche');
+}
+}
 }
 
 init();
