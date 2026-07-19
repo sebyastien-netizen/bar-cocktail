@@ -42,7 +42,7 @@
       <div class="qr-popup" id="qr-popup">
         <div class="qr-titre">Ouvrir sur mobile</div>
         <img id="qr-img" width="180" height="180" alt="QR Code">
-        <div class="qr-url">super-mousse-70068b.netlify.app</div>
+        <div class="qr-url">bar-cocktail-smoky.vercel.app</div>
       </div>
     </header>
 
@@ -61,6 +61,17 @@
       <div id="section-cave" class="tab-section">
         <div class="cave-header"><h2>🍶 Ma Cave</h2></div>
         <div id="cave-container"><div class="loading-state">Chargement…</div></div>
+
+        <!-- ÉQUIPEMENTS (dépliable, uniquement dans Ma Cave) -->
+        <details class="equip-details" id="equip-details" ontoggle="onEquipToggle(this)">
+          <summary class="equip-summary">
+            🔧 Équipements
+            <span class="equip-summary-stats" id="equip-summary-stats"></span>
+          </summary>
+          <div id="equipements-container" class="equip-body">
+            <div class="loading-state">Chargement…</div>
+          </div>
+        </details>
       </div>
 
       <!-- RECETTES -->
@@ -86,17 +97,6 @@
         <div class="cave-header"><h2>🛒 À acheter</h2></div>
         <div id="aacheter-container"><div class="loading-state">Chargement…</div></div>
       </div>
-
-      <!-- ÉQUIPEMENTS (section dépliable) -->
-      <details class="equip-details" id="equip-details" ontoggle="onEquipToggle(this)">
-        <summary class="equip-summary">
-          🔧 Équipements
-          <span class="equip-summary-stats" id="equip-summary-stats"></span>
-        </summary>
-        <div id="equipements-container" class="equip-body">
-          <div class="loading-state">Chargement…</div>
-        </div>
-      </details>
 
     </main>
   </div>
@@ -149,8 +149,6 @@
   <div class="modal-overlay" id="modal-ajout">
     <div class="modal modal-ajout-large">
       <h3>Ajouter un alcool</h3>
-
-      <!-- Nom + identification Claude -->
       <div class="form-group">
         <label>Nom du produit <span class="label-hint">soyez précis : marque + type</span></label>
         <div class="ajout-nom-row">
@@ -158,23 +156,15 @@
           <button class="btn btn-outline btn-identifier" id="btn-identifier-claude">✨ Identifier</button>
         </div>
       </div>
-
-      <!-- Résultat identification -->
       <div id="ajout-claude-result" class="ajout-claude-result"></div>
-
-      <!-- Catégorie (pré-remplie par Claude) -->
       <div class="form-group">
         <label>Catégorie</label>
         <select id="select-categorie-ajout"></select>
       </div>
-
-      <!-- Description -->
       <div class="form-group">
         <label>Description <span class="label-hint">optionnel</span></label>
         <input type="text" id="input-detail-ajout" placeholder="ex: Rhum agricole AOC Guadeloupe">
       </div>
-
-      <!-- Degré + Contenance -->
       <div class="form-row">
         <div class="form-group">
           <label>Degré (%) <span class="label-hint">optionnel</span></label>
@@ -185,14 +175,10 @@
           <input type="number" id="input-cl-ajout" placeholder="ex: 70">
         </div>
       </div>
-
-      <!-- Prix payé -->
       <div class="form-group">
         <label>Prix payé (€) <span class="label-hint">optionnel</span></label>
         <input type="number" id="input-prix-paye-ajout" placeholder="ex: 28" step="0.01">
       </div>
-
-      <!-- Origine + Anecdote -->
       <div class="form-group">
         <label>Origine <span class="label-hint">optionnel</span></label>
         <input type="text" id="input-origine-ajout" placeholder="ex: Capesterre-Belle-Eau, Guadeloupe">
@@ -201,7 +187,6 @@
         <label>Anecdote <span class="label-hint">optionnel</span></label>
         <input type="text" id="input-anecdote-ajout" placeholder="ex: Distillé sur alambic Savalle du XIXe siècle">
       </div>
-
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="fermerModal('modal-ajout')">Annuler</button>
         <button class="btn" id="btn-confirmer-ajout">Ajouter à la cave</button>
