@@ -51,6 +51,7 @@
       <button data-tab="recettes">🍹 Recettes</button>
       <button data-tab="dashboard">📊 Dashboard</button>
       <button data-tab="concoctions">⚗️ Concoctions</button>
+      <button data-tab="herboristerie">🌿 Herboristerie</button>
       <button disabled title="Bientôt">🎓 École</button>
       <button data-tab="aacheter">🛒 À acheter</button>
     </nav>
@@ -61,8 +62,6 @@
       <div id="section-cave" class="tab-section">
         <div class="cave-header"><h2>🍶 Ma Cave</h2></div>
         <div id="cave-container"><div class="loading-state">Chargement…</div></div>
-
-        <!-- ÉQUIPEMENTS (dépliable, uniquement dans Ma Cave) -->
         <details class="equip-details" id="equip-details" ontoggle="onEquipToggle(this)">
           <summary class="equip-summary">
             🔧 Équipements
@@ -86,6 +85,12 @@
         <div id="dashboard-container"><div class="loading-state">Chargement…</div></div>
       </div>
 
+      <!-- HERBORISTERIE -->
+      <div id="section-herboristerie" class="tab-section hidden">
+        <div class="cave-header"><h2>🌿 Herboristerie</h2></div>
+        <div id="herboristerie-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
       <!-- CONCOCTIONS -->
       <div id="section-concoctions" class="tab-section hidden">
         <div class="cave-header"><h2>⚗️ Concoctions</h2></div>
@@ -106,6 +111,14 @@
     <div class="modal modal-fiche">
       <button class="modal-close" onclick="fermerModal('modal-fiche-recette')">✕</button>
       <div class="fiche-contenu"></div>
+    </div>
+  </div>
+
+  <!-- MODAL : FICHE PLANTE -->
+  <div class="modal-overlay modal-large" id="modal-fiche-plante">
+    <div class="modal modal-fiche">
+      <button class="modal-close" onclick="fermerModal('modal-fiche-plante')">✕</button>
+      <div class="plante-fiche-contenu"></div>
     </div>
   </div>
 
