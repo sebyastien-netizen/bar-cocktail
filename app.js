@@ -2610,8 +2610,9 @@ const AXES = [
 ];
 
 let ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+let ajustementValsOriginaux = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
 let ajustementRecette = null;
-let ajustementApplique = null; // { ings: [], portions: 1 } — null = recette originale
+let ajustementApplique = null;
 let ajustementPortions = 1;
 
 function ouvrirPanneauAjustement(recetteId) {
@@ -2630,6 +2631,9 @@ function ouvrirPanneauAjustement(recetteId) {
     fort:    0,
     cremeux: toSlider(r.gout_cremeux)
   };
+
+  // Sauvegarder les valeurs originales pour le marqueur et le reset
+  ajustementValsOriginaux = { ...ajustementVals };
 
   // Portions
   ajustementPortions = 1;
@@ -2658,6 +2662,7 @@ function ouvrirPanneauAjustement(recetteId) {
   if (portVal) portVal.textContent = '1';
 
   calculerAjustements();
+  updateMarqueursOriginaux();
 }
 
 function fermerPanneauAjustement() {
@@ -2673,6 +2678,7 @@ function onAdjSlider(axe, val) {
     el.style.color = val > 0 ? '#4caf7d' : val < 0 ? '#e24b4a' : 'var(--text-muted)';
   }
   calculerAjustements();
+  updateMarqueursOriginaux();
 }
 
 function calculerAjustements() {
@@ -2763,14 +2769,41 @@ function calculerAjustements() {
 }
 
 function resetAjustements() {
-  ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+  ajustementVals = { ...ajustementValsOriginaux };
   AXES.forEach(ax => {
+    const v = ajustementVals[ax.id] || 0;
     const s = document.getElementById(`adj-${ax.id}`);
-    if (s) s.value = 0;
+    if (s) s.value = v;
     const el = document.getElementById(`adj-val-${ax.id}`);
-    if (el) { el.textContent = '0'; el.style.color = 'var(--text-muted)'; }
+    if (el) {
+      el.textContent = v > 0 ? '+' + v : v;
+      el.style.color = v > 0 ? '#4caf7d' : v < 0 ? '#e24b4a' : 'var(--text-muted)';
+    }
   });
+  const portSlider = document.getElementById('adj-portions-slider');
+  const portVal = document.getElementById('adj-portions-val');
+  if (portSlider) portSlider.value = 1;
+  if (portVal) portVal.textContent = '1';
+  ajustementPortions = 1;
   calculerAjustements();
+  updateMarqueursOriginaux();
+}
+
+function updateMarqueursOriginaux() {
+  // Affiche un trait gris sur la position originale de chaque curseur
+  AXES.forEach(ax => {
+    const slider = document.getElementById(`adj-${ax.id}`);
+    const marqueur = document.getElementById(`adj-marqueur-${ax.id}`);
+    if (!slider || !marqueur) return;
+
+    const origVal = ajustementValsOriginaux[ax.id] || 0;
+    // Convertir la valeur (-3 à +3) en pourcentage (0 à 100)
+    const pct = ((origVal + 3) / 6) * 100;
+    marqueur.style.left = `${pct}%`;
+
+    // Masquer le marqueur si la position originale est au centre exact (0)
+    marqueur.style.opacity = origVal !== 0 ? '1' : '0';
+  });
 }
 
 function onAdjPortions(val) {
