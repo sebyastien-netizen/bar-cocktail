@@ -910,7 +910,7 @@ function ouvrirModalAjout() {
     result.innerHTML = '';
  
     try {
-      const response = await fetch('/.netlify/functions/identifier', {
+      const response = await fetch('/api/identifier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nom })
@@ -1448,7 +1448,7 @@ async function chargerApportGustatif() {
   const manquantsTop = Object.entries(scoreMap).sort((a,b) => b[1]-a[1]).slice(0,8).map(([nom]) => nom).join(', ');
  
   try {
-    const apportResponse = await fetch('/.netlify/functions/apport', {
+    const apportResponse = await fetch('/api/apport', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ caveNoms, manquantsTop })
