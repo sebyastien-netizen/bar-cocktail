@@ -1887,5 +1887,272 @@ function ouvrirFichePlante(id) {
   `;
  
   afficherModal('modal-fiche-plante');
+ let ecoleData = { alcools: [], techniques: [], materiels: [], lexique: [] };
+let ecoleSection = 'alcools';
+ 
+// =============================================
+// CHARGEMENT
+// =============================================
+ 
+async function chargerEcole() {
+  const container = document.getElementById('ecole-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-state">Chargement…</div>';
+ 
+  const [{ data: alcools }, { data: techniques }, { data: materiels }, { data: lexique }] = await Promise.all([
+    db.from('ecole_alcools').select('*').order('ordre'),
+    db.from('ecole_techniques').select('*').order('ordre'),
+    db.from('ecole_materiels').select('*').order('ordre'),
+    db.from('ecole_lexique').select('*').order('ordre')
+  ]);
+ 
+  ecoleData = {
+    alcools:    alcools    || [],
+    techniques: techniques || [],
+    materiels:  materiels  || [],
+    lexique:    lexique    || []
+  };
+ 
+  renderEcole();
+}
+ 
+// =============================================
+// RENDU PRINCIPAL
+// =============================================
+ 
+function renderEcole() {
+  const container = document.getElementById('ecole-container');
+  if (!container) return;
+ 
+  const sections = [
+    { id: 'alcools',    label: '🥃 Alcools' },
+    { id: 'techniques', label: '🍹 Techniques' },
+    { id: 'materiels',  label: '🔧 Matériels' },
+    { id: 'lexique',    label: '📖 Lexique' }
+  ];
+ 
+  container.innerHTML = `
+    <div class="ecole-nav">
+      ${sections.map(s => `
+        <button class="ecole-nav-btn ${ecoleSection === s.id ? 'active' : ''}"
+          onclick="ecoleSection='${s.id}'; renderEcole()">
+          ${s.label}
+        </button>
+      `).join('')}
+    </div>
+    <div class="ecole-content">
+      ${ecoleSection === 'alcools'    ? renderAlcools()    : ''}
+      ${ecoleSection === 'techniques' ? renderTechniques() : ''}
+      ${ecoleSection === 'materiels'  ? renderMateriels()  : ''}
+      ${ecoleSection === 'lexique'    ? renderLexique()    : ''}
+    </div>
+  `;
+}
+ 
+// =============================================
+// ALCOOLS
+// =============================================
+ 
+function renderAlcools() {
+  const caveNoms = cave?.categories?.flatMap(c =>
+    c.items.filter(i => i.detenu !== false).map(i => i.nom.toLowerCase())
+  ) || [];
+ 
+  return `<div class="ecole-grille">${ecoleData.alcools.map(a => {
+    const dansCave = caveNoms.some(n =>
+      a.nom.toLowerCase().split(' ').some(mot => n.includes(mot) && mot.length > 3)
+    );
+    return `
+      <div class="ecole-carte" onclick="ouvrirFicheAlcool('${a.id}')">
+        <div class="ecole-carte-top">
+          <span class="ecole-emoji">${a.emoji}</span>
+          <div class="ecole-carte-info">
+            <div class="ecole-nom">${a.nom}</div>
+            <div class="ecole-sous-types">${(a.sous_types || []).slice(0, 3).join(' · ')}</div>
+          </div>
+          ${dansCave ? '<span class="ecole-cave-badge">✓ Cave</span>' : ''}
+        </div>
+        <div class="ecole-profil">${a.profil || ''}</div>
+        ${a.cocktails_types?.length ? `<div class="ecole-cocktails">🍹 ${a.cocktails_types.slice(0, 3).join(' · ')}</div>` : ''}
+      </div>
+    `;
+  }).join('')}</div>`;
+}
+ 
+// =============================================
+// TECHNIQUES
+// =============================================
+ 
+function renderTechniques() {
+  const diffLabel = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' };
+  const diffClass = { facile: 'diff-facile', moyen: 'diff-moyen', avance: 'diff-avance' };
+ 
+  return `<div class="ecole-grille">${ecoleData.techniques.map(t => `
+    <div class="ecole-carte" onclick="ouvrirFicheTechnique('${t.id}')">
+      <div class="ecole-carte-top">
+        <span class="ecole-emoji">${t.emoji}</span>
+        <div class="ecole-carte-info">
+          <div class="ecole-nom">${t.nom}</div>
+          <div class="ecole-sous-types">${(t.materiels || []).slice(0, 2).join(' · ')}</div>
+        </div>
+        <span class="carte-diff ${diffClass[t.difficulte] || ''}">${diffLabel[t.difficulte] || ''}</span>
+      </div>
+      <div class="ecole-profil">${t.description || ''}</div>
+    </div>
+  `).join('')}</div>`;
+}
+ 
+// =============================================
+// MATÉRIELS
+// =============================================
+ 
+function renderMateriels() {
+  const groupes = {
+    necessaire: '⭐ Essentiels',
+    utile:      '👍 Utiles',
+    folklore:   '🎭 Folklore'
+  };
+ 
+  return Object.entries(groupes).map(([cat, label]) => {
+    const items = ecoleData.materiels.filter(m => m.categorie === cat);
+    if (!items.length) return '';
+    return `
+      <div class="ecole-groupe">
+        <div class="ecole-groupe-titre">${label}</div>
+        ${items.map(m => `
+          <div class="ecole-materiel-item" onclick="ouvrirFicheMateriel('${m.id}')">
+            <span class="ecole-emoji" style="font-size:1.2rem">${m.emoji}</span>
+            <div class="ecole-materiel-info">
+              <div class="ecole-nom" style="font-size:0.88rem">${m.nom}</div>
+              <div class="ecole-sous-types">${m.description || ''}</div>
+            </div>
+            ${m.prix_estime ? `<span class="item-prix">${m.prix_estime}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+ 
+// =============================================
+// LEXIQUE
+// =============================================
+ 
+function renderLexique() {
+  const groupes = {
+    commander:   '🗣 Commander au bar',
+    bartenders:  '🍸 Entre bartenders',
+    degustation: '👅 Dégustation'
+  };
+ 
+  return Object.entries(groupes).map(([cat, label]) => {
+    const items = ecoleData.lexique.filter(l => l.categorie === cat);
+    if (!items.length) return '';
+    return `
+      <div class="ecole-groupe">
+        <div class="ecole-groupe-titre">${label}</div>
+        ${items.map(l => `
+          <div class="ecole-lexique-item">
+            <div class="ecole-terme">${l.terme}</div>
+            <div class="ecole-definition">${l.definition}</div>
+            ${l.exemple ? `<div class="ecole-exemple">${l.exemple}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+ 
+// =============================================
+// FICHES DÉTAILLÉES
+// =============================================
+ 
+function ouvrirFicheAlcool(id) {
+  const a = ecoleData.alcools.find(x => x.id === id);
+  if (!a) return;
+ 
+  document.querySelector('.ecole-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">${a.emoji}</span>
+      <div><h2 class="fiche-titre">${a.nom}</h2></div>
+    </div>
+    ${a.sous_types?.length ? `
+    <div class="plante-section">
+      <h3>Types</h3>
+      <div class="plante-cocktails-liste">
+        ${a.sous_types.map(s => `<span class="plante-cocktail-chip">${s}</span>`).join('')}
+      </div>
+    </div>` : ''}
+    ${a.profil ? `<div class="plante-section"><h3>Profil</h3><p>${a.profil}</p></div>` : ''}
+    ${a.histoire ? `<div class="plante-section"><h3>Histoire</h3><p>${a.histoire}</p></div>` : ''}
+    ${a.production ? `<div class="plante-section"><h3>Production</h3><p>${a.production}</p></div>` : ''}
+    ${a.regions ? `<div class="plante-section"><h3>Régions</h3><p>${a.regions}</p></div>` : ''}
+    ${a.comment_boire ? `<div class="plante-section"><h3>Comment le boire</h3><p class="plante-notes-bar">${a.comment_boire}</p></div>` : ''}
+    ${a.cocktails_types?.length ? `
+    <div class="plante-section">
+      <h3>Cocktails associés</h3>
+      <div class="plante-cocktails-liste">
+        ${a.cocktails_types.map(c => `<span class="plante-cocktail-chip">🍹 ${c}</span>`).join('')}
+      </div>
+    </div>` : ''}
+  `;
+  afficherModal('modal-ecole-fiche');
+}
+ 
+function ouvrirFicheTechnique(id) {
+  const t = ecoleData.techniques.find(x => x.id === id);
+  if (!t) return;
+  const diffLabel = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' };
+  const diffClass = { facile: 'diff-facile', moyen: 'diff-moyen', avance: 'diff-avance' };
+ 
+  document.querySelector('.ecole-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">${t.emoji}</span>
+      <div>
+        <h2 class="fiche-titre">${t.nom}</h2>
+        <span class="carte-diff ${diffClass[t.difficulte] || ''}" style="margin-top:6px;display:inline-block">
+          ${diffLabel[t.difficulte] || ''}
+        </span>
+      </div>
+    </div>
+    ${t.description ? `<div class="plante-section"><h3>Description</h3><p>${t.description}</p></div>` : ''}
+    ${t.quand ? `<div class="plante-section"><h3>Quand l'utiliser</h3><p>${t.quand}</p></div>` : ''}
+    ${t.materiels?.length ? `
+    <div class="plante-section">
+      <h3>Matériels</h3>
+      <div class="fiche-materiels">
+        ${t.materiels.map(m => `<span class="tag-materiel">${m}</span>`).join('')}
+      </div>
+    </div>` : ''}
+    ${t.etapes?.length ? `
+    <div class="plante-section">
+      <h3>Étapes</h3>
+      <ol class="fiche-etapes">
+        ${t.etapes.map(e => `
+          <li class="etape-item">
+            <div class="etape-desc">${e}</div>
+          </li>
+        `).join('')}
+      </ol>
+    </div>` : ''}
+    ${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="plante-notes-bar">${t.conseil_pro}</p></div>` : ''}
+  `;
+  afficherModal('modal-ecole-fiche');
+}
+ 
+function ouvrirFicheMateriel(id) {
+  const m = ecoleData.materiels.find(x => x.id === id);
+  if (!m) return;
+ 
+  document.querySelector('.ecole-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">${m.emoji}</span>
+      <div><h2 class="fiche-titre">${m.nom}</h2></div>
+    </div>
+    ${m.description ? `<div class="plante-section"><h3>Description</h3><p>${m.description}</p></div>` : ''}
+    ${m.pourquoi ? `<div class="plante-section"><h3>Pourquoi c'est important</h3><p class="plante-notes-bar">${m.pourquoi}</p></div>` : ''}
+    ${m.prix_estime ? `<div class="plante-section"><h3>Prix indicatif</h3><p>${m.prix_estime}</p></div>` : ''}
+  `;
+  afficherModal('modal-ecole-fiche');
 }
 init();
