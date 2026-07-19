@@ -751,6 +751,9 @@ function renderFiche(portions) {
       <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
       </button>
+      <button class="btn-ajuster-flottant" onclick="ouvrirPanneauAjustement('${r.id}')">
+        ✦ Ajuster
+      </button>
     </div>
   `;
 }
@@ -2501,3 +2504,245 @@ async function supprimerRealisation(id) {
 }
 
 init();
+
+// =============================================
+// CURSEUR GUSTATIF — Panneau latéral
+// =============================================
+
+const REGLES_GUSTATIVES = {
+  amer: {
+    moins: [
+      { seuil: -1, action: 'reduire', cible: ['campari','angostura','kahlua','bitter','amaro','fernet','kahlúa'], pct: 15, note: 'Réduire l\'amer principal' },
+      { seuil: -2, action: 'sel', note: '1 pincée de sel fin — supprime la perception amère' },
+      { seuil: -2, action: 'augmenter', cible: ['sirop','sucre','miel'], pct: 20, note: 'Compenser avec plus de sucrosité' },
+      { seuil: -3, action: 'ai', note: 'Reformulation complète recommandée' }
+    ],
+    plus: [
+      { seuil: 1, action: 'ajouter_fixe', ingredient: 'Angostura Aromatic', quantite: '1 dash', note: '1 dash Angostura Aromatic' },
+      { seuil: 2, action: 'ajouter_fixe', ingredient: 'Angostura Aromatic', quantite: '2 dashs', note: '2 dashs Angostura Aromatic' },
+      { seuil: 3, action: 'ai', note: 'Envisager Fernet ou Amaro' }
+    ]
+  },
+  sucre: {
+    moins: [
+      { seuil: -1, action: 'reduire', cible: ['sirop','sucre','miel','grenadine','orgeat'], pct: 30, note: 'Réduire l\'apport sucré' },
+      { seuil: -2, action: 'reduire', cible: ['cointreau','triple sec','curacao','liqueur'], pct: 15, note: 'Réduire légèrement la liqueur sucrée' },
+      { seuil: -3, action: 'ai', note: 'Supprimer sirop, ajuster liqueur' }
+    ],
+    plus: [
+      { seuil: 1, action: 'augmenter', cible: ['sirop','sucre'], pct: 30, note: 'Augmenter le sirop de sucre' },
+      { seuil: 2, action: 'ajouter_fixe', ingredient: 'Sirop de sucre', quantite: '0.5cl', note: 'Ajouter 0.5cl de sirop' },
+      { seuil: 3, action: 'sub', note: 'Option : sirop de miel ou agave pour plus de complexité' }
+    ]
+  },
+  acide: {
+    moins: [
+      { seuil: -1, action: 'reduire', cible: ['citron','lime','jus de citron','jus de lime'], pct: 15, note: 'Réduire légèrement l\'agrume' },
+      { seuil: -2, action: 'sel', note: '1 pincée de sel — atténue la perception acide' },
+      { seuil: -2, action: 'augmenter', cible: ['sirop','sucre'], pct: 20, note: 'Compenser avec plus de sucre' }
+    ],
+    plus: [
+      { seuil: 1, action: 'augmenter', cible: ['citron','lime','jus'], pct: 15, note: 'Augmenter le jus d\'agrume' },
+      { seuil: 2, action: 'ajouter_fixe', ingredient: 'Jus de citron', quantite: '0.5cl', note: 'Ajouter 0.5cl de jus de citron' }
+    ]
+  },
+  fort: {
+    moins: [
+      { seuil: -1, action: 'reduire', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 10, note: 'Réduire le spiritueux de 10%' },
+      { seuil: -2, action: 'reduire', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 20, note: 'Réduire le spiritueux de 20%' },
+      { seuil: -3, action: 'ai', note: 'Version allégée — compenser avec plus de mixer' }
+    ],
+    plus: [
+      { seuil: 1, action: 'augmenter', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 10, note: 'Augmenter le spiritueux de 10%' },
+      { seuil: 2, action: 'augmenter', cible: ['vodka','gin','whisky','rhum','mezcal','tequila','cognac','armagnac'], pct: 20, note: 'Version plus corsée (+20%)' },
+      { seuil: 3, action: 'ai', note: 'Option overproof ou Navy Strength' }
+    ]
+  },
+  fruite: {
+    moins: [
+      { seuil: -1, action: 'reduire', cible: ['jus','framboise','fraise','mangue','ananas','grenadine'], pct: 20, note: 'Réduire l\'apport fruité' }
+    ],
+    plus: [
+      { seuil: 1, action: 'augmenter', cible: ['jus','framboise','fraise','mangue','ananas'], pct: 20, note: 'Augmenter l\'apport fruité' },
+      { seuil: 2, action: 'ajouter_fixe', ingredient: 'Jus de fruit frais', quantite: '1cl', note: 'Ajouter 1cl de jus de fruit frais' }
+    ]
+  },
+  cremeux: {
+    moins: [
+      { seuil: -1, action: 'reduire', cible: ['creme','aquafaba','blanc','oeuf'], pct: 30, note: 'Réduire l\'agent crémeux' },
+      { seuil: -3, action: 'supprimer', cible: ['creme','aquafaba','blanc','oeuf'], note: 'Supprimer — texture plus liquide' }
+    ],
+    plus: [
+      { seuil: 1, action: 'augmenter', cible: ['creme','aquafaba','blanc'], pct: 30, note: 'Augmenter l\'agent crémeux' },
+      { seuil: 2, action: 'sub', note: 'Blanc d\'œuf à la place de l\'aquafaba — mousse plus dense' }
+    ]
+  }
+};
+
+const AXES = [
+  { id: 'amer',   label: 'Amer' },
+  { id: 'sucre',  label: 'Sucré' },
+  { id: 'acide',  label: 'Acide' },
+  { id: 'fort',   label: 'Force' },
+  { id: 'fruite', label: 'Fruité' },
+  { id: 'cremeux',label: 'Crémeux' }
+];
+
+let ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+let ajustementRecette = null;
+
+function ouvrirPanneauAjustement(recetteId) {
+  ajustementRecette = recettes.find(r => r.id === recetteId);
+  if (!ajustementRecette) return;
+
+  ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+
+  const panneau = document.getElementById('panneau-ajustement');
+  panneau.querySelector('.panneau-titre-recette').textContent = ajustementRecette.nom;
+  panneau.classList.add('visible');
+
+  AXES.forEach(ax => {
+    const slider = document.getElementById(`adj-${ax.id}`);
+    if (slider) { slider.value = 0; }
+    const val = document.getElementById(`adj-val-${ax.id}`);
+    if (val) { val.textContent = '0'; val.style.color = 'var(--text-muted)'; }
+  });
+
+  calculerAjustements();
+}
+
+function fermerPanneauAjustement() {
+  document.getElementById('panneau-ajustement').classList.remove('visible');
+}
+
+function onAdjSlider(axe, val) {
+  ajustementVals[axe] = parseInt(val);
+  const el = document.getElementById(`adj-val-${axe}`);
+  if (el) {
+    el.textContent = val > 0 ? '+' + val : val;
+    el.style.color = val > 0 ? '#4caf7d' : val < 0 ? '#e24b4a' : 'var(--text-muted)';
+  }
+  calculerAjustements();
+}
+
+function calculerAjustements() {
+  if (!ajustementRecette) return;
+
+  const ings = (ajustementRecette.ingredients || []).map(i => ({ ...i, cl_ajuste: i.quantite }));
+  const ajustements = [];
+  let needsAI = false;
+  let ajoutSel = false;
+
+  Object.entries(ajustementVals).forEach(([axe, val]) => {
+    if (val === 0) return;
+    const direction = val < 0 ? 'moins' : 'plus';
+    const regles = REGLES_GUSTATIVES[axe]?.[direction] || [];
+
+    regles.forEach(regle => {
+      const abs = Math.abs(val);
+      if (abs < Math.abs(regle.seuil)) return;
+
+      if (regle.action === 'ai') { needsAI = true; return; }
+      if (regle.action === 'sel') { if (!ajoutSel) { ajoutSel = true; ajustements.push({ type: 'sel', texte: regle.note }); } return; }
+      if (regle.action === 'sub') { ajustements.push({ type: 'sub', texte: regle.note }); return; }
+      if (regle.action === 'ajouter_fixe') { ajustements.push({ type: 'add', texte: `+ ${regle.quantite} ${regle.ingredient}` }); return; }
+
+      if (regle.cible) {
+        ings.forEach(ing => {
+          const nomLower = ing.nom.toLowerCase();
+          const match = regle.cible.some(c => nomLower.includes(c));
+          if (!match || !ing.quantite) return;
+
+          if (regle.action === 'reduire') {
+            ing.cl_ajuste = Math.max(0.2, ing.quantite * (1 - regle.pct / 100));
+            ajustements.push({ type: 'remove', texte: `${ing.nom} : ${ing.quantite}cl → ${ing.cl_ajuste.toFixed(1)}cl` });
+          } else if (regle.action === 'augmenter') {
+            ing.cl_ajuste = ing.quantite * (1 + regle.pct / 100);
+            ajustements.push({ type: 'add', texte: `${ing.nom} : ${ing.quantite}cl → ${ing.cl_ajuste.toFixed(1)}cl` });
+          } else if (regle.action === 'supprimer') {
+            ing.cl_ajuste = 0;
+            ajustements.push({ type: 'remove', texte: `${ing.nom} supprimé` });
+          }
+        });
+      }
+    });
+  });
+
+  const totalModif = Object.values(ajustementVals).reduce((s, v) => s + Math.abs(v), 0);
+  if (totalModif >= 8) needsAI = true;
+
+  // Rendu recette ajustée
+  const recetteDiv = document.getElementById('adj-recette');
+  if (recetteDiv) {
+    recetteDiv.innerHTML = ings.map(ing => {
+      const modif = ing.cl_ajuste && Math.abs(ing.cl_ajuste - (ing.quantite || 0)) > 0.05;
+      return `<div class="adj-ing-row">
+        <span class="adj-ing-nom">${ing.nom}</span>
+        <span class="adj-ing-qte ${modif ? 'adj-ing-qte--modif' : ''}">
+          ${ing.cl_ajuste ? ing.cl_ajuste.toFixed(1) + ' cl' : (ing.quantite ? ing.quantite + ' ' + (ing.unite || '') : '—')}
+          ${modif ? ' ↗' : ''}
+        </span>
+      </div>`;
+    }).join('');
+  }
+
+  // Rendu ajustements
+  const adjDiv = document.getElementById('adj-liste');
+  const typeClass = { add: 'adj-note--add', remove: 'adj-note--remove', sub: 'adj-note--sub', sel: 'adj-note--sel' };
+  if (adjDiv) {
+    adjDiv.innerHTML = ajustements.length
+      ? ajustements.map(a => `<div class="adj-note ${typeClass[a.type] || ''}">${a.texte}</div>`).join('')
+      : '<div class="adj-note-vide">Recette originale — déplacez les curseurs</div>';
+  }
+
+  // Bouton AI
+  const aiBtn = document.getElementById('adj-ai-btn');
+  if (aiBtn) aiBtn.style.display = needsAI ? 'block' : 'none';
+}
+
+function resetAjustements() {
+  ajustementVals = { amer: 0, sucre: 0, acide: 0, fort: 0, fruite: 0, cremeux: 0 };
+  AXES.forEach(ax => {
+    const s = document.getElementById(`adj-${ax.id}`);
+    if (s) s.value = 0;
+    const v = document.getElementById(`adj-val-${ax.id}`);
+    if (v) { v.textContent = '0'; v.style.color = 'var(--text-muted)'; }
+  });
+  calculerAjustements();
+}
+
+async function demanderAjustementAI() {
+  if (!ajustementRecette) return;
+  const btn = document.getElementById('adj-ai-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyse en cours…';
+
+  const ingsDesc = (ajustementRecette.ingredients || []).map(i => `${i.nom} ${i.quantite || ''}${i.unite || ''}`).join(', ');
+  const ajustDesc = Object.entries(ajustementVals)
+    .filter(([, v]) => v !== 0)
+    .map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`)
+    .join(', ');
+
+  try {
+    const response = await fetch('/api/apport', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        caveNoms: `Recette: ${ajustementRecette.nom}. Ingrédients: ${ingsDesc}`,
+        manquantsTop: `Ajustements demandés: ${ajustDesc}. Propose une reformulation complète des dosages et substitutions si nécessaire. Réponds en JSON: [{"nom": "ingrédient", "apport": "dosage ajusté et raison"}]`
+      })
+    });
+    const items = await response.json();
+    const adjDiv = document.getElementById('adj-liste');
+    if (adjDiv && items.length) {
+      adjDiv.innerHTML += items.map(i =>
+        `<div class="adj-note adj-note--ai"><strong>${i.nom}</strong> — ${i.apport}</div>`
+      ).join('');
+    }
+  } catch (e) {
+    console.error('Erreur AI ajustement:', e);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✨ Reformulation Claude';
+}
