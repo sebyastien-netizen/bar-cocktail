@@ -2426,3 +2426,110 @@ main { overflow-x: hidden; }
   .panneau-ajustement { width: 100vw; }
   .btn-ajuster-flottant { flex: 1; }
 }
+/* =============================================
+   AJUSTEMENT v2 — CSS à ajouter dans style.css
+   ============================================= */
+ 
+/* Bandeau version ajustée dans la fiche */
+.fiche-bandeau-ajuste {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(201,150,58,0.12);
+  border: 1px solid rgba(201,150,58,0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: #ba7517;
+  font-weight: 500;
+}
+.fiche-bandeau-reset {
+  background: none;
+  border: none;
+  color: #ba7517;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: var(--font-body);
+  padding: 0;
+  opacity: 0.7;
+}
+.fiche-bandeau-reset:hover { opacity: 1; }
+ 
+/* Ingrédient modifié par ajustement */
+.fiche-ing-icon--warning { background: rgba(186,117,23,0.15); color: #ba7517; }
+ 
+/* Portions dans le panneau */
+.adj-portions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+}
+.adj-portions-label { font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
+.adj-portions-val {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+ 
+/* Quantité × portions dans le panneau */
+.adj-ing-qte-portions {
+  font-size: 11px;
+  font-weight: 500;
+  color: #ba7517;
+  background: rgba(186,117,23,0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+ 
+/* Bouton Appliquer à la fiche */
+.adj-appliquer-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(201,150,58,0.15);
+  border: 1px solid rgba(201,150,58,0.4);
+  color: #ba7517;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 12px;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+}
+.adj-appliquer-btn:hover { background: rgba(201,150,58,0.25); }
+ 
+ 
+<!-- =============================================
+     HTML à modifier dans index.html
+     Dans le panneau-body, AVANT la section "Recette ajustée",
+     ajouter ce bloc portions :
+     ============================================= -->
+ 
+<!--
+<div class="adj-portions-row">
+  <span class="adj-portions-label">Portions</span>
+  <input type="range" id="adj-portions-slider" min="1" max="10" value="1" step="1"
+    style="flex:1" oninput="onAdjPortions(this.value)">
+  <span class="adj-portions-val" id="adj-portions-val">1</span>
+</div>
+-->
+ 
+<!--
+  Dans le panneau-footer, AVANT le bouton "Recette originale",
+  ajouter :
+-->
+ 
+<!--
+<button class="adj-appliquer-btn" onclick="appliquerAjustements()">
+  ✦ Appliquer à la fiche
+</button>
+-->
+ 
