@@ -466,204 +466,287 @@ function ouvrirFicheRecette(id) {
   renderFiche(1);
   afficherModal('modal-fiche-recette');
 }
+ function getConseilBartender(r, p) {
+  if (p === 1) return null;
+  const nom = r.nom;
+  if (p === 2) return {
+    icon: '💡', titre: 'Pour 2 verres',
+    texte: `Préparez les deux en une seule passe. Stirred : 30 tours puis filtrez les deux immédiatement. Shaké : shakez en une seule fois, filtrez vite. Un ${nom} attend mal — servez ensemble.`,
+    bg: 'var(--bg-accent)', color: 'var(--text-accent)'
+  };
+  if (p <= 3) return {
+    icon: '⚠️', titre: `Pour ${p} verres — 2 passes`,
+    texte: `Maximum 2 cocktails par passe dans un shaker ou verre à mélange standard. Préparez en ${Math.ceil(p/2)} lots de 2. Commencez le second lot pendant que le premier est servi.`,
+    bg: 'var(--bg-warning)', color: 'var(--text-warning)'
+  };
+  if (p <= 6) return {
+    icon: '🍶', titre: `Pour ${p} verres — batch recommandé`,
+    texte: `Mélangez tous les spiritueux à l'avance avec 20% d'eau pour simuler la dilution. Réfrigérez minimum 1h. Versez au service sur cube ou dans le shaker pour les cocktails citrus. Constant et rapide.`,
+    bg: 'var(--bg-success)', color: 'var(--text-success)'
+  };
+  if (p <= 8) return {
+    icon: '🍶', titre: `Pour ${p} verres — batch la veille`,
+    texte: `Préparez le batch la veille avec 25% d'eau ajoutée. Le repos 12h unifie les arômes. Étiquetez la bouteille avec la date et le contenu. Sortez du frigo 5 min avant le service.`,
+    bg: 'var(--bg-success)', color: 'var(--text-success)'
+  };
+  return {
+    icon: '🎯', titre: `Pour ${p} verres — mode événement`,
+    texte: `Batch obligatoire. Bouteille étiquetée au frigo. Verres au congélateur 10 min avant. Service : cube + ${Math.round(r.ingredients?.reduce((s,i) => s + (i.quantite||0), 0) * 1.25 * 10)/10}cl batch + garniture = 20 secondes par verre. Préparez les garnitures à l'avance.`,
+    bg: 'rgba(83,74,183,0.1)', color: '#7F77DD'
+  };
+}
+ 
+// =============================================
+// CALCUL BATCH
+// =============================================
+ 
+function getBatchInfo(r, p) {
+  if (p < 4) return null;
+  const ratio = p >= 7 ? 0.25 : 0.20;
+  const totalSpiritueux = (r.ingredients || [])
+    .filter(i => i.quantite && i.unite === 'cl' && !i.optionnel)
+    .reduce((s, i) => s + (i.quantite * p), 0);
+  const eau = Math.round(totalSpiritueux * ratio * 10) / 10;
+  const total = Math.round((totalSpiritueux + eau) * 10) / 10;
+  return { totalSpiritueux: Math.round(totalSpiritueux * 10) / 10, eau, total, ratio: Math.round(ratio * 100) };
+}
+ 
+// =============================================
+// RENDU FICHE PRINCIPALE
+// =============================================
  
 function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
   const caveIds = getItemsCave();
-  const diffLabel = { facile:'Facile', moyen:'Moyen', avance:'Avancé' }[r.difficulte] || r.difficulte;
+  const diffLabel = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
  
-  let conseilOrga = '';
-  if (portions >= 2) {
-    if (r.type === 'preparation') {
-      conseilOrga = `
-        <div class="conseil-orga">
-          <span class="conseil-icon">⚗️</span>
-          <span>Pour ${portions} fois la recette : multipliez les quantités. Les préparations se conservent — faites un batch plus grand pour en avoir d'avance.</span>
-        </div>`;
-    } else if (r.type === 'mocktail') {
-      conseilOrga = `
-        <div class="conseil-orga">
-          <span class="conseil-icon">🧃</span>
-          <span>Pour ${portions} verres : préparez le mélange de base en avance, ajoutez l'eau gazeuse au dernier moment pour conserver les bulles.</span>
-        </div>`;
-    } else {
-      conseilOrga = `
-        <div class="conseil-orga">
-          <span class="conseil-icon">🍹</span>
-          <span>Pour ${portions} verres : préparez tous les ingrédients à l'avance. Shakez en 2 fois max (shaker limité à 2 portions). Servez immédiatement.</span>
-        </div>`;
-    }
-  }
- 
-  const prixHtml = r.prix_portion ? `
-    <span class="tag-prix">~${(r.prix_portion * portions).toFixed(2)}€${portions > 1 ? ` (${portions} verres)` : ''}</span>
-  ` : '';
- 
-  const kitHtml = r.kit_portable ? `<span class="tag-kit">✓ KIT</span>` : '';
- 
-  // Image en-tête fiche
-  const ficheImgHtml = r.photo_url ? `
-    <div class="fiche-img-wrap">
-      <img src="${r.photo_url}" alt="${r.nom}" class="fiche-img" loading="lazy"
-        onerror="this.parentElement.style.display='none'">
-    </div>` : '';
+  const conseil = getConseilBartender(r, portions);
+  const batch   = getBatchInfo(r, portions);
  
   document.querySelector('.fiche-contenu').innerHTML = `
  
-    ${ficheImgHtml}
- 
-    <div class="fiche-header">
-      <div>
-        <h2 class="fiche-titre">${r.nom}</h2>
-        <div class="fiche-meta">
-          ${r.base_alcool ? `<span class="tag-meta">🥃 ${r.base_alcool}</span>` : ''}
-          <span class="tag-meta diff-${r.difficulte}">${diffLabel}</span>
-          ${badgeDisponibilite(nbManquants)}
-          ${prixHtml}
-          ${kitHtml}
+    <!-- EN-TÊTE -->
+    <div class="fiche-entete">
+      ${r.photo_url ? `<div class="fiche-img-wrap"><img src="${r.photo_url}" alt="${r.nom}" class="fiche-img" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <div class="fiche-entete-body">
+        <div class="fiche-entete-top">
+          <h2 class="fiche-titre">${r.nom}</h2>
+          <div class="fiche-badges">
+            <span class="carte-diff diff-${r.difficulte}">${diffLabel}</span>
+            ${badgeDisponibilite(nbManquants)}
+            ${r.kit_portable ? '<span class="tag-kit">✓ KIT</span>' : ''}
+          </div>
         </div>
-        <div class="fiche-gouts">
-          ${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}
-        </div>
+        ${r.base_alcool ? `<div class="fiche-base">🥃 ${r.base_alcool}</div>` : ''}
+        <div class="fiche-gouts">${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}</div>
+        ${r.description_courte ? `<p class="fiche-description">${r.description_courte}</p>` : ''}
       </div>
     </div>
  
-    <div class="fiche-portions">
-      <span class="portions-label">Portions</span>
+    <!-- SÉLECTEUR PORTIONS -->
+    <div class="fiche-portions-bloc">
+      <div class="portions-label-row">
+        <span class="portions-label">Portions</span>
+        ${r.prix_portion ? `<span class="fiche-prix-total">~${(r.prix_portion * portions).toFixed(2)}€ pour ${portions} verre${portions > 1 ? 's' : ''}</span>` : ''}
+      </div>
       <div class="portions-ctrl">
-        <button class="portions-btn" onclick="changerPortions(${portions - 1})" ${portions <= 1 ? 'disabled' : ''}>−</button>
+        <button class="portions-btn" onclick="renderFiche(${portions - 1})" ${portions <= 1 ? 'disabled' : ''}>−</button>
         <span class="portions-val">${portions}</span>
-        <button class="portions-btn" onclick="changerPortions(${portions + 1})" ${portions >= 10 ? 'disabled' : ''}>+</button>
+        <button class="portions-btn" onclick="renderFiche(${portions + 1})" ${portions >= 10 ? 'disabled' : ''}>+</button>
       </div>
     </div>
-    ${conseilOrga}
  
-    <div class="fiche-section">
-      <h3>Ingrédients <span class="fiche-portion">pour ${portions} verre${portions > 1 ? 's' : ''}</span></h3>
-      <ul class="fiche-ingredients">
+    <!-- CONSEIL BARTENDER -->
+    ${conseil ? `
+    <div class="fiche-conseil" style="background:${conseil.bg};color:${conseil.color}">
+      <div class="fiche-conseil-titre">${conseil.icon} ${conseil.titre}</div>
+      <div class="fiche-conseil-texte">${conseil.texte}</div>
+    </div>` : ''}
+ 
+    <!-- GRILLE INFOS + SERVICE -->
+    ${r.saveur_dominante || r.verre_type ? `
+    <div class="fiche-grid-2">
+      ${r.saveur_dominante ? `
+      <div class="fiche-card">
+        <div class="fiche-card-titre">Aperçu des caractéristiques</div>
+        ${r.saveur_dominante ? `<div class="fiche-carac-row"><span>Saveur dominante</span><span>${r.saveur_dominante}</span></div>` : ''}
+        ${r.aromes ? `<div class="fiche-carac-row"><span>Arômes</span><span>${r.aromes}</span></div>` : ''}
+        ${r.arriere_gout ? `<div class="fiche-carac-row"><span>Arrière-goût</span><span>${r.arriere_gout}</span></div>` : ''}
+        ${r.texture ? `<div class="fiche-carac-row"><span>Texture</span><span>${r.texture}</span></div>` : ''}
+        ${r.couleur_robe ? `<div class="fiche-carac-row"><span>Couleur et robe</span><span>${r.couleur_robe}</span></div>` : ''}
+        ${r.petillance ? `<div class="fiche-carac-row"><span>Pétillance</span><span>${r.petillance}</span></div>` : ''}
+        ${r.sucrosite ? `<div class="fiche-carac-row"><span>Sucrosité</span><span>${r.sucrosite}</span></div>` : ''}
+      </div>` : ''}
+      ${r.verre_type ? `
+      <div class="fiche-card">
+        <div class="fiche-card-titre">Service</div>
+        ${r.verre_type ? `<div class="fiche-carac-row"><span>Verre</span><span>${r.verre_type}</span></div>` : ''}
+        ${r.glace_type ? `<div class="fiche-carac-row"><span>Glace</span><span>${r.glace_type}</span></div>` : ''}
+        ${r.temperature_service ? `<div class="fiche-carac-row"><span>Température</span><span>${r.temperature_service}</span></div>` : ''}
+        ${r.garniture ? `<div class="fiche-carac-row"><span>Garniture</span><span>${r.garniture}</span></div>` : ''}
+        ${r.abv_estime ? `<div class="fiche-carac-row"><span>ABV estimé</span><span>${r.abv_estime}</span></div>` : ''}
+        ${r.prix_portion ? `<div class="fiche-carac-row"><span>Prix / verre</span><span>~${r.prix_portion.toFixed(2)}€</span></div>` : ''}
+        ${r.kit_portable ? `<div class="fiche-carac-row"><span>Kit portable</span><span>✓ Oui</span></div>` : ''}
+      </div>` : ''}
+    </div>` : ''}
+ 
+    <!-- PROFIL GUSTATIF -->
+    ${hasProfil(r) ? `
+    <div class="fiche-card">
+      <div class="fiche-card-titre">Profil gustatif</div>
+      <div class="fiche-profil-grid">
+        <div>
+          ${renderBarre('Sucré',   r.gout_sucre)}
+          ${renderBarre('Amer',    r.gout_amer)}
+          ${renderBarre('Acide',   r.gout_acide)}
+          ${renderBarre('Fruité',  r.gout_fruite)}
+        </div>
+        <div>
+          ${renderBarre('Fumé',    r.gout_fume)}
+          ${renderBarre('Floral',  r.gout_floral)}
+          ${renderBarre('Épicé',   r.gout_epice)}
+          ${renderBarre('Crémeux', r.gout_cremeux)}
+        </div>
+      </div>
+    </div>` : ''}
+ 
+    <!-- INGRÉDIENTS -->
+    <div class="fiche-card">
+      <div class="fiche-card-titre">Ingrédients <span class="fiche-portion-label">— ${portions} verre${portions > 1 ? 's' : ''}</span></div>
+      <div class="fiche-ing-liste">
         ${(r.ingredients || []).map(ing => {
           const enCave = ing.item_cave_id ? caveIds.has(ing.item_cave_id) : true;
-          const qte = ing.quantite ? (ing.quantite * portions) : null;
-          const qteStr = qte !== null
-            ? `<strong>${Number.isInteger(qte) ? qte : qte.toFixed(1)} ${ing.unite || ''}</strong>`
-            : '';
+          const qte = ing.quantite ? Math.round(ing.quantite * portions * 10) / 10 : null;
+          const pct = ing.quantite && r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0) > 0
+            ? Math.round((ing.quantite / r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0)) * 100)
+            : 0;
+          const couleur = enCave ? (ing.optionnel ? 'success' : 'accent') : 'danger';
           return `
-            <li class="ing-item ${!enCave && !ing.optionnel ? 'ing-manquant' : ''} ${ing.optionnel ? 'ing-optionnel' : ''}">
-              <span class="ing-dot">${enCave ? '●' : '○'}</span>
-              <span class="ing-texte">${qteStr} ${ing.nom}</span>
-              ${ing.optionnel ? '<span class="ing-opt-label">optionnel</span>' : ''}
-              ${!enCave && !ing.optionnel ? '<span class="ing-manquant-label">manquant</span>' : ''}
-            </li>
-          `;
+            <div class="fiche-ing-item">
+              <div class="fiche-ing-icon fiche-ing-icon--${couleur}">
+                <i class="ti ti-droplet" aria-hidden="true"></i>
+              </div>
+              <div class="fiche-ing-body">
+                <div class="fiche-ing-header">
+                  <span class="fiche-ing-nom ${!enCave && !ing.optionnel ? 'fiche-ing-nom--manquant' : ''}">${ing.nom}${ing.optionnel ? ' <span class="fiche-ing-opt">optionnel</span>' : ''}</span>
+                  <span class="fiche-ing-qte">${qte ? qte + ' ' + (ing.unite || '') : ''}</span>
+                </div>
+                ${pct > 0 ? `<div class="fiche-ing-barre"><div class="fiche-ing-barre-fill fiche-ing-barre-fill--${couleur}" style="width:${pct}%"></div></div>` : ''}
+                ${!enCave && !ing.optionnel ? `<div class="fiche-ing-warn">Manquant — voir À acheter</div>` : ''}
+              </div>
+            </div>`;
         }).join('')}
-      </ul>
+      </div>
+      ${batch ? `
+      <div class="fiche-batch-info">
+        <strong>Batch :</strong> ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')} + ${batch.eau}cl eau = ${batch.total}cl total
+      </div>` : ''}
     </div>
  
+    <!-- MATÉRIELS -->
     ${r.materiels && r.materiels.length > 0 ? `
-    <div class="fiche-section">
-      <h3>Matériels</h3>
+    <div class="fiche-card">
+      <div class="fiche-card-titre">Matériels</div>
       <div class="fiche-materiels">
         ${r.materiels.map(m => `<span class="tag-materiel ${m.essentiel ? '' : 'materiel-optionnel'}">${m.nom}</span>`).join('')}
       </div>
-    </div>
-    ` : ''}
+    </div>` : ''}
  
-    <div class="fiche-section">
-      <h3>Préparation</h3>
-      <ol class="fiche-etapes">
-        ${(r.etapes || []).map(e => `
-          <li class="etape-item">
-            <div class="etape-titre">${e.titre}</div>
-            <div class="etape-desc">${e.description}</div>
-          </li>
+    <!-- PRÉPARATION -->
+    <div class="fiche-card">
+      <div class="fiche-card-titre">Préparation${portions > 1 ? ` — ${portions} verres` : ''}</div>
+      <div class="fiche-etapes-timeline">
+        ${(r.etapes || []).map((e, i) => `
+          <div class="fiche-etape-row">
+            <div class="fiche-etape-left">
+              <div class="fiche-etape-num ${i === (r.etapes.length - 1) ? 'fiche-etape-num--done' : ''}">
+                ${i === (r.etapes.length - 1) ? '<i class="ti ti-check" aria-hidden="true"></i>' : i + 1}
+              </div>
+              ${i < (r.etapes.length - 1) ? '<div class="fiche-etape-line"></div>' : ''}
+            </div>
+            <div class="fiche-etape-body">
+              <div class="fiche-etape-titre">${e.titre}</div>
+              <div class="fiche-etape-desc">${e.description}</div>
+            </div>
+          </div>
         `).join('')}
-      </ol>
-    </div>
- 
-    ${hasProfil(r) ? `
-    <div class="fiche-section">
-      <h3>Profil gustatif</h3>
-      <div class="profil-barres">
-        ${renderBarre('Sucré',   r.gout_sucre)}
-        ${renderBarre('Amer',    r.gout_amer)}
-        ${renderBarre('Acide',   r.gout_acide)}
-        ${renderBarre('Fruité',  r.gout_fruite)}
-        ${renderBarre('Fumé',    r.gout_fume)}
-        ${renderBarre('Floral',  r.gout_floral)}
-        ${renderBarre('Épicé',   r.gout_epice)}
-        ${renderBarre('Crémeux', r.gout_cremeux)}
       </div>
     </div>
-    ` : ''}
  
+    <!-- DÉGUSTATION -->
     ${r.degustation_voir ? `
-    <div class="fiche-section">
-      <h3>Guide de dégustation</h3>
-      <div class="degustation-steps">
-        <div class="degu-step">
-          <span class="degu-icon">👁</span>
-          <div><div class="degu-titre">Regardez</div><div class="degu-texte">${r.degustation_voir}</div></div>
-        </div>
-        <div class="degu-step">
-          <span class="degu-icon">👃</span>
-          <div><div class="degu-titre">Sentez</div><div class="degu-texte">${r.degustation_sentir}</div></div>
-        </div>
-        <div class="degu-step">
-          <span class="degu-icon">👅</span>
-          <div><div class="degu-titre">Goûtez</div><div class="degu-texte">${r.degustation_gout}</div></div>
-        </div>
-        <div class="degu-step">
-          <span class="degu-icon">✨</span>
-          <div><div class="degu-titre">Finish</div><div class="degu-texte">${r.degustation_finish}</div></div>
-        </div>
-        ${r.degustation_defi ? `
-        <div class="degu-step degu-defi">
-          <span class="degu-icon">🎯</span>
-          <div><div class="degu-titre">Défi détection</div><div class="degu-texte">${r.degustation_defi}</div></div>
-        </div>
-        ` : ''}
+    <div class="fiche-card">
+      <div class="fiche-card-titre">Guide de dégustation</div>
+      <div class="fiche-degu-steps">
+        <div class="fiche-degu-step"><span class="fiche-degu-icon">👁</span><div><div class="fiche-degu-label">Regardez</div><div class="fiche-degu-texte">${r.degustation_voir}</div></div></div>
+        <div class="fiche-degu-step"><span class="fiche-degu-icon">👃</span><div><div class="fiche-degu-label">Sentez</div><div class="fiche-degu-texte">${r.degustation_sentir}</div></div></div>
+        <div class="fiche-degu-step"><span class="fiche-degu-icon">👅</span><div><div class="fiche-degu-label">Goûtez</div><div class="fiche-degu-texte">${r.degustation_gout}</div></div></div>
+        <div class="fiche-degu-step"><span class="fiche-degu-icon">✨</span><div><div class="fiche-degu-label">Finish</div><div class="fiche-degu-texte">${r.degustation_finish}</div></div></div>
+        ${r.degustation_defi ? `<div class="fiche-degu-step fiche-degu-step--defi"><span class="fiche-degu-icon">🎯</span><div><div class="fiche-degu-label">Défi détection</div><div class="fiche-degu-texte">${r.degustation_defi}</div></div></div>` : ''}
       </div>
-    </div>
-    ` : ''}
+    </div>` : ''}
  
-    ${hasVariantes(r) ? `
-    <div class="fiche-section">
-      <h3>Variantes</h3>
-      <div class="variantes-list">
-        ${r.variante_alcool ? `
-        <div class="variante-item">
-          <span class="variante-label">🔄 Autre alcool</span>
-          <p>${r.variante_alcool}</p>
-        </div>` : ''}
-        ${r.variante_prestige ? `
-        <div class="variante-item variante-prestige">
-          <span class="variante-label">⭐ Version Prestige</span>
-          <p>${r.variante_prestige}</p>
-        </div>` : ''}
-        ${r.variante_mocktail_id ? `
-        <div class="variante-item variante-mocktail">
-          <span class="variante-label">🧃 Mocktail associé</span>
-          <button class="btn-variante-link" onclick="fermerModal('modal-fiche-recette'); setTimeout(()=>{ changerSection('mocktail'); ouvrirFicheRecette('${r.variante_mocktail_id}'); }, 200)">
-            Voir ${recettes.find(x=>x.id===r.variante_mocktail_id)?.nom || r.variante_mocktail_id} →
-          </button>
-        </div>` : ''}
-        ${r.variante_notes ? `
-        <div class="variante-item">
-          <span class="variante-label">💡 Notes</span>
-          <p>${r.variante_notes}</p>
-        </div>` : ''}
+    <!-- VARIANTES -->
+    ${hasVariantes(r) || r.variante_cave ? `
+    <div class="fiche-card">
+      <div class="fiche-card-titre">Variantes et alternatives</div>
+      ${r.variante_cave ? `
+      <div class="fiche-variante fiche-variante--cave">
+        <div class="fiche-variante-label">Avec votre cave</div>
+        <div class="fiche-variante-nom">${r.variante_cave_nom || 'Variante maison'}</div>
+        <div class="fiche-variante-desc">${r.variante_cave}</div>
+      </div>` : ''}
+      ${r.variante_alcool ? `
+      <div class="fiche-variante">
+        <div class="fiche-variante-label">Autre alcool</div>
+        <div class="fiche-variante-desc">${r.variante_alcool}</div>
+      </div>` : ''}
+      ${r.variante_prestige ? `
+      <div class="fiche-variante fiche-variante--prestige">
+        <div class="fiche-variante-label">Version prestige</div>
+        <div class="fiche-variante-desc">${r.variante_prestige}</div>
+      </div>` : ''}
+      ${r.variante_mocktail_id ? `
+      <div class="fiche-variante">
+        <div class="fiche-variante-label">Mocktail associé</div>
+        <button class="btn-variante-link" onclick="fermerModal('modal-fiche-recette'); setTimeout(()=>{ changerSection('mocktail'); ouvrirFicheRecette('${r.variante_mocktail_id}'); }, 200)">
+          Voir ${recettes.find(x=>x.id===r.variante_mocktail_id)?.nom || r.variante_mocktail_id} →
+        </button>
+      </div>` : ''}
+      ${r.variante_notes ? `
+      <div class="fiche-variante">
+        <div class="fiche-variante-label">Notes</div>
+        <div class="fiche-variante-desc">${r.variante_notes}</div>
+      </div>` : ''}
+    </div>` : ''}
+ 
+    <!-- OCCASIONS + INFOS -->
+    ${r.occasions?.length || r.anecdote ? `
+    <div class="fiche-grid-2">
+      ${r.occasions?.length ? `
+      <div class="fiche-card">
+        <div class="fiche-card-titre">Occasions</div>
+        <div class="fiche-occasions">${r.occasions.map(o => `<span class="fiche-occasion-chip">${o}</span>`).join('')}</div>
+      </div>` : ''}
+      <div class="fiche-card">
+        <div class="fiche-card-titre">Infos</div>
+        <div class="fiche-carac-row"><span>Sans gluten</span><span class="${r.sans_gluten !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.sans_gluten !== false ? '✓ Oui' : '✗ Non'}</span></div>
+        <div class="fiche-carac-row"><span>Vegan</span><span class="${r.vegan !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.vegan !== false ? '✓ Oui' : '✗ Non'}</span></div>
+        <div class="fiche-carac-row"><span>Sans lactose</span><span class="${r.sans_lactose !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.sans_lactose !== false ? '✓ Oui' : '✗ Non'}</span></div>
+        <div class="fiche-carac-row"><span>Sans œuf</span><span class="${r.sans_oeuf !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.sans_oeuf !== false ? '✓ Oui' : '✗ Non'}</span></div>
+        <div class="fiche-carac-row"><span>Kit portable</span><span class="${r.kit_portable ? 'fiche-info-ok' : 'fiche-info-no'}">${r.kit_portable ? '✓ Oui' : '✗ Non'}</span></div>
       </div>
-    </div>
-    ` : ''}
+    </div>` : ''}
  
+    <!-- ANECDOTE -->
     ${r.anecdote ? `
-    <div class="fiche-section fiche-anecdote">
-      <h3>📖 Histoire</h3>
-      <p>${r.anecdote}</p>
-    </div>
-    ` : ''}
+    <div class="fiche-card fiche-card--anecdote">
+      <div class="fiche-card-titre">Histoire</div>
+      <p class="fiche-anecdote-texte">${r.anecdote}</p>
+    </div>` : ''}
  
+    <!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
       <button class="btn btn-realiser" onclick="marquerRealisee(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
