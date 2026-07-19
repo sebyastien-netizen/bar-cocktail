@@ -1684,8 +1684,8 @@ async function chargerDashboard() {
   const realisables = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
  
   // Prix total cave
-  const prixTotal = cave.categories.reduce((sum, cat) =>
-    sum + cat.items.filter(i => i.detenu !== false && i.prix_estime)
+  const prixTotal = (cave?.categories || []).reduce((sum, cat) =>
+    sum + (cat.items || []).filter(i => i.detenu !== false && i.prix_estime)
                    .reduce((s, i) => s + parseFloat(i.prix_estime), 0), 0);
  
   // Conservations urgentes
@@ -2808,8 +2808,9 @@ function updateMarqueursOriginaux() {
     const pct = ((origVal + 3) / 6) * 100;
     marqueur.style.left = `calc(${pct}% + (0.5 - ${pct / 100}) * 14px)`;
 
-    // Visible si origVal non nul OU si on a bougé depuis l'original
-    marqueur.style.opacity = (origVal !== 0 || currentVal !== origVal) ? '1' : '0';
+    // Toujours visible si origVal != 0 (position initiale non centrale)
+    // Même si l'utilisateur n'a pas encore bougé
+    marqueur.style.opacity = origVal !== 0 ? '1' : (currentVal !== origVal ? '1' : '0');
   });
 }
 
