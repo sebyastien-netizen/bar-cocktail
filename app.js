@@ -1887,6 +1887,7 @@ function ouvrirFichePlante(id) {
   `;
  
   afficherModal('modal-fiche-plante');
+ }
  let ecoleData = { alcools: [], techniques: [], materiels: [], lexique: [] };
 let ecoleSection = 'alcools';
  
