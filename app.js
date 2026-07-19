@@ -594,7 +594,10 @@ function renderFiche(portions) {
     <!-- PROFIL GUSTATIF -->
     ${hasProfil(r) ? `
     <div class="fiche-card">
-      <div class="fiche-card-titre">Profil gustatif</div>
+      <div class="fiche-card-header">
+  <div class="fiche-card-titre">Profil gustatif</div>
+  <button class="btn-ajuster-flottant" onclick="ouvrirPanneauAjustement('${r.id}')">✦ Ajuster</button>
+</div>
       <div class="fiche-profil-grid">
         <div>
           ${renderBarre('Sucré',   r.gout_sucre)}
@@ -750,9 +753,6 @@ function renderFiche(portions) {
     <div class="fiche-action">
       <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
-      </button>
-      <button class="btn-ajuster-flottant" onclick="ouvrirPanneauAjustement('${r.id}')">
-        ✦ Ajuster
       </button>
     </div>
   `;
