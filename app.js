@@ -1503,4 +1503,196 @@ document.addEventListener('click', e => {
 // =============================================
 // LANCEMENT
 // =============================================
+async function chargerDashboard() {
+  const container = document.getElementById('dashboard-container');
+  if (!container) return;
+ 
+  // Recettes réalisables (cocktails uniquement)
+  const realisables = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
+ 
+  // Prix total cave
+  const prixTotal = cave.categories.reduce((sum, cat) =>
+    sum + cat.items.filter(i => i.detenu !== false && i.prix_estime)
+                   .reduce((s, i) => s + parseFloat(i.prix_estime), 0), 0);
+ 
+  // Conservations urgentes
+  const conservations = [];
+  cave.categories.forEach(cat => {
+    cat.items.forEach(item => {
+      if (item.ouvert && item.conservation) {
+        const joursEcoules = Math.floor((Date.now() - new Date(item.date_ouverture || Date.now())) / 86400000);
+        const joursMax = item.conservation.duree_mois * 30;
+        const joursRestants = Math.round(joursMax - joursEcoules);
+        conservations.push({ nom: item.nom, joursRestants });
+      }
+    });
+  });
+  conservations.sort((a, b) => a.joursRestants - b.joursRestants);
+ 
+  // Concoctions en cours
+  const concEnCours = concoctions.filter(c => c.statut === 'en_cours');
+ 
+  // Anecdote + conseil aléatoires
+  const [{ data: anecdote }, { data: conseil }] = await Promise.all([
+    db.from('anecdotes').select('*').order('random()').limit(1).single(),
+    db.from('conseils').select('*').order('random()').limit(1).single()
+  ]);
+ 
+  renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil });
+}
+ 
+function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil }) {
+  const container = document.getElementById('dashboard-container');
+  const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
+  const categorieClass = { technique: 'badge-3', gestion: 'badge-ok', service: 'badge-1' };
+ 
+  const nbConservations = conservations.length;
+  const nbConcoctions   = concEnCours.length;
+  const nbRefs          = cave.categories.reduce((n, c) => n + c.items.filter(i => i.detenu !== false).length, 0);
+ 
+  container.innerHTML = `
+ 
+    <!-- TUILES STATISTIQUES -->
+    <div class="dashboard-grid-top">
+      <div class="dash-stat">
+        <span class="dash-stat-label">Réalisables maintenant</span>
+        <span class="dash-stat-val dash-val-accent">${realisables.length}</span>
+        <span class="dash-stat-sub">sur ${recettes.filter(r => r.type === 'cocktail').length} cocktails</span>
+      </div>
+      <div class="dash-stat">
+        <span class="dash-stat-label">Valeur cave</span>
+        <span class="dash-stat-val">${prixTotal.toFixed(0)} €</span>
+        <span class="dash-stat-sub">${nbRefs} références</span>
+      </div>
+      <div class="dash-stat">
+        <span class="dash-stat-label">Concoctions</span>
+        <span class="dash-stat-val ${nbConcoctions > 0 ? 'dash-val-warning' : ''}">${nbConcoctions}</span>
+        <span class="dash-stat-sub">${nbConcoctions > 0
+          ? concEnCours[0].nom + (concEnCours[0].date_fin
+            ? ' · ' + Math.ceil((new Date(concEnCours[0].date_fin) - new Date()) / 86400000) + 'j'
+            : '')
+          : 'aucune en cours'}</span>
+      </div>
+      <div class="dash-stat">
+        <span class="dash-stat-label">Conservations</span>
+        <span class="dash-stat-val ${nbConservations > 0 ? 'dash-val-danger' : ''}">${nbConservations}</span>
+        <span class="dash-stat-sub">${nbConservations > 0 ? 'à surveiller' : 'tout est bon'}</span>
+      </div>
+    </div>
+ 
+    <!-- GRILLE PRINCIPALE -->
+    <div class="dashboard-grid-main">
+ 
+      <!-- COLONNE GAUCHE : recettes réalisables -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-titre">Réalisables ce soir</span>
+          <button class="dash-link" onclick="
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+            document.querySelector('nav button[data-tab=recettes]').classList.add('active');
+            document.getElementById('section-recettes').classList.remove('hidden');
+            filtreDisponible = true;
+            renderRecettes();
+          ">Voir tout</button>
+        </div>
+        <div class="dash-recettes-liste">
+          ${realisables.length === 0
+            ? '<div class="dash-empty">Aucun cocktail réalisable avec la cave actuelle.</div>'
+            : realisables.slice(0, 5).map(r => `
+              <div class="dash-recette-item" onclick="
+                document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+                document.querySelector('nav button[data-tab=recettes]').classList.add('active');
+                document.getElementById('section-recettes').classList.remove('hidden');
+                sectionRecette = 'cocktail';
+                ouvrirFicheRecette('${r.id}');
+              ">
+                ${r.photo_url
+                  ? `<img src="${r.photo_url}" alt="${r.nom}" class="dash-recette-img" loading="lazy" onerror="this.style.display='none'">`
+                  : `<div class="dash-recette-img dash-recette-img--fallback">${r.nom.charAt(0)}</div>`}
+                <div class="dash-recette-info">
+                  <div class="dash-recette-nom">${r.nom}</div>
+                  <div class="dash-recette-meta">${r.base_alcool ? r.base_alcool + ' · ' : ''}${(r.gouts || []).slice(0, 2).join(' · ')}</div>
+                </div>
+                <span class="badge-dispo badge-ok">✓</span>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+ 
+      <!-- COLONNE DROITE -->
+      <div class="dash-col-droite">
+ 
+        ${nbConservations > 0 ? `
+        <div class="dash-card">
+          <div class="dash-card-titre" style="margin-bottom:10px">Conservations</div>
+          ${conservations.slice(0, 4).map(c => {
+            const niveau  = c.joursRestants <= 14 ? 'rouge' : c.joursRestants <= 90 ? 'orange' : 'vert';
+            const couleur = niveau === 'rouge' ? 'dash-val-danger' : niveau === 'orange' ? 'dash-val-warning' : 'dash-val-ok';
+            return `
+              <div class="dash-conservation-item">
+                <div class="conservation-dot dot-${niveau}"></div>
+                <span class="dash-conservation-nom">${c.nom}</span>
+                <span class="dash-conservation-delai ${couleur}">${c.joursRestants > 0 ? c.joursRestants + 'j' : 'expiré'}</span>
+              </div>`;
+          }).join('')}
+        </div>` : ''}
+ 
+        <!-- ANECDOTE -->
+        <div class="dash-card dash-card--accent">
+          <div class="dash-card-header">
+            <span class="dash-card-titre">Anecdote du jour</span>
+            <button class="dash-refresh-btn" onclick="rechargerAnecdote()" title="Nouvelle anecdote">↻</button>
+          </div>
+          <p class="dash-anecdote-texte" id="dash-anecdote-texte">${anecdote?.texte || 'Chargement…'}</p>
+        </div>
+ 
+        <!-- CONSEIL -->
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="dash-card-titre">Conseil du jour</span>
+              <span class="badge-dispo ${categorieClass[conseil?.categorie] || 'badge-ok'}" style="font-size:0.68rem;">${categorieLabel[conseil?.categorie] || ''}</span>
+            </div>
+            <button class="dash-refresh-btn" onclick="rechargerConseil()" title="Nouveau conseil">↻</button>
+          </div>
+          <p class="dash-conseil-texte" id="dash-conseil-texte">${conseil?.texte || 'Chargement…'}</p>
+        </div>
+ 
+      </div>
+    </div>
+  `;
+}
+ 
+// =============================================
+// RECHARGEMENT ANECDOTE / CONSEIL
+// =============================================
+ 
+async function rechargerAnecdote() {
+  const btn = document.querySelector('[onclick="rechargerAnecdote()"]');
+  if (btn) btn.style.opacity = '0.4';
+  const { data } = await db.from('anecdotes').select('*').order('random()').limit(1).single();
+  const el = document.getElementById('dash-anecdote-texte');
+  if (el && data) el.textContent = data.texte;
+  if (btn) btn.style.opacity = '1';
+}
+ 
+async function rechargerConseil() {
+  const btn = document.querySelector('[onclick="rechargerConseil()"]');
+  if (btn) btn.style.opacity = '0.4';
+  const { data } = await db.from('conseils').select('*').order('random()').limit(1).single();
+  const el = document.getElementById('dash-conseil-texte');
+  if (el && data) {
+    const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
+    const categorieClass = { technique: 'badge-3', gestion: 'badge-ok', service: 'badge-1' };
+    el.textContent = data.texte;
+    const badge = el.previousElementSibling?.querySelector('.badge-dispo');
+    if (badge) {
+      badge.className = `badge-dispo ${categorieClass[data.categorie] || 'badge-ok'}`;
+      badge.style.fontSize = '0.68rem';
+      badge.textContent = categorieLabel[data.categorie] || '';
+    }
+  }
+  if (btn) btn.style.opacity = '1';
 init();
