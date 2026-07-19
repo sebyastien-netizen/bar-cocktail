@@ -989,6 +989,7 @@ function onTabChange(tab) {
   if (tab === 'concoctions') chargerConcoctions();
   if (tab === 'dashboard') chargerDashboard();
   if (tab === 'herboristerie') chargerHerboristerie();
+  if (tab === 'ecole') chargerEcole();
 }
  
 document.querySelectorAll('nav button[data-tab]').forEach(btn => {
