@@ -748,7 +748,7 @@ function renderFiche(portions) {
 
     <!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
-      <button class="btn btn-realiser" onclick="marquerRealisee(${portions})">
+      <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
       </button>
     </div>
@@ -1694,12 +1694,13 @@ async function chargerDashboard() {
   const concEnCours = concoctions.filter(c => c.statut === 'en_cours');
  
   // Anecdote + conseil aléatoires
-  const [{ data: anecdote }, { data: conseil }] = await Promise.all([
+  const [{ data: anecdote }, { data: conseil }, { data: realisations }] = await Promise.all([
     db.from('anecdotes').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
-    db.from('conseils').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] }))
+    db.from('conseils').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
+    db.from('realisations').select('*').eq('user_id', currentUser.id).order('date', { ascending: false }).limit(5)
   ]);
  
-  renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil });
+ renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations });
 }
  
 function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil }) {
@@ -2316,6 +2317,187 @@ function ouvrirFicheMateriel(id) {
   `;
   afficherModal('modal-ecole-fiche');
 }
-
+function ouvrirModalRealisation(portions) {
+  const r = recetteOuverte;
+  const modal = document.getElementById('modal-realisation');
+ 
+  modal.querySelector('#real-cocktail-nom').textContent = r.nom;
+  modal.querySelector('#real-date').value = new Date().toISOString().split('T')[0];
+  modal.querySelector('#real-portions').value = portions;
+  modal.querySelector('#real-note').value = '';
+ 
+  modal.querySelector('#btn-confirmer-realisation').onclick = async () => {
+    const date     = modal.querySelector('#real-date').value;
+    const portions = parseInt(modal.querySelector('#real-portions').value) || 1;
+    const note     = modal.querySelector('#real-note').value.trim();
+ 
+    // Enregistrer la réalisation
+    await db.from('realisations').insert({
+      user_id:     currentUser.id,
+      recette_id:  r.id,
+      recette_nom: r.nom,
+      date,
+      portions,
+      note: note || null
+    });
+ 
+    // Décrémenter la cave
+    await decrementerCave(r, portions);
+ 
+    fermerModal('modal-realisation');
+    fermerModal('modal-fiche-recette');
+ 
+    // Toast feedback
+    const feedback = document.createElement('div');
+    feedback.className = 'toast-feedback';
+    feedback.textContent = `✓ ${r.nom} — réalisé le ${new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+    document.body.appendChild(feedback);
+    setTimeout(() => feedback.classList.add('visible'), 50);
+    setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 3000);
+ 
+    renderCave();
+  };
+ 
+  afficherModal('modal-realisation');
+}
+ 
+// =============================================
+// DÉCRÉMENTER LA CAVE (extrait de marquerRealisee)
+// =============================================
+ 
+async function decrementerCave(r, portions) {
+  const caveIds = getItemsCave();
+  const updates = [];
+ 
+  for (const ing of (r.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || !ing.unite) continue;
+    if (!caveIds.has(ing.item_cave_id)) continue;
+    if (ing.unite !== 'cl') continue;
+ 
+    for (const cat of cave.categories) {
+      const item = cat.items.find(i => i.id === ing.item_cave_id);
+      if (item && item.cl_restants !== null) {
+        const nouveau = Math.max(0, item.cl_restants - (ing.quantite * portions));
+        updates.push({ item, nouveau });
+      }
+    }
+  }
+ 
+  for (const { item, nouveau } of updates) {
+    await db.from('items').update({ cl_restants: nouveau }).eq('id', item.id).eq('user_id', currentUser.id);
+    item.cl_restants = nouveau;
+  }
+}
+ 
+// =============================================
+// HISTORIQUE COMPLET (onglet ou page dédiée)
+// =============================================
+ 
+let realisationsCache = [];
+ 
+async function chargerHistoriqueRealisations() {
+  const { data } = await db.from('realisations')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('date', { ascending: false })
+    .limit(50);
+  realisationsCache = data || [];
+  return realisationsCache;
+}
+ 
+// =============================================
+// RENDU SECTION DASHBOARD — RÉALISATIONS
+// =============================================
+ 
+function renderDashboardRealisations(realisations) {
+  if (!realisations || realisations.length === 0) {
+    return `
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-titre">Dernières réalisations</span>
+        </div>
+        <div class="dash-empty">Aucune réalisation enregistrée. Utilisez le bouton "Réalisée" dans les fiches recettes.</div>
+      </div>`;
+  }
+ 
+  const total = realisations.length;
+ 
+  return `
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-titre">Dernières réalisations</span>
+        <button class="dash-link" onclick="ouvrirHistoriqueComplet()">Tout voir (${total})</button>
+      </div>
+      <div class="dash-realisations-liste">
+        ${realisations.slice(0, 5).map(real => {
+          const recette = recettes.find(r => r.id === real.recette_id);
+          const dateStr = new Date(real.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+          return `
+            <div class="dash-real-item" onclick="sectionRecette='cocktail'; ouvrirFicheRecette('${real.recette_id}'); document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-section').forEach(s=>s.classList.add('hidden')); document.querySelector('nav button[data-tab=recettes]').classList.add('active'); document.getElementById('section-recettes').classList.remove('hidden');">
+              ${recette?.photo_url
+                ? `<img src="${recette.photo_url}" class="dash-real-img" alt="${real.recette_nom}" loading="lazy" onerror="this.style.display='none'">`
+                : `<div class="dash-real-img dash-real-img--fallback">${real.recette_nom.charAt(0)}</div>`}
+              <div class="dash-real-info">
+                <div class="dash-real-nom">${real.recette_nom}</div>
+                <div class="dash-real-meta">${real.portions} verre${real.portions > 1 ? 's' : ''} · ${dateStr}</div>
+                ${real.note ? `<div class="dash-real-note">${real.note}</div>` : ''}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+ 
+// =============================================
+// MODAL HISTORIQUE COMPLET
+// =============================================
+ 
+async function ouvrirHistoriqueComplet() {
+  const reals = await chargerHistoriqueRealisations();
+  const modal = document.getElementById('modal-historique');
+ 
+  const corps = modal.querySelector('.historique-corps');
+  if (!reals.length) {
+    corps.innerHTML = '<div class="dash-empty">Aucune réalisation enregistrée.</div>';
+  } else {
+    // Grouper par mois
+    const groupes = {};
+    reals.forEach(r => {
+      const mois = new Date(r.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      if (!groupes[mois]) groupes[mois] = [];
+      groupes[mois].push(r);
+    });
+ 
+    corps.innerHTML = Object.entries(groupes).map(([mois, items]) => `
+      <div class="historique-mois">
+        <div class="historique-mois-titre">${mois}</div>
+        ${items.map(real => {
+          const recette = recettes.find(r => r.id === real.recette_id);
+          const dateStr = new Date(real.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+          return `
+            <div class="historique-item">
+              ${recette?.photo_url
+                ? `<img src="${recette.photo_url}" class="dash-real-img" alt="${real.recette_nom}" loading="lazy" onerror="this.style.display='none'">`
+                : `<div class="dash-real-img dash-real-img--fallback">${real.recette_nom.charAt(0)}</div>`}
+              <div class="historique-item-info">
+                <div class="dash-real-nom">${real.recette_nom}</div>
+                <div class="dash-real-meta">${real.portions} verre${real.portions > 1 ? 's' : ''} · ${dateStr}</div>
+                ${real.note ? `<div class="dash-real-note">"${real.note}"</div>` : ''}
+              </div>
+              <button class="btn-icon btn-supprimer" title="Supprimer" onclick="supprimerRealisation('${real.id}')">🗑</button>
+            </div>`;
+        }).join('')}
+      </div>
+    `).join('');
+  }
+ 
+  afficherModal('modal-historique');
+}
+ 
+async function supprimerRealisation(id) {
+  if (!confirm('Supprimer cette réalisation ?')) return;
+  await db.from('realisations').delete().eq('id', id).eq('user_id', currentUser.id);
+  ouvrirHistoriqueComplet();
+}
 
 init();
