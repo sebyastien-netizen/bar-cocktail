@@ -316,9 +316,10 @@
 
     <div class="adj-curseur-row">
       <span class="adj-curseur-label">Amer</span>
-      <div class="adj-curseur-track"></span>
-        <input type="range" id="adj-amer" min="-3" max="3" value="0" step="1" style="width:100%" oninput="onAdjSlider('amer', this.value)">
-      </div>
+<div class="adj-curseur-track">
+  <input type="range" id="adj-amer" min="-3" max="3" value="0" step="1" style="width:100%" oninput="onAdjSlider('amer', this.value)">
+  <span class="adj-marqueur" id="adj-marqueur-amer"></span>
+</div>
       <span class="adj-curseur-val" id="adj-val-amer">0</span>
     </div>
 
