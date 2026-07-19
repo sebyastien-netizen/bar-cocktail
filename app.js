@@ -2153,6 +2153,9 @@ function ouvrirFicheMateriel(id) {
     ${m.pourquoi ? `<div class="plante-section"><h3>Pourquoi c'est important</h3><p class="plante-notes-bar">${m.pourquoi}</p></div>` : ''}
     ${m.prix_estime ? `<div class="plante-section"><h3>Prix indicatif</h3><p>${m.prix_estime}</p></div>` : ''}
   `;
-  afficherModal('modal-ecole-fiche');
-}
+ afficherModal('modal-ecole-fiche');
+}              // ← ouvrirFicheMateriel fermée
+
+}              // ← ajoute cette ligne (ferme ouvrirFicheTechnique ou une autre fonction)
+
 init();
