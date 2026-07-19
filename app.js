@@ -1689,5 +1689,201 @@ async function rechargerConseil() {
   }
   if (btn) btn.style.opacity = '1';
 }
-
+let plantesList = [];
+let filtreHerboFamille = '';
+let filtreHerboUsage = '';
+let plantesOuverte = null;
+ 
+// =============================================
+// CHARGEMENT
+// =============================================
+ 
+async function chargerHerboristerie() {
+  const container = document.getElementById('herboristerie-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-state">Chargement…</div>';
+ 
+  const { data: plantes } = await db.from('plantes').select('*').order('nom');
+  if (!plantes) return;
+ 
+  plantesList = plantes;
+  renderHerboristerie(plantes);
+}
+ 
+// =============================================
+// RENDU LISTE
+// =============================================
+ 
+function renderHerboristerie(plantes) {
+  const container = document.getElementById('herboristerie-container');
+  if (!container) return;
+ 
+  const familles = [...new Set(plantes.map(p => p.famille).filter(Boolean))];
+  const usages   = [...new Set(plantes.flatMap(p => p.usages_bar || []))].sort();
+ 
+  let liste = plantes;
+  if (filtreHerboFamille) liste = liste.filter(p => p.famille === filtreHerboFamille);
+  if (filtreHerboUsage)   liste = liste.filter(p => p.usages_bar?.includes(filtreHerboUsage));
+ 
+  const familleLabel = { aromatique: 'Aromatiques', fleur: 'Fleurs', epice: 'Épices', agrume: 'Agrumes', autre: 'Autres' };
+  const usageLabel   = { decoration: 'Déco', infusion: 'Infusion', maceration: 'Macération', sirop: 'Sirop', muddle: 'Muddle', zeste: 'Zeste' };
+ 
+  container.innerHTML = `
+    <div class="herbo-filtres">
+      <button class="herbo-filtre-btn ${!filtreHerboFamille && !filtreHerboUsage ? 'active' : ''}"
+        onclick="filtreHerboFamille=''; filtreHerboUsage=''; renderHerboristerie(plantesList)">Toutes</button>
+      ${familles.map(f => `
+        <button class="herbo-filtre-btn ${filtreHerboFamille === f ? 'active' : ''}"
+          onclick="filtreHerboFamille='${f}'; filtreHerboUsage=''; renderHerboristerie(plantesList)">
+          ${familleLabel[f] || f}
+        </button>`).join('')}
+      <span class="herbo-filtre-sep">|</span>
+      ${usages.map(u => `
+        <button class="herbo-filtre-btn herbo-filtre-usage ${filtreHerboUsage === u ? 'active' : ''}"
+          onclick="filtreHerboUsage='${u}'; filtreHerboFamille=''; renderHerboristerie(plantesList)">
+          ${usageLabel[u] || u}
+        </button>`).join('')}
+    </div>
+ 
+    <div class="herbo-grille">
+      ${liste.length === 0 ? '<div class="empty-state">Aucune plante trouvée.</div>' : ''}
+      ${liste.map(p => renderCartePlante(p)).join('')}
+    </div>
+  `;
+}
+ 
+// =============================================
+// CARTE PLANTE
+// =============================================
+ 
+function renderCartePlante(p) {
+  const moisActuel = new Date().getMonth() + 1;
+  const enSaison   = p.disponibilite_mois?.includes(moisActuel);
+  const usageLabel = { decoration: 'Déco', infusion: 'Infusion', maceration: 'Macération', sirop: 'Sirop', muddle: 'Muddle', zeste: 'Zeste' };
+ 
+  return `
+    <div class="herbo-carte" onclick="ouvrirFichePlante('${p.id}')">
+      <div class="herbo-carte-top">
+        <span class="herbo-emoji">${p.emoji}</span>
+        <div class="herbo-carte-info">
+          <div class="herbo-nom">${p.nom}</div>
+          ${p.nom_latin ? `<div class="herbo-latin">${p.nom_latin}</div>` : ''}
+        </div>
+        <span class="herbo-saison ${enSaison ? 'herbo-saison--ok' : 'herbo-saison--off'}">
+          ${enSaison ? '● Dispo' : '○ Hors saison'}
+        </span>
+      </div>
+      <div class="herbo-profil">${p.profil_aromatique || ''}</div>
+      <div class="herbo-usages">
+        ${(p.usages_bar || []).map(u => `<span class="herbo-usage-tag">${usageLabel[u] || u}</span>`).join('')}
+      </div>
+      ${p.cocktails_types?.length ? `
+        <div class="herbo-cocktails">🍹 ${p.cocktails_types.slice(0, 3).join(' · ')}</div>
+      ` : ''}
+    </div>
+  `;
+}
+ 
+// =============================================
+// FICHE DÉTAILLÉE
+// =============================================
+ 
+function ouvrirFichePlante(id) {
+  const p = plantesList.find(x => x.id === id);
+  if (!p) return;
+  plantesOuverte = p;
+ 
+  const usageLabel = { decoration: 'Déco', infusion: 'Infusion', maceration: 'Macération', sirop: 'Sirop', muddle: 'Muddle', zeste: 'Zeste' };
+  const moisNoms   = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const moisActuel = new Date().getMonth() + 1;
+ 
+  document.querySelector('.plante-fiche-contenu').innerHTML = `
+ 
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">${p.emoji}</span>
+      <div>
+        <h2 class="fiche-titre">${p.nom}</h2>
+        ${p.nom_latin ? `<div class="herbo-latin" style="font-size:0.85rem;margin-top:2px">${p.nom_latin}</div>` : ''}
+      </div>
+    </div>
+ 
+    <div class="plante-section">
+      <h3>Profil aromatique</h3>
+      <p>${p.profil_aromatique || '—'}</p>
+    </div>
+ 
+    <div class="plante-section">
+      <h3>Usages au bar</h3>
+      <div class="herbo-usages" style="margin-bottom:10px">
+        ${(p.usages_bar || []).map(u => `<span class="herbo-usage-tag herbo-usage-tag--large">${usageLabel[u] || u}</span>`).join('')}
+      </div>
+      ${p.notes_bartender ? `<p class="plante-notes-bar">${p.notes_bartender}</p>` : ''}
+    </div>
+ 
+    ${p.cocktails_types?.length ? `
+    <div class="plante-section">
+      <h3>Cocktails associés</h3>
+      <div class="plante-cocktails-liste">
+        ${p.cocktails_types.map(c => `<span class="plante-cocktail-chip">🍹 ${c}</span>`).join('')}
+      </div>
+    </div>` : ''}
+ 
+    ${p.conservation_bar ? `
+    <div class="plante-section">
+      <h3>Conservation bar</h3>
+      <p>${p.conservation_bar}</p>
+    </div>` : ''}
+ 
+    ${p.arrosage && p.arrosage !== 'Non applicable' ? `
+    <div class="plante-section">
+      <h3>Entretien</h3>
+      <div class="plante-entretien-grid">
+        <div class="plante-entretien-item">
+          <span class="plante-entretien-icon">💧</span>
+          <div><div class="plante-entretien-label">Arrosage</div><div class="plante-entretien-val">${p.arrosage}</div></div>
+        </div>
+        <div class="plante-entretien-item">
+          <span class="plante-entretien-icon">☀️</span>
+          <div><div class="plante-entretien-label">Lumière</div><div class="plante-entretien-val">${p.lumiere}</div></div>
+        </div>
+        <div class="plante-entretien-item">
+          <span class="plante-entretien-icon">🪴</span>
+          <div><div class="plante-entretien-label">Substrat</div><div class="plante-entretien-val">${p.substrat}</div></div>
+        </div>
+        ${p.taille && p.taille !== 'Non applicable' ? `
+        <div class="plante-entretien-item">
+          <span class="plante-entretien-icon">✂️</span>
+          <div><div class="plante-entretien-label">Taille</div><div class="plante-entretien-val">${p.taille}</div></div>
+        </div>` : ''}
+      </div>
+    </div>` : ''}
+ 
+    ${p.periode_plantation && p.periode_plantation !== 'Non applicable' ? `
+    <div class="plante-section">
+      <h3>Calendrier — Sud-Ouest</h3>
+      <div class="plante-calendrier">
+        ${moisNoms.map((m, i) => {
+          const mois  = i + 1;
+          const dispo = p.disponibilite_mois?.includes(mois);
+          const actuel = mois === moisActuel;
+          return `<div class="plante-mois ${dispo ? 'plante-mois--dispo' : ''} ${actuel ? 'plante-mois--actuel' : ''}">${m}</div>`;
+        }).join('')}
+      </div>
+      <div class="plante-calendrier-legend">
+        ${p.periode_plantation ? `🌱 Planter : ${p.periode_plantation}` : ''}
+        ${p.periode_recolte ? ` · ✂️ Récolter : ${p.periode_recolte}` : ''}
+      </div>
+    </div>` : ''}
+ 
+    ${p.signes_problemes?.length ? `
+    <div class="plante-section">
+      <h3>Signes de problème</h3>
+      <ul class="plante-problemes">
+        ${p.signes_problemes.map(s => `<li>${s}</li>`).join('')}
+      </ul>
+    </div>` : ''}
+  `;
+ 
+  afficherModal('modal-fiche-plante');
+}
 init();
