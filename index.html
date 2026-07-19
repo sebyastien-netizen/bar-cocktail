@@ -36,7 +36,7 @@
     <header>
       <span style="font-size:1.4rem">🍸</span>
       <h1>Bar à Cocktail</h1>
-      <span class="subtitle">v0.3</span>
+      <span class="subtitle">v0.4</span>
       <button class="btn-qr" id="btn-qr" title="QR Code mobile" onclick="toggleQR()">📱</button>
       <button class="btn-logout" id="btn-logout" title="Déconnexion">⏏</button>
       <div class="qr-popup" id="qr-popup">
@@ -52,7 +52,7 @@
       <button data-tab="dashboard">📊 Dashboard</button>
       <button data-tab="concoctions">⚗️ Concoctions</button>
       <button data-tab="herboristerie">🌿 Herboristerie</button>
-      <button disabled title="Bientôt">🎓 École</button>
+      <button data-tab="ecole">🎓 École</button>
       <button data-tab="aacheter">🛒 À acheter</button>
     </nav>
 
@@ -85,16 +85,22 @@
         <div id="dashboard-container"><div class="loading-state">Chargement…</div></div>
       </div>
 
+      <!-- CONCOCTIONS -->
+      <div id="section-concoctions" class="tab-section hidden">
+        <div class="cave-header"><h2>⚗️ Concoctions</h2></div>
+        <div id="concoctions-container"><div class="loading-state">Chargement…</div></div>
+      </div>
+
       <!-- HERBORISTERIE -->
       <div id="section-herboristerie" class="tab-section hidden">
         <div class="cave-header"><h2>🌿 Herboristerie</h2></div>
         <div id="herboristerie-container"><div class="loading-state">Chargement…</div></div>
       </div>
 
-      <!-- CONCOCTIONS -->
-      <div id="section-concoctions" class="tab-section hidden">
-        <div class="cave-header"><h2>⚗️ Concoctions</h2></div>
-        <div id="concoctions-container"><div class="loading-state">Chargement…</div></div>
+      <!-- ÉCOLE -->
+      <div id="section-ecole" class="tab-section hidden">
+        <div class="cave-header"><h2>🎓 École</h2></div>
+        <div id="ecole-container"><div class="loading-state">Chargement…</div></div>
       </div>
 
       <!-- À ACHETER -->
@@ -119,6 +125,14 @@
     <div class="modal modal-fiche">
       <button class="modal-close" onclick="fermerModal('modal-fiche-plante')">✕</button>
       <div class="plante-fiche-contenu"></div>
+    </div>
+  </div>
+
+  <!-- MODAL : FICHE ÉCOLE -->
+  <div class="modal-overlay modal-large" id="modal-ecole-fiche">
+    <div class="modal modal-fiche">
+      <button class="modal-close" onclick="fermerModal('modal-ecole-fiche')">✕</button>
+      <div class="ecole-fiche-contenu"></div>
     </div>
   </div>
 
