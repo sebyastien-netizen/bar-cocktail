@@ -1758,8 +1758,7 @@ function renderDashboard({ realisables, prixTotal, conservations, concEnCours, a
  
   const nbConservations = conservations.length;
   const nbConcoctions   = concEnCours.length;
-  const nbRefs          = cave.categories.reduce((n, c) => n + c.items.filter(i => i.detenu !== false).length, 0);
- 
+const nbRefs = (cave?.categories || []).reduce((n, c) => n + c.items.filter(i => i.detenu !== false).length, 0); 
   container.innerHTML = `
  
     <!-- TUILES STATISTIQUES -->
