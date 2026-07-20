@@ -2547,3 +2547,15 @@ main { overflow-x: hidden; }
   transition: opacity 0.2s;
   z-index: 2;
 }
+.analyser-card { background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.analyser-nom { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.analyser-meta { font-size: 12px; color: var(--text-muted); }
+.analyser-section { display: flex; flex-direction: column; gap: 4px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; }
+.analyser-section--warning { border: 1px solid rgba(255,165,0,0.2); background: rgba(255,165,0,0.05); }
+.analyser-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; }
+.analyser-texte { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.analyser-verdict { font-size: 13px; font-weight: 500; padding: 10px 14px; border-radius: 8px; text-align: center; }
+.analyser-verdict--acheter { background: rgba(0,200,100,0.1); color: #00c864; border: 1px solid rgba(0,200,100,0.2); }
+.analyser-verdict--passer { background: rgba(255,100,100,0.1); color: #ff6464; border: 1px solid rgba(255,100,100,0.2); }
+.analyser-verdict--doublon { background: rgba(255,165,0,0.1); color: #ffaa00; border: 1px solid rgba(255,165,0,0.2); }
+.analyser-verdict--mieux { background: rgba(100,150,255,0.1); color: #6496ff; border: 1px solid rgba(100,150,255,0.2); }
