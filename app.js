@@ -1690,7 +1690,7 @@ async function chargerDashboard() {
  
   // Conservations urgentes
   const conservations = [];
-  cave.categories.forEach(cat => {
+ (cave?.categories || []).forEach(cat => {
     cat.items.forEach(item => {
       if (item.ouvert && item.conservation) {
         const joursEcoules = Math.floor((Date.now() - new Date(item.date_ouverture || Date.now())) / 86400000);
