@@ -1607,6 +1607,15 @@ async function chargerAAcheter() {
       </select>
       <div id="simulateur-result"></div>
     </div>
+    <!-- SIMULATEUR -->
+    <div class="aacheter-groupe">
+      <div class="aacheter-groupe-titre">🔮 Simulateur — et si j'avais…</div>
+      <select id="simulateur-select" onchange="simulerGain(this.value)" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-card);color:var(--text-primary);font-size:14px;margin-bottom:12px;">
+        <option value="">Choisir un alcool manquant…</option>
+        ${allScored.map(i => `<option value="${i.id}">${i.nom}${i.prix ? ' — ' + i.prix + '€' : ''}</option>`).join('')}
+      </select>
+      <div id="simulateur-result"></div>
+    </div>
     <!-- APPORT GUSTATIF -->
     <div class="aacheter-groupe">
       <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
