@@ -514,7 +514,43 @@ function getBatchInfo(r, p) {
 // =============================================
 // RENDU FICHE PRINCIPALE
 // =============================================
+async function chargerJournalRecette(recetteId) {
+  const { data, error } = await supabase
+    .from('realisations')
+    .select('*')
+    .eq('recette_id', recetteId)
+    .eq('user_id', USER_ID)
+    .order('date', { ascending: false });
+  if (error || !data) return [];
+  return data;
+}
 
+function renderJournalRecette(realisations) {
+  if (!realisations.length) return `
+    <div class="journal-vide">Aucune réalisation enregistrée.</div>`;
+  return realisations.map(r => `
+    <div class="journal-ligne">
+      <span class="journal-date">${new Date(r.date).toLocaleDateString('fr-FR')}</span>
+      <span class="journal-portions">${r.portions} verre${r.portions > 1 ? 's' : ''}</span>
+      <span class="journal-note">${r.note || '—'}</span>
+    </div>`).join('');
+}
+
+async function toggleJournalRecette() {
+  const corps = document.getElementById('journal-corps');
+  const chevron = document.getElementById('journal-chevron');
+  if (!corps) return;
+  if (corps.classList.contains('visible')) {
+    corps.classList.remove('visible');
+    chevron.textContent = '▸';
+    return;
+  }
+  corps.innerHTML = '<div class="journal-vide">Chargement…</div>';
+  corps.classList.add('visible');
+  chevron.textContent = '▾';
+  const data = await chargerJournalRecette(recetteOuverte.id);
+  corps.innerHTML = renderJournalRecette(data);
+}
 function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
