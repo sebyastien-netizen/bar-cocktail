@@ -1701,7 +1701,19 @@ async function analyserBouteille() {
       <div class="analyser-card">
         <div class="analyser-nom">${data.nom_complet}</div>
         <div class="analyser-meta">${data.categorie} · ${data.degre}° · ${data.profil_gustatif}</div>
-
+${data.cocktails_possibles?.length ? `
+        <div class="analyser-section">
+          <div class="analyser-label">🍹 Cocktails réalisables</div>
+          ${data.cocktails_possibles.map(c => `
+            <div class="simulateur-recette">
+              <span class="simulateur-recette-nom">${c.nom}</span>
+              <span class="simulateur-recette-gouts">${
+                c.ingredients_manquants?.length
+                  ? '⚠️ manque : ' + c.ingredients_manquants.join(', ')
+                  : '✓ réalisable maintenant'
+              }</span>
+            </div>`).join('')}
+        </div>` : ''}
         ${data.doublon_cave ? `
         <div class="analyser-section analyser-section--warning">
           <div class="analyser-label">⚠️ Déjà similaire en cave</div>
