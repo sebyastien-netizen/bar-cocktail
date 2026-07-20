@@ -519,7 +519,7 @@ async function chargerJournalRecette(recetteId) {
     .from('realisations')
     .select('*')
     .eq('recette_id', recetteId)
-    .eq('user_id', USER_ID)
+  .eq('user_id', currentUser.id)
     .order('date', { ascending: false });
   if (error || !data) return [];
   return data;
