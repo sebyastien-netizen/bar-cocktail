@@ -1598,15 +1598,7 @@ async function chargerAAcheter() {
         </div>
       `;
     }).join('')}
-<!-- SIMULATEUR -->
-    <div class="aacheter-groupe">
-      <div class="aacheter-groupe-titre">🔮 Simulateur — et si j'avais…</div>
-      <select id="simulateur-select" onchange="simulerGain(this.value)" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-card);color:var(--text-primary);font-size:14px;margin-bottom:12px;">
-        <option value="">Choisir un alcool manquant…</option>
-        ${allScored.map(i => `<option value="${i.id}">${i.nom}${i.prix ? ' — ' + i.prix + '€' : ''}</option>`).join('')}
-      </select>
-      <div id="simulateur-result"></div>
-    </div>
+
     <!-- SIMULATEUR -->
     <div class="aacheter-groupe">
       <div class="aacheter-groupe-titre">🔮 Simulateur — et si j'avais…</div>
@@ -1625,7 +1617,36 @@ async function chargerAAcheter() {
     </div>
   `;
 }
-
+function simulerGain(itemId) {
+  const result = document.getElementById('simulateur-result');
+  if (!itemId) { result.innerHTML = ''; return; }
+  const caveIds = getItemsCave();
+  const simulCave = new Set([...caveIds, itemId]);
+  const debloquees = recettes.filter(r => {
+    const manquantsAvant = (r.ingredients || []).filter(i =>
+      i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel
+    ).length;
+    const manquantsApres = (r.ingredients || []).filter(i =>
+      i.item_cave_id && !simulCave.has(i.item_cave_id) && !i.optionnel
+    ).length;
+    return manquantsAvant > 0 && manquantsApres === 0;
+  });
+  if (!debloquees.length) {
+    result.innerHTML = '<div class="simulateur-vide">Aucune recette supplémentaire débloquée.</div>';
+    return;
+  }
+  result.innerHTML = `
+    <div class="simulateur-gain">
+      <div class="simulateur-gain-titre">+${debloquees.length} recette${debloquees.length > 1 ? 's' : ''} débloquée${debloquees.length > 1 ? 's' : ''}</div>
+      ${debloquees.map(r => `
+        <div class="simulateur-recette" onclick="ouvrirFiche('${r.id}')">
+          <span class="simulateur-recette-nom">${r.nom}</span>
+          <span class="simulateur-recette-gouts">${(r.gouts || []).join(', ')}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
 function renderItemAAcheter(item, isTop) {
   const nbRecettes      = item.recettesDetail.length;
   const prix            = parseFloat(item.prix) || null;
