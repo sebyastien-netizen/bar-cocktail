@@ -515,7 +515,7 @@ function getBatchInfo(r, p) {
 // RENDU FICHE PRINCIPALE
 // =============================================
 async function chargerJournalRecette(recetteId) {
-  const { data, error } = await supabase
+ const { data, error } = await db
     .from('realisations')
     .select('*')
     .eq('recette_id', recetteId)
