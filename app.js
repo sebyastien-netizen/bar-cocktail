@@ -886,6 +886,8 @@ async function marquerRealisee(portions) {
 function ouvrirModalItem(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
+  const categoriesExclues = ['ingredients-frais', 'garde-manger', 'ponctuels'];
+  if (categoriesExclues.includes(catId)) return;
  
   document.getElementById('modal-ouverture-titre').textContent = item.nom;
   document.getElementById('modal-ouverture-texte').textContent = item.ouvert
