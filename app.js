@@ -1578,7 +1578,20 @@ async function chargerAAcheter() {
         </button>
       `).join('')}
     </div>
-
+ <!-- ANALYSER UNE BOUTEILLE -->
+    <div class="aacheter-groupe">
+      <div class="aacheter-groupe-titre">🔍 Analyser une bouteille</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" id="analyser-input" placeholder="Ex: Campari, Monkey 47, Mezcal El Silencio…"
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:14px;"
+          onkeydown="if(event.key==='Enter') analyserBouteille()">
+        <button id="analyser-btn" onclick="analyserBouteille()"
+          style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,165,0,0.4);background:rgba(255,165,0,0.1);color:#ffaa00;font-size:14px;cursor:pointer;white-space:nowrap;">
+          🔍 Analyser
+        </button>
+      </div>
+      <div id="analyser-result"></div>
+    </div>
     <!-- MEILLEUR ACHAT -->
     ${filtreActif === 'tout' ? `
     <div class="aacheter-top-card">
@@ -1607,20 +1620,7 @@ async function chargerAAcheter() {
       </select>
       <div id="simulateur-result"></div>
     </div>
-    <!-- ANALYSER UNE BOUTEILLE -->
-    <div class="aacheter-groupe">
-      <div class="aacheter-groupe-titre">🔍 Analyser une bouteille</div>
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <input type="text" id="analyser-input" placeholder="Ex: Campari, Monkey 47, Mezcal El Silencio…"
-          style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:14px;"
-          onkeydown="if(event.key==='Enter') analyserBouteille()">
-        <button id="analyser-btn" onclick="analyserBouteille()"
-          style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,165,0,0.4);background:rgba(255,165,0,0.1);color:#ffaa00;font-size:14px;cursor:pointer;white-space:nowrap;">
-          🔍 Analyser
-        </button>
-      </div>
-      <div id="analyser-result"></div>
-    </div>
+   
     <!-- APPORT GUSTATIF -->
     <div class="aacheter-groupe">
       <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
