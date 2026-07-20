@@ -793,7 +793,15 @@ function renderFiche(portions) {
       <div class="fiche-card-titre">Histoire</div>
       <p class="fiche-anecdote-texte">${r.anecdote}</p>
     </div>` : ''}
-
+    
+<!-- JOURNAL -->
+    <div class="journal-bloc">
+      <div class="journal-header" onclick="toggleJournalRecette()">
+        <span>🗒 Journal</span>
+        <span id="journal-chevron">▸</span>
+      </div>
+      <div id="journal-corps"></div>
+    </div>
     <!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
       <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
