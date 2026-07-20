@@ -922,6 +922,8 @@ function ouvrirModalItem(itemId, catId) {
 function ouvrirModalContenance(itemId, catId) {
   const item = trouverItem(itemId, catId);
   if (!item) return;
+  const categoriesExclues = ['ingredients-frais', 'garde-manger', 'ponctuels'];
+  if (categoriesExclues.includes(catId)) return;
  
   document.getElementById('modal-contenance-titre').textContent = item.nom;
   const body = document.querySelector('.modal-contenance-body');
