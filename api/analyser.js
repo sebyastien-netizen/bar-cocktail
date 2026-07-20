@@ -23,34 +23,50 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        max_tokens: 1000,
+        max_tokens: 1200,
         response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content: 'Tu es un bartender expert et conseiller en spiritueux. Réponds uniquement en JSON valide.'
+            content: `Tu es un bartender professionnel expert en spiritueux et en cocktails classiques et modernes. 
+Tu donnes des avis précis, directs et techniques. Tu connais les prix du marché français. 
+Réponds uniquement en JSON valide, sans texte générique ni formules creuses.`
           },
           {
             role: 'user',
             content: `Analyse cet alcool : "${nom}".
-Cave actuelle du bartender : ${cave}.
 
-Retourne ce JSON exactement :
+Cave actuelle du bartender (ce qu'il possède déjà) : ${cave}.
+
+Ta mission :
+1. Identifier précisément l'alcool
+2. Détecter si un alcool similaire est déjà en cave (même famille ET profil proche)
+3. Lister les cocktails classiques ou modernes réalisables avec cet alcool ET les ingrédients déjà en cave — sois précis et exhaustif, minimum 3 cocktails si possible
+4. Évaluer si une meilleure version existe (millésime supérieur, expression premium) avec prix réel français
+5. Identifier une alternative moins chère donnant le même résultat en cocktail avec prix réel français
+6. Donner un avis bartender technique et personnel sur la complémentarité avec cette cave précise
+7. Rendre un verdict tranché et justifié
+
+Retourne ce JSON exactement, sans champ supplémentaire :
 {
   "identifie": true,
-  "nom_complet": "nom commercial exact",
-  "categorie": "catégorie (ex: Gin, Rhum, Whisky...)",
+  "nom_complet": "nom commercial exact et complet",
+  "categorie": "catégorie précise (ex: London Dry Gin, Rhum Agricole, Single Malt Islay...)",
   "degre": 40,
-  "profil_gustatif": "description courte du profil (ex: floral, épicé, agrumes)",
-  "doublon_cave": "nom de l'alcool similaire déjà en cave, ou null si aucun",
-  "doublon_note": "explication si doublon, ou null",
-  "meilleure_version": "nom d'une meilleure expression/millésime si applicable, ou null",
-  "meilleure_version_prix": "prix estimé en €, ou null",
-  "variante_moins_chere": "nom d'un équivalent moins cher donnant le même résultat en cocktail, ou null",
-  "variante_moins_chere_prix": "prix estimé en €, ou null",
-  "complementarite": "en 1-2 phrases : ce que cet alcool apporte gustativement à la cave existante",
+  "profil_gustatif": "3-5 notes aromatiques précises séparées par des virgules",
+  "doublon_cave": "nom exact de l'alcool similaire déjà en cave, ou null",
+  "doublon_note": "en 1 phrase : en quoi ils se ressemblent ET en quoi ils diffèrent, ou null",
+  "cocktails_possibles": [
+    {"nom": "Negroni", "ingredients_manquants": [], "difficulte": "facile"},
+    {"nom": "Last Word", "ingredients_manquants": ["Marasquin"], "difficulte": "moyen"}
+  ],
+  "meilleure_version": "nom exact d'une expression supérieure si applicable, ou null",
+  "meilleure_version_prix": 45,
+  "variante_moins_chere": "nom exact d'un équivalent moins cher en cocktail, ou null",
+  "variante_moins_chere_prix": 18,
+  "complementarite": "en 2-3 phrases techniques : ce que cet alcool apporte CONCRÈTEMENT à cette cave précise, quels profils gustatifs il ouvre ou complète",
   "verdict": "ACHETER | PASSER | DOUBLON | MIEUX_AILLEURS",
-  "verdict_raison": "explication courte du verdict en 1 phrase"
+  "verdict_raison": "1 phrase directe et argumentée expliquant le verdict"
 }
 Si alcool non identifié : {"identifie": false}`
           }
