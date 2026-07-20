@@ -2323,7 +2323,7 @@ main { overflow-x: hidden; }
   width: 58px;
   flex-shrink: 0;
 }
-.adj-curseur-track { flex: 1; }
+.adj-curseur-track { flex: 1; position: relative; }
 .adj-curseur-val {
   font-size: 12px;
   font-weight: 500;
