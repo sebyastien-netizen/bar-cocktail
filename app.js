@@ -2557,17 +2557,69 @@ function ouvrirFicheMateriel(id) {
 function ouvrirModalRealisation(portions) {
   const r = recetteOuverte;
   const modal = document.getElementById('modal-realisation');
- 
+
   modal.querySelector('#real-cocktail-nom').textContent = r.nom;
   modal.querySelector('#real-date').value = new Date().toISOString().split('T')[0];
   modal.querySelector('#real-portions').value = portions;
   modal.querySelector('#real-note').value = '';
- 
+  modal.querySelector('#real-plus').value = '';
+  modal.querySelector('#real-moins').value = '';
+  modal.querySelector('#real-photo').value = '';
+  modal.querySelector('#real-photo-preview').innerHTML = '';
+
+  // Gestion étoiles
+  let etoilesVal = 0;
+  const etoiles = modal.querySelectorAll('.etoile');
+  etoiles.forEach(e => e.classList.remove('active'));
+
+  etoiles.forEach(e => {
+    e.onclick = () => {
+      etoilesVal = parseInt(e.dataset.val);
+      etoiles.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= etoilesVal));
+    };
+  });
+
+  // Preview photo
+  modal.querySelector('#real-photo').onchange = function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      modal.querySelector('#real-photo-preview').innerHTML =
+        `<img src="${e.target.result}" style="max-width:100%;border-radius:8px;max-height:150px;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  };
+
   modal.querySelector('#btn-confirmer-realisation').onclick = async () => {
     const date     = modal.querySelector('#real-date').value;
     const portions = parseInt(modal.querySelector('#real-portions').value) || 1;
-    const note     = modal.querySelector('#real-note').value.trim();
- 
+    const plus     = modal.querySelector('#real-plus').value.trim();
+    const moins    = modal.querySelector('#real-moins').value.trim();
+    const noteLib  = modal.querySelector('#real-note').value.trim();
+    const photoFile = modal.querySelector('#real-photo').files[0];
+
+    // Construire la note JSON
+    const noteObj = {};
+    if (etoilesVal) noteObj.etoiles = etoilesVal;
+    if (plus) noteObj.plus = plus;
+    if (moins) noteObj.moins = moins;
+    if (noteLib) noteObj.note = noteLib;
+
+    // Upload photo si présente
+    let photoUrl = null;
+    if (photoFile) {
+      const ext = photoFile.name.split('.').pop();
+      const path = `realisations/${currentUser.id}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await db.storage
+        .from('photos-realisations')
+        .upload(path, photoFile, { upsert: true });
+      if (!uploadError) {
+        const { data: urlData } = db.storage.from('photos-realisations').getPublicUrl(path);
+        photoUrl = urlData?.publicUrl || null;
+      }
+    }
+
     // Enregistrer la réalisation
     await db.from('realisations').insert({
       user_id:     currentUser.id,
@@ -2575,26 +2627,26 @@ function ouvrirModalRealisation(portions) {
       recette_nom: r.nom,
       date,
       portions,
-      note: note || null
+      note: Object.keys(noteObj).length ? JSON.stringify(noteObj) : null,
+      photo_url: photoUrl
     });
- 
+
     // Décrémenter la cave
     await decrementerCave(r, portions);
- 
+
     fermerModal('modal-realisation');
     fermerModal('modal-fiche-recette');
- 
-    // Toast feedback
+
     const feedback = document.createElement('div');
     feedback.className = 'toast-feedback';
     feedback.textContent = `✓ ${r.nom} — réalisé le ${new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
     document.body.appendChild(feedback);
     setTimeout(() => feedback.classList.add('visible'), 50);
     setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 3000);
- 
+
     renderCave();
   };
- 
+
   afficherModal('modal-realisation');
 }
  
