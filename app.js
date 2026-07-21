@@ -553,6 +553,125 @@ function renderJournalRecette(realisations) {
     </div>`;
   }).join('');
 }
+async function annulerRealisation(realisationId, recetteId, portions) {
+  // Trouver la recette pour prévisualiser la re-incrémentation
+  const r = recettes.find(rec => rec.id === recetteId);
+  if (!r) return;
+
+  // Construire le message de prévisualisation
+  const preview = (r.ingredients || [])
+    .filter(i => i.item_cave_id && i.quantite && i.unite)
+    .map(i => `+${(i.quantite * portions).toFixed(1)} ${i.unite} de ${i.nom}`)
+    .join('\n');
+
+  const msg = preview
+    ? `Cette annulation va remettre en cave :\n\n${preview}\n\nÊtes-vous sûr ?`
+    : `Annuler cette réalisation de ${portions} verre${portions > 1 ? 's' : ''} ?\n\nÊtes-vous sûr ?`;
+
+  if (!confirm(msg)) return;
+
+  // Supprimer la réalisation
+  await db.from('realisations').delete().eq('id', realisationId).eq('user_id', currentUser.id);
+
+  // Re-incrémenter la cave
+  for (const ing of (r.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || !ing.unite) continue;
+    const itemCave = (cave?.categories || []).flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
+    if (!itemCave || itemCave.cl_restants === null) continue;
+    const nouveau = Math.round((itemCave.cl_restants + ing.quantite * portions) * 10) / 10;
+    await db.from('items').update({ cl_restants: nouveau }).eq('id', ing.item_cave_id).eq('user_id', currentUser.id);
+    itemCave.cl_restants = nouveau;
+  }
+
+  // Recharger le journal
+  const data = await chargerJournalRecette(recetteId);
+  document.getElementById('journal-corps').innerHTML = renderJournalRecette(data);
+  renderCave();
+}
+
+async function editerRealisation(realisationId) {
+  // Charger la réalisation existante
+  const { data } = await db.from('realisations').select('*').eq('id', realisationId).single();
+  if (!data) return;
+
+  let noteObj = {};
+  try { noteObj = data.note ? JSON.parse(data.note) : {}; } catch(e) {}
+
+  const modal = document.getElementById('modal-realisation');
+  modal.querySelector('#real-cocktail-nom').textContent = data.recette_nom;
+  modal.querySelector('#real-date').value = data.date;
+  modal.querySelector('#real-portions').value = data.portions;
+  modal.querySelector('#real-plus').value = noteObj.plus || '';
+  modal.querySelector('#real-moins').value = noteObj.moins || '';
+  modal.querySelector('#real-note').value = noteObj.note || '';
+  modal.querySelector('#real-photo-preview').innerHTML = data.photo_url
+    ? `<img src="${data.photo_url}" style="max-width:100%;border-radius:8px;max-height:150px;object-fit:cover;">`
+    : '';
+
+  // Pré-remplir étoiles
+  let etoilesVal = noteObj.etoiles || 0;
+  const etoiles = modal.querySelectorAll('.etoile');
+  etoiles.forEach(e => e.classList.toggle('active', parseInt(e.dataset.val) <= etoilesVal));
+  etoiles.forEach(e => {
+    e.onclick = () => {
+      etoilesVal = parseInt(e.dataset.val);
+      etoiles.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= etoilesVal));
+    };
+  });
+
+  // Preview photo
+  modal.querySelector('#real-photo').onchange = function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      modal.querySelector('#real-photo-preview').innerHTML =
+        `<img src="${e.target.result}" style="max-width:100%;border-radius:8px;max-height:150px;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Bouton confirmer = UPDATE (pas INSERT)
+  modal.querySelector('#btn-confirmer-realisation').textContent = '✓ Mettre à jour';
+  modal.querySelector('#btn-confirmer-realisation').onclick = async () => {
+    const plus    = modal.querySelector('#real-plus').value.trim();
+    const moins   = modal.querySelector('#real-moins').value.trim();
+    const noteLib = modal.querySelector('#real-note').value.trim();
+    const photoFile = modal.querySelector('#real-photo').files[0];
+
+    const noteObj2 = {};
+    if (etoilesVal) noteObj2.etoiles = etoilesVal;
+    if (plus) noteObj2.plus = plus;
+    if (moins) noteObj2.moins = moins;
+    if (noteLib) noteObj2.note = noteLib;
+
+    let photoUrl = data.photo_url;
+    if (photoFile) {
+      const ext = photoFile.name.split('.').pop();
+      const path = `realisations/${currentUser.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await db.storage.from('photos-realisations').upload(path, photoFile, { upsert: true });
+      if (!uploadError) {
+        const { data: urlData } = db.storage.from('photos-realisations').getPublicUrl(path);
+        photoUrl = urlData?.publicUrl || null;
+      }
+    }
+
+    await db.from('realisations').update({
+      date: modal.querySelector('#real-date').value,
+      portions: parseInt(modal.querySelector('#real-portions').value) || 1,
+      note: Object.keys(noteObj2).length ? JSON.stringify(noteObj2) : null,
+      photo_url: photoUrl
+    }).eq('id', realisationId).eq('user_id', currentUser.id);
+
+    fermerModal('modal-realisation');
+    modal.querySelector('#btn-confirmer-realisation').textContent = '✓ Enregistrer';
+
+    const journalData = await chargerJournalRecette(recetteOuverte.id);
+    document.getElementById('journal-corps').innerHTML = renderJournalRecette(journalData);
+  };
+
+  afficherModal('modal-realisation');
+}
 function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
