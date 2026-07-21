@@ -682,7 +682,8 @@ async function editerRealisation(realisationId) {
     modal.querySelector('#btn-confirmer-realisation').textContent = '✓ Enregistrer';
 
     const journalData = await chargerJournalRecette(recetteOuverte.id);
-    document.getElementById('journal-corps').innerHTML = renderJournalRecette(journalData);
+const cible = document.getElementById('panneau-journal-body') || document.getElementById('journal-corps');
+if (cible) cible.innerHTML = renderJournalRecette(journalData);
   };
 
   afficherModal('modal-realisation');
