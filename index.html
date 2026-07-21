@@ -321,6 +321,24 @@
 <!-- Overlay -->
 <div class="panneau-overlay" id="panneau-overlay" onclick="fermerPanneauAjustement()"></div>
 
+  <!-- Panneau Journal -->
+<div class="panneau-ajustement" id="panneau-journal">
+  <div class="panneau-header">
+    <div>
+      <div class="panneau-titre">Journal</div>
+      <div class="panneau-titre-recette" id="panneau-journal-nom"></div>
+    </div>
+    <button class="panneau-close" onclick="fermerPanneauJournal()" aria-label="Fermer">✕</button>
+  </div>
+  <div class="panneau-body" id="panneau-journal-body">
+    <div class="journal-vide">Chargement…</div>
+  </div>
+  <div class="panneau-footer">
+    <button class="btn" onclick="ouvrirModalRealisation(1)" style="width:100%">+ Nouvelle réalisation</button>
+  </div>
+</div>
+<div class="panneau-overlay" id="panneau-journal-overlay" onclick="fermerPanneauJournal()"></div>
+  
 <!-- Panneau latéral -->
 <div class="panneau-ajustement" id="panneau-ajustement">
 
