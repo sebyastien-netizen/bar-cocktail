@@ -1795,7 +1795,7 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .fiche-entete { margin-bottom: 1.25rem; }
 .fiche-entete-body { padding-top: 0; }
 .fiche-entete-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-.fiche-badges { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+.fiche-badges { display: flex; gap: 6px; flex-wrap: wrap; max-width: 60%; justify-content: flex-end; }
 .fiche-base { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px; }
 .fiche-description { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.65; margin: 10px 0 0; }
  
