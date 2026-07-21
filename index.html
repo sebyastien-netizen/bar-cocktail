@@ -272,8 +272,31 @@
       <input type="number" id="real-portions" min="1" max="20" value="1">
     </div>
     <div class="form-group">
-      <label>Note personnelle <span class="label-hint">optionnel</span></label>
-      <input type="text" id="real-note" placeholder="ex: Très réussi, moins d'Angostura la prochaine fois">
+      <label>Note ⭐</label>
+      <div class="real-etoiles" id="real-etoiles">
+        <span class="etoile" data-val="1">★</span>
+        <span class="etoile" data-val="2">★</span>
+        <span class="etoile" data-val="3">★</span>
+        <span class="etoile" data-val="4">★</span>
+        <span class="etoile" data-val="5">★</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Le plus 👍 <span class="label-hint">optionnel</span></label>
+      <input type="text" id="real-plus" placeholder="ex: Équilibre parfait, beau pétillant">
+    </div>
+    <div class="form-group">
+      <label>Le moins 👎 <span class="label-hint">optionnel</span></label>
+      <input type="text" id="real-moins" placeholder="ex: Trop sucré, moins d'Angostura">
+    </div>
+    <div class="form-group">
+      <label>Note libre <span class="label-hint">optionnel</span></label>
+      <input type="text" id="real-note" placeholder="ex: Servi avec des glaçons clairs">
+    </div>
+    <div class="form-group">
+      <label>Photo <span class="label-hint">optionnel</span></label>
+      <input type="file" id="real-photo" accept="image/*" capture="environment">
+      <div id="real-photo-preview" style="margin-top:8px;"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="fermerModal('modal-realisation')">Annuler</button>
