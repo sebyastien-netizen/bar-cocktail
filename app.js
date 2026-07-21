@@ -528,28 +528,30 @@ async function chargerJournalRecette(recetteId) {
 function renderJournalRecette(realisations) {
   if (!realisations.length) return `
     <div class="journal-vide">Aucune réalisation enregistrée.</div>`;
-  return realisations.map(r => `
+  return realisations.map(r => {
+    let noteObj = {};
+    try { noteObj = r.note ? JSON.parse(r.note) : {}; } catch(e) { noteObj = { note: r.note }; }
+    const etoiles = noteObj.etoiles ? '★'.repeat(noteObj.etoiles) + '☆'.repeat(5 - noteObj.etoiles) : '';
+    const details = [
+      noteObj.plus ? `👍 ${noteObj.plus}` : null,
+      noteObj.moins ? `👎 ${noteObj.moins}` : null,
+      noteObj.note ? `💬 ${noteObj.note}` : null
+    ].filter(Boolean).join(' · ');
+    return `
     <div class="journal-ligne">
-      <span class="journal-date">${new Date(r.date).toLocaleDateString('fr-FR')}</span>
-      <span class="journal-portions">${r.portions} verre${r.portions > 1 ? 's' : ''}</span>
-      <span class="journal-note">${r.note || '—'}</span>
-    </div>`).join('');
-}
-
-async function toggleJournalRecette() {
-  const corps = document.getElementById('journal-corps');
-  const chevron = document.getElementById('journal-chevron');
-  if (!corps) return;
-  if (corps.classList.contains('visible')) {
-    corps.classList.remove('visible');
-    chevron.textContent = '▸';
-    return;
-  }
-  corps.innerHTML = '<div class="journal-vide">Chargement…</div>';
-  corps.classList.add('visible');
-  chevron.textContent = '▾';
-  const data = await chargerJournalRecette(recetteOuverte.id);
-  corps.innerHTML = renderJournalRecette(data);
+      <div class="journal-ligne-top">
+        <span class="journal-date">${new Date(r.date).toLocaleDateString('fr-FR')}</span>
+        <span class="journal-portions">${r.portions} verre${r.portions > 1 ? 's' : ''}</span>
+        ${etoiles ? `<span class="journal-etoiles">${etoiles}</span>` : ''}
+        <div class="journal-actions">
+          <button class="journal-btn" onclick="editerRealisation('${r.id}')">✏️</button>
+          <button class="journal-btn journal-btn--delete" onclick="annulerRealisation('${r.id}', '${recetteOuverte.id}', ${r.portions})">🗑️</button>
+        </div>
+      </div>
+      ${details ? `<div class="journal-details">${details}</div>` : ''}
+      ${r.photo_url ? `<img src="${r.photo_url}" class="journal-photo">` : ''}
+    </div>`;
+  }).join('');
 }
 function renderFiche(portions) {
   const r = recetteOuverte;
