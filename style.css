@@ -2564,3 +2564,12 @@ main { overflow-x: hidden; }
 .etoile { font-size: 28px; color: rgba(255,255,255,0.2); cursor: pointer; transition: color 0.15s; }
 .etoile.active { color: #ffaa00; }
 .etoile:hover { color: #ffaa00; }
+
+.journal-ligne-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.journal-etoiles { font-size: 12px; color: #ffaa00; letter-spacing: 1px; }
+.journal-actions { margin-left: auto; display: flex; gap: 6px; }
+.journal-btn { background: transparent; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; opacity: 0.6; }
+.journal-btn:hover { opacity: 1; }
+.journal-btn--delete:hover { color: #ff6464; }
+.journal-details { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+.journal-photo { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
