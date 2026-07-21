@@ -2559,3 +2559,8 @@ main { overflow-x: hidden; }
 .analyser-verdict--passer { background: rgba(255,100,100,0.1); color: #ff6464; border: 1px solid rgba(255,100,100,0.2); }
 .analyser-verdict--doublon { background: rgba(255,165,0,0.1); color: #ffaa00; border: 1px solid rgba(255,165,0,0.2); }
 .analyser-verdict--mieux { background: rgba(100,150,255,0.1); color: #6496ff; border: 1px solid rgba(100,150,255,0.2); }
+
+.real-etoiles { display: flex; gap: 8px; margin-top: 4px; }
+.etoile { font-size: 28px; color: rgba(255,255,255,0.2); cursor: pointer; transition: color 0.15s; }
+.etoile.active { color: #ffaa00; }
+.etoile:hover { color: #ffaa00; }
