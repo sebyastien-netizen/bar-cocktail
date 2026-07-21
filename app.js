@@ -525,19 +525,19 @@ async function chargerJournalRecette(recetteId) {
   return data;
 }
 async function toggleJournalRecette() {
-  const corps = document.getElementById('journal-corps');
-  const chevron = document.getElementById('journal-chevron');
-  if (!corps) return;
-  if (corps.classList.contains('visible')) {
-    corps.classList.remove('visible');
-    chevron.textContent = '▸';
-    return;
-  }
-  corps.innerHTML = '<div class="journal-vide">Chargement…</div>';
-  corps.classList.add('visible');
-  chevron.textContent = '▾';
+  const panneau = document.getElementById('panneau-journal');
+  const overlay = document.getElementById('panneau-journal-overlay');
+  document.getElementById('panneau-journal-nom').textContent = recetteOuverte.nom;
+  panneau.classList.add('visible');
+  overlay.classList.add('visible');
+  document.getElementById('panneau-journal-body').innerHTML = '<div class="journal-vide">Chargement…</div>';
   const data = await chargerJournalRecette(recetteOuverte.id);
-  corps.innerHTML = renderJournalRecette(data);
+  document.getElementById('panneau-journal-body').innerHTML = renderJournalRecette(data);
+}
+
+function fermerPanneauJournal() {
+  document.getElementById('panneau-journal').classList.remove('visible');
+  document.getElementById('panneau-journal-overlay').classList.remove('visible');
 }
 function renderJournalRecette(realisations) {
   if (!realisations.length) return `
