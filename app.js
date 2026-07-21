@@ -532,13 +532,7 @@ async function toggleJournalRecette() {
   overlay.classList.add('visible');
   document.getElementById('panneau-journal-body').innerHTML = '<div class="journal-vide">Chargement…</div>';
   const data = await chargerJournalRecette(recetteOuverte.id);
-document.getElementById('panneau-journal-body').innerHTML =
-  renderJournalRecette(data) +
-  `<div style="padding:12px 0 4px;">
-    <button class="btn btn-realiser" style="width:100%;font-size:14px;" onclick="fermerPanneauJournal(); ouvrirModalRealisation(1);">
-      + Nouvelle réalisation
-    </button>
-  </div>`;;
+document.getElementById('panneau-journal-body').innerHTML = renderJournalRecette(data);
 }
 
 function fermerPanneauJournal() {
