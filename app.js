@@ -533,6 +533,12 @@ async function toggleJournalRecette() {
   document.getElementById('panneau-journal-body').innerHTML = '<div class="journal-vide">Chargement…</div>';
   const data = await chargerJournalRecette(recetteOuverte.id);
 document.getElementById('panneau-journal-body').innerHTML = renderJournalRecette(data);
+ document.getElementById('panneau-journal-body').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  if (btn.dataset.action === 'editer') editerRealisation(btn.dataset.id);
+  if (btn.dataset.action === 'annuler') annulerRealisation(btn.dataset.id, btn.dataset.recette, parseInt(btn.dataset.portions));
+});
 }
 
 function fermerPanneauJournal() {
