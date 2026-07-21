@@ -557,10 +557,10 @@ function renderJournalRecette(realisations) {
         <span class="journal-date">${new Date(r.date).toLocaleDateString('fr-FR')}</span>
         <span class="journal-portions">${r.portions} verre${r.portions > 1 ? 's' : ''}</span>
         ${etoiles ? `<span class="journal-etoiles">${etoiles}</span>` : ''}
-        <div class="journal-actions">
-          <button class="journal-btn" onclick="editerRealisation('${r.id}')">✏️</button>
-          <button class="journal-btn journal-btn--delete" onclick="annulerRealisation('${r.id}', '${recetteOuverte.id}', ${r.portions})">🗑️</button>
-        </div>
+<div class="journal-actions">
+  <button class="journal-btn" data-action="editer" data-id="${r.id}">✏️</button>
+  <button class="journal-btn journal-btn--delete" data-action="annuler" data-id="${r.id}" data-recette="${recetteOuverte.id}" data-portions="${r.portions}">🗑️</button>
+</div>
       </div>
       ${details ? `<div class="journal-details">${details}</div>` : ''}
       ${r.photo_url ? `<img src="${r.photo_url}" class="journal-photo">` : ''}
