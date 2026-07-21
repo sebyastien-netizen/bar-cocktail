@@ -2572,3 +2572,11 @@ main { overflow-x: hidden; }
 .journal-btn--delete:hover { color: #ff6464; }
 .journal-details { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
 .journal-photo { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+.journal-photo {
+  display: block;
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 8px;
+}
