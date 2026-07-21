@@ -599,7 +599,8 @@ async function annulerRealisation(realisationId, recetteId, portions) {
 
   // Recharger le journal
   const data = await chargerJournalRecette(recetteId);
-  document.getElementById('journal-corps').innerHTML = renderJournalRecette(data);
+const cible = document.getElementById('panneau-journal-body') || document.getElementById('journal-corps');
+if (cible) cible.innerHTML = renderJournalRecette(data);
   renderCave();
 }
 
