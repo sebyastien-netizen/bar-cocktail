@@ -2742,7 +2742,8 @@ function lancerDepuisChoix() {
   const date = document.getElementById('choix-real-date').value;
   const portions = parseInt(document.getElementById('choix-real-portions').value) || 1;
   fermerModal('modal-choix-realisation');
-  lancerDegustationAveugle(r, portions, date);
+  const snapAjust = ajustementApplique ? { ...ajustementVals } : {};
+  lancerDegustationAveugle(r, portions, date, snapAjust);
 }
 
 function ouvrirModalNotes(recette, date, callback) {
@@ -3382,9 +3383,10 @@ let degustationState = {
   reponses: {}, revealed: false
 };
 
-function lancerDegustationAveugle(recette, portions, date) {
+function lancerDegustationAveugle(recette, portions, date, ajustementSnapshot = {}) {
   degustationState = {
     recette, portions, date,
+    ajustementSnapshot,
     verreActuel: 1, etapeActuelle: 0,
     reponses: {}, revealed: false
   };
@@ -3483,27 +3485,134 @@ async function sauvegarderDegustation() {
 
 function renderRevelation() {
   const r = degustationState.recette;
+  const ajust = degustationState.ajustementSnapshot || {};
+  const reponses = degustationState.reponses;
+
+  // Profil de référence — ajusté si actif, brut sinon
+  const profil = {
+    sucre:  (r.gout_sucre  || 0) + (ajust.sucre  || 0),
+    amer:   (r.gout_amer   || 0) + (ajust.amer   || 0),
+    acide:  (r.gout_acide  || 0) + (ajust.acide  || 0),
+    fruite: (r.gout_fruite || 0) + (ajust.fruite || 0),
+    fume:   (r.gout_fume   || 0),
+    floral: (r.gout_floral || 0),
+    epice:  (r.gout_epice  || 0),
+    cremeux:(r.gout_cremeux|| 0) + (ajust.cremeux|| 0),
+  };
+
+  // Famille dominante par étape (nez, bouche, finish)
+  const famillesToAxe = {
+    'Fruité': 'fruite', 'Floral': 'floral', 'Boisé': 'epice',
+    'Épicé': 'epice', 'Fumé': 'fume', 'Herbacé': 'floral',
+    'Sucré': 'sucre', 'Amer': 'amer', 'Acide': 'acide',
+    'Rond': 'cremeux', 'Sec': 'amer', 'Pétillant': 'fruite',
+    'Chaleureux': 'epice', 'Fruité': 'fruite', 'Frais': 'acide',
+    'Poivré': 'epice'
+  };
+
+  // Axe dominant réel
+  const axeDominant = Object.entries(profil).sort((a,b) => b[1]-a[1])[0];
+
+  // SCORE
+  let score = 0;
+
+  // Nez famille (15 pts)
+  const nezChoix = reponses['nez_famille'];
+  const nezAxe = famillesToAxe[nezChoix];
+  if (nezAxe && profil[nezAxe] >= 2) score += 15;
+  else if (nezAxe && profil[nezAxe] >= 0) score += 7;
+
+  // Bouche famille (15 pts)
+  const boucheChoix = reponses['bouche_sensation'];
+  const boucheAxe = famillesToAxe[boucheChoix];
+  if (boucheAxe && profil[boucheAxe] >= 2) score += 15;
+  else if (boucheAxe && profil[boucheAxe] >= 0) score += 7;
+
+  // Finish famille (15 pts)
+  const finishChoix = reponses['finish_caractere'];
+  const finishAxe = famillesToAxe[finishChoix];
+  if (finishAxe && profil[finishAxe] >= 1) score += 15;
+  else if (finishAxe && profil[finishAxe] >= 0) score += 7;
+
+  // Visuel texture (15 pts — approximatif)
+  const visuelChoix = reponses['visuel_texture'];
+  if (visuelChoix) score += 10; // toujours partiellement valide
+
+  // Curseurs intensité (10 pts × 4)
+  const intensiteRef = Math.round(
+    (Math.abs(profil.sucre) + Math.abs(profil.amer) + Math.abs(profil.acide) + Math.abs(profil.fruite)) / 4
+    * 10 / 3
+  );
+  const checkCurseur = (key) => {
+    const val = reponses[key] ?? 5;
+    const diff = Math.abs(val - intensiteRef);
+    if (diff <= 2) return 10;
+    if (diff <= 3) return 5;
+    return 0;
+  };
+  score += checkCurseur('visuel_intensite');
+  score += checkCurseur('nez_intensite');
+  score += checkCurseur('bouche_intensite');
+  score += checkCurseur('finish_intensite');
+  score = Math.min(100, score);
+
+  // Mention
+  const mention = score >= 91 ? 'Nez de maître 🏆'
+    : score >= 71 ? 'Palais affûté 🎯'
+    : score >= 41 ? 'Bon détecteur 👃'
+    : 'Palais en formation 🌱';
+
+  // Ingrédients
   const ings = (r.ingredients || []).map(i => `${i.quantite || ''} ${i.unite || ''} ${i.nom}`.trim()).join('<br>');
-  const profilKeys = ['gout_sucre','gout_amer','gout_acide','gout_fruite','gout_fume','gout_floral','gout_epice','gout_cremeux'];
+
+  // Profil HTML avec comparaison
+  const profilKeys = ['sucre','amer','acide','fruite','fume','floral','epice','cremeux'];
   const profilLabels = ['Sucré','Amer','Acide','Fruité','Fumé','Floral','Épicé','Crémeux'];
   const profilHTML = profilKeys.map((k, i) => {
-    const val = r[k] || 0;
+    const val = profil[k] || 0;
     if (!val) return '';
     const pct = ((val + 3) / 6 * 100).toFixed(0);
+    const ajuste = ajust[k] && ajust[k] !== 0;
     return `<div class="deg-profil-barre">
-      <span style="width:60px;font-size:12px;color:var(--text-secondary);">${profilLabels[i]}</span>
+      <span style="width:60px;font-size:12px;color:var(--text-secondary);">${profilLabels[i]}${ajuste ? ' ✦' : ''}</span>
       <div class="deg-profil-track"><div class="deg-profil-fill" style="width:${pct}%"></div></div>
       <span style="font-size:12px;color:var(--text-muted);">${val > 0 ? '+' : ''}${val}</span>
     </div>`;
   }).join('');
+
+  // Comparaison détectée
+  const comparaisonHTML = `
+    <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:8px;">CE QUE TU AS DÉTECTÉ</div>
+    ${[
+      {label:'👁 Visuel', choix: visuelChoix, intensite: reponses['visuel_intensite']},
+      {label:'👃 Nez', choix: nezChoix, intensite: reponses['nez_intensite']},
+      {label:'👄 Bouche', choix: boucheChoix, intensite: reponses['bouche_intensite']},
+      {label:'✨ Finish', choix: finishChoix, intensite: reponses['finish_intensite']},
+    ].map(e => `
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:0.5px solid var(--border);">
+        <span style="color:var(--text-secondary);">${e.label}</span>
+        <span style="color:var(--text-primary);">${e.choix || '—'} · ${e.intensite ?? 5}/10</span>
+      </div>
+    `).join('')}
+  `;
+
   return `
+    <div class="deg-revelation" style="text-align:center;margin-bottom:12px;">
+      <div style="font-size:42px;font-weight:500;color:#c9a84c;">${score}</div>
+      <div style="font-size:13px;color:var(--text-secondary);">/ 100</div>
+      <div style="font-size:15px;font-weight:500;margin-top:4px;color:var(--text-primary);">${mention}</div>
+      ${ajust && Object.values(ajust).some(v=>v!==0) ? '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">✦ profil ajusté pris en compte</div>' : ''}
+    </div>
     <div class="deg-revelation">
       <h3>${r.nom}</h3>
       <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">INGRÉDIENTS</div>
       <div class="deg-ing-list">${ings || 'Non disponible'}</div>
     </div>
     <div class="deg-revelation">
-      <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:10px;">PROFIL GUSTATIF</div>
+      ${comparaisonHTML}
+    </div>
+    <div class="deg-revelation">
+      <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:10px;">PROFIL RÉEL${ajust && Object.values(ajust).some(v=>v!==0) ? ' (ajusté)' : ''}</div>
       ${profilHTML || '<span style="font-size:13px;color:var(--text-muted);">Profil non renseigné</span>'}
     </div>
   `;
