@@ -947,7 +947,7 @@ function renderFiche(portions) {
     </div>
     <!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
-      <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
+     <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
       </button>
     </div>
