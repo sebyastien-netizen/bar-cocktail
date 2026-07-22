@@ -947,7 +947,7 @@ function renderFiche(portions) {
     </div>
     <!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
-      <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
+      <button class="btn btn-realiser" onclick="(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
       </button>
     </div>
@@ -2788,10 +2788,10 @@ function ouvrirModalRealisation(portions) {
     // Décrémenter la cave
     await decrementerCave(r, portions);
 
-    fermerModal('modal-realisation');
-    fermerModal('modal-fiche-recette');
-
-    const feedback = document.createElement('div');
+fermerModal('modal-realisation');
+lancerDegustationAveugle(r, portions, date);
+const feedback = document.createElement('div');
+   
     feedback.className = 'toast-feedback';
     feedback.textContent = `✓ ${r.nom} — réalisé le ${new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
     document.body.appendChild(feedback);
