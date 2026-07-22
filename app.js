@@ -2677,8 +2677,17 @@ function ouvrirFicheTechnique(id) {
         `).join('')}
       </ol>
     </div>` : ''}
-    ${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="plante-notes-bar">${t.conseil_pro}</p></div>` : ''}
-  `;
+${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="plante-notes-bar">${t.conseil_pro}</p></div>` : ''}
+    ${t.id === 'fat-wash' ? `
+    <div class="plante-section">
+      <h3>Conservation</h3>
+      <p>🧊 <strong>Réfrigérateur :</strong> 2 semaines dans un bocal hermétique.<br>
+         ❄️ <strong>Congélateur :</strong> 3 mois — décongeler au frigo, ne pas recongeler.<br>
+         ⚠️ Signes d'altération : trouble persistant à température ambiante, odeur rance, dépôt gras visible.</p>
+    </div>
+    <div class="plante-section">
+      <h3>Préparations associées</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">  `;
   afficherModal('modal-ecole-fiche');
 }
  
