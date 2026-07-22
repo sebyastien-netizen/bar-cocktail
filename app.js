@@ -3388,14 +3388,16 @@ function lancerDegustationAveugle(recette, portions, date) {
     verreActuel: 1, etapeActuelle: 0,
     reponses: {}, revealed: false
   };
-  const modal = document.getElementById('modal-degustation-aveugle');
-  modal.style.display = 'flex';
+const modal = document.getElementById('modal-degustation-aveugle');
+modal.style.display = '';
+modal.classList.add('visible');
   renderEtapeDegustation();
 }
 
 function fermerDegustation() {
   document.getElementById('modal-degustation-aveugle').style.display = 'none';
   afficherToastRealisation(degustationState.recette.nom, degustationState.date);
+ document.getElementById('modal-degustation-aveugle').classList.remove('visible');
 }
 
 function renderEtapeDegustation() {
