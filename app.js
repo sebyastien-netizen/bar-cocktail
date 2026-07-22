@@ -3327,3 +3327,179 @@ async function demanderAjustementAI() {
   btn.disabled = false;
   btn.textContent = '✨ Reformulation Claude';
 }
+
+function afficherToastRealisation(nom, date) {
+  const feedback = document.createElement('div');
+  feedback.className = 'toast-feedback';
+  feedback.textContent = `✓ ${nom} — réalisé le ${new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+  document.body.appendChild(feedback);
+  setTimeout(() => feedback.classList.add('visible'), 50);
+  setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 3000);
+  renderCave();
+}
+
+// =============================================
+// MODE DÉGUSTATION À L'AVEUGLE
+// =============================================
+
+const DEG_ETAPES = [
+  {
+    titre: '👁 Visuel',
+    curseur: { min: 'Clair', max: 'Foncé', key: 'visuel_intensite' },
+    question: 'Quelle texture ?',
+    choix: ['Limpide', 'Trouble', 'Mousseux', 'Huileux'],
+    key: 'visuel_texture'
+  },
+  {
+    titre: '👃 Nez',
+    curseur: { min: 'Discret', max: 'Puissant', key: 'nez_intensite' },
+    question: 'Famille dominante ?',
+    choix: ['Fruité', 'Floral', 'Boisé', 'Épicé', 'Fumé', 'Herbacé'],
+    key: 'nez_famille'
+  },
+  {
+    titre: '👄 Bouche',
+    curseur: { min: 'Léger', max: 'Corsé', key: 'bouche_intensite' },
+    question: 'Sensation dominante ?',
+    choix: ['Sucré', 'Amer', 'Acide', 'Rond', 'Sec', 'Pétillant'],
+    key: 'bouche_sensation'
+  },
+  {
+    titre: '✨ Finish',
+    curseur: { min: 'Court', max: 'Long', key: 'finish_intensite' },
+    question: 'Caractère ?',
+    choix: ['Chaleureux', 'Fruité', 'Fumé', 'Frais', 'Amer', 'Poivré'],
+    key: 'finish_caractere'
+  }
+];
+
+let degustationState = {
+  recette: null, portions: 0, date: null,
+  verreActuel: 1, etapeActuelle: 0,
+  reponses: {}, revealed: false
+};
+
+function lancerDegustationAveugle(recette, portions, date) {
+  degustationState = {
+    recette, portions, date,
+    verreActuel: 1, etapeActuelle: 0,
+    reponses: {}, revealed: false
+  };
+  const modal = document.getElementById('modal-degustation-aveugle');
+  modal.style.display = 'flex';
+  renderEtapeDegustation();
+}
+
+function fermerDegustation() {
+  document.getElementById('modal-degustation-aveugle').style.display = 'none';
+  afficherToastRealisation(degustationState.recette.nom, degustationState.date);
+}
+
+function renderEtapeDegustation() {
+  const { etapeActuelle, verreActuel, portions, reponses, revealed } = degustationState;
+  const label = document.getElementById('degustation-verre-label');
+  label.textContent = portions > 1 ? `Verre ${verreActuel} / ${portions}` : '';
+  document.querySelectorAll('.deg-prog-step').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < etapeActuelle) el.classList.add('done');
+    else if (i === etapeActuelle) el.classList.add('active');
+  });
+  document.getElementById('btn-deg-precedent').style.display = etapeActuelle === 0 ? 'none' : 'block';
+  const corps = document.getElementById('degustation-corps');
+  const isReveal = etapeActuelle === DEG_ETAPES.length;
+  document.getElementById('btn-deg-suivant').textContent = isReveal ? '✓ Terminer' : (etapeActuelle === DEG_ETAPES.length - 1 ? 'Révéler →' : 'Suivant →');
+  if (isReveal) {
+    corps.innerHTML = renderRevelation();
+    return;
+  }
+  const etape = DEG_ETAPES[etapeActuelle];
+  const valCurseur = reponses[etape.curseur.key] ?? 5;
+  const valChoix = reponses[etape.key] ?? null;
+  corps.innerHTML = `
+    <div style="font-size:22px;font-weight:500;margin-bottom:20px;color:var(--text-primary);">${etape.titre}</div>
+    <label style="font-size:13px;color:var(--text-secondary);">Intensité</label>
+    <input type="range" min="1" max="10" value="${valCurseur}" step="1" style="width:100%;margin:8px 0 0;"
+      oninput="degustationState.reponses['${etape.curseur.key}'] = parseInt(this.value)">
+    <div class="deg-curseur-label"><span>${etape.curseur.min}</span><span>${etape.curseur.max}</span></div>
+    <div class="deg-question">${etape.question}</div>
+    <div class="deg-choix-grid">
+      ${etape.choix.map(c => `
+        <button class="deg-choix-btn ${valChoix === c ? 'selected' : ''}"
+          onclick="selectDegChoix('${etape.key}', '${c}', this)">${c}</button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function selectDegChoix(key, valeur, btn) {
+  degustationState.reponses[key] = valeur;
+  btn.closest('.deg-choix-grid').querySelectorAll('.deg-choix-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function degustationSuivant() {
+  const { etapeActuelle, verreActuel, portions, recette, date, reponses } = degustationState;
+  if (etapeActuelle === DEG_ETAPES.length) {
+    sauvegarderDegustation();
+    return;
+  }
+  degustationState.etapeActuelle++;
+  renderEtapeDegustation();
+}
+
+function degustationPrecedent() {
+  if (degustationState.etapeActuelle > 0) {
+    degustationState.etapeActuelle--;
+    renderEtapeDegustation();
+  }
+}
+
+async function sauvegarderDegustation() {
+  const { recette, date, verreActuel, portions, reponses } = degustationState;
+  const noteObj = { degustation_aveugle: reponses };
+  await db.from('realisations').insert({
+    user_id: currentUser.id,
+    recette_id: recette.id,
+    recette_nom: recette.nom,
+    date,
+    portions: 1,
+    note: JSON.stringify(noteObj),
+    photo_url: null
+  });
+  if (verreActuel < portions) {
+    degustationState.verreActuel++;
+    degustationState.etapeActuelle = 0;
+    degustationState.reponses = {};
+    renderEtapeDegustation();
+  } else {
+    fermerDegustation();
+  }
+}
+
+function renderRevelation() {
+  const r = degustationState.recette;
+  const ings = (r.ingredients || []).map(i => `${i.quantite || ''} ${i.unite || ''} ${i.nom}`.trim()).join('<br>');
+  const profilKeys = ['gout_sucre','gout_amer','gout_acide','gout_fruite','gout_fume','gout_floral','gout_epice','gout_cremeux'];
+  const profilLabels = ['Sucré','Amer','Acide','Fruité','Fumé','Floral','Épicé','Crémeux'];
+  const profilHTML = profilKeys.map((k, i) => {
+    const val = r[k] || 0;
+    if (!val) return '';
+    const pct = ((val + 3) / 6 * 100).toFixed(0);
+    return `<div class="deg-profil-barre">
+      <span style="width:60px;font-size:12px;color:var(--text-secondary);">${profilLabels[i]}</span>
+      <div class="deg-profil-track"><div class="deg-profil-fill" style="width:${pct}%"></div></div>
+      <span style="font-size:12px;color:var(--text-muted);">${val > 0 ? '+' : ''}${val}</span>
+    </div>`;
+  }).join('');
+  return `
+    <div class="deg-revelation">
+      <h3>${r.nom}</h3>
+      <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">INGRÉDIENTS</div>
+      <div class="deg-ing-list">${ings || 'Non disponible'}</div>
+    </div>
+    <div class="deg-revelation">
+      <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:10px;">PROFIL GUSTATIF</div>
+      ${profilHTML || '<span style="font-size:13px;color:var(--text-muted);">Profil non renseigné</span>'}
+    </div>
+  `;
+}
