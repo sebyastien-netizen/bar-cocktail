@@ -2790,15 +2790,8 @@ function ouvrirModalRealisation(portions) {
 
 fermerModal('modal-realisation');
 lancerDegustationAveugle(r, portions, date);
-const feedback = document.createElement('div');
    
-    feedback.className = 'toast-feedback';
-    feedback.textContent = `✓ ${r.nom} — réalisé le ${new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
-    document.body.appendChild(feedback);
-    setTimeout(() => feedback.classList.add('visible'), 50);
-    setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 3000);
-
-    renderCave();
+afficherToastRealisation(r.nom, date);
   };
 
   afficherModal('modal-realisation');
