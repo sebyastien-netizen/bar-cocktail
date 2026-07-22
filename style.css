@@ -2586,3 +2586,58 @@ main { overflow-x: hidden; }
 #modal-realisation .modal-overlay {
   z-index: 9998;
 }
+
+.modal-fullscreen {
+  width: 100%;
+  max-width: 480px;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.deg-prog-step {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border, #e0e0e0);
+  transition: background 0.3s;
+}
+.deg-prog-step.active { background: #c9a84c; }
+.deg-prog-step.done { background: #6abf8a; }
+.deg-curseur-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.deg-question { font-size: 14px; font-weight: 500; color: var(--text-primary); margin: 20px 0 10px; }
+.deg-choix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.deg-choix-btn {
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e0e0e0);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.deg-choix-btn.selected {
+  border-color: #c9a84c;
+  background: rgba(201,168,76,0.12);
+  color: #c9a84c;
+  font-weight: 500;
+}
+.deg-revelation {
+  background: var(--surface-1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.deg-revelation h3 { font-size: 18px; margin: 0 0 8px; color: var(--text-primary); }
+.deg-ing-list { font-size: 13px; color: var(--text-secondary); line-height: 1.8; }
+.deg-profil-barre { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; }
+.deg-profil-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.deg-profil-fill { height: 100%; background: #c9a84c; border-radius: 3px; }
