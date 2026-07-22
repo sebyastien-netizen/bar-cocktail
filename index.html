@@ -259,6 +259,30 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
+  
+  <!-- MODAL : DÉGUSTATION À L'AVEUGLE -->
+<div class="modal-overlay" id="modal-degustation-aveugle" style="display:none;z-index:9999;">
+  <div class="modal modal-fullscreen">
+    <div id="degustation-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span id="degustation-verre-label" style="font-size:13px;color:var(--text-muted);"></span>
+        <button onclick="fermerDegustation()" style="background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;">✕</button>
+      </div>
+      <div id="degustation-progress" style="display:flex;gap:4px;margin-bottom:16px;">
+        <div class="deg-prog-step" data-step="0"></div>
+        <div class="deg-prog-step" data-step="1"></div>
+        <div class="deg-prog-step" data-step="2"></div>
+        <div class="deg-prog-step" data-step="3"></div>
+      </div>
+    </div>
+    <div id="degustation-corps"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button id="btn-deg-precedent" class="btn" style="flex:1;" onclick="degustationPrecedent()">← Précédent</button>
+      <button id="btn-deg-suivant" class="btn btn-realiser" style="flex:2;" onclick="degustationSuivant()">Suivant →</button>
+    </div>
+  </div>
+</div>
+  
   <!-- MODAL : RÉALISATION -->
 <div class="modal-overlay" id="modal-realisation">
   <div class="modal">
