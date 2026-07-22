@@ -2646,7 +2646,7 @@ function ouvrirFicheTechnique(id) {
   if (!t) return;
   const diffLabel = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' };
   const diffClass = { facile: 'diff-facile', moyen: 'diff-moyen', avance: 'diff-avance' };
- 
+
   document.querySelector('.ecole-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2.5rem">${t.emoji}</span>
@@ -2670,14 +2670,10 @@ function ouvrirFicheTechnique(id) {
     <div class="plante-section">
       <h3>Étapes</h3>
       <ol class="fiche-etapes">
-        ${t.etapes.map(e => `
-          <li class="etape-item">
-            <div class="etape-desc">${e}</div>
-          </li>
-        `).join('')}
+        ${t.etapes.map(e => `<li class="etape-item"><div class="etape-desc">${e}</div></li>`).join('')}
       </ol>
     </div>` : ''}
-${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="plante-notes-bar">${t.conseil_pro}</p></div>` : ''}
+    ${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="plante-notes-bar">${t.conseil_pro}</p></div>` : ''}
     ${t.id === 'fat-wash' ? `
     <div class="plante-section">
       <h3>Conservation</h3>
@@ -2687,7 +2683,13 @@ ${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="pla
     </div>
     <div class="plante-section">
       <h3>Préparations associées</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">  `;
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" style="font-size:13px;padding:8px 14px;" onclick="fermerModal('modal-ecole-fiche'); ouvrirOnglet('recettes'); setTimeout(() => ouvrirRecette('prep-fat-wash'), 300)">
+          🧈 Fat Wash Beurre Noisette-Jameson
+        </button>
+      </div>
+    </div>` : ''}
+  `;
   afficherModal('modal-ecole-fiche');
 }
  
