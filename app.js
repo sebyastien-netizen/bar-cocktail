@@ -2710,30 +2710,58 @@ function ouvrirFicheMateriel(id) {
 }
 function ouvrirModalRealisation(portions) {
   const r = recetteOuverte;
+  document.getElementById('choix-real-nom').textContent = r.nom;
+  document.getElementById('choix-real-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('choix-real-portions').value = portions;
+  document.getElementById('choix-confirmation').style.display = 'none';
+  document.getElementById('btn-choix-decrementer').disabled = false;
+  afficherModal('modal-choix-realisation');
+}
+
+function confirmerDecrementation() {
+  document.getElementById('choix-confirmation').style.display = 'block';
+  document.getElementById('btn-choix-decrementer').disabled = true;
+}
+
+function annulerConfirmation() {
+  document.getElementById('choix-confirmation').style.display = 'none';
+  document.getElementById('btn-choix-decrementer').disabled = false;
+}
+
+async function validerDecrementation() {
+  const r = recetteOuverte;
+  const date = document.getElementById('choix-real-date').value;
+  const portions = parseInt(document.getElementById('choix-real-portions').value) || 1;
+  await decrementerCave(r, portions);
+  fermerModal('modal-choix-realisation');
+  afficherToastRealisation(r.nom, date);
+}
+
+function lancerDepuisChoix() {
+  const r = recetteOuverte;
+  const date = document.getElementById('choix-real-date').value;
+  const portions = parseInt(document.getElementById('choix-real-portions').value) || 1;
+  fermerModal('modal-choix-realisation');
+  lancerDegustationAveugle(r, portions, date);
+}
+
+function ouvrirModalNotes(recette, date, callback) {
   const modal = document.getElementById('modal-realisation');
-
-  modal.querySelector('#real-cocktail-nom').textContent = r.nom;
-  modal.querySelector('#real-date').value = new Date().toISOString().split('T')[0];
-  modal.querySelector('#real-portions').value = portions;
-  modal.querySelector('#real-note').value = '';
-  modal.querySelector('#real-plus').value = '';
-  modal.querySelector('#real-moins').value = '';
-  modal.querySelector('#real-photo').value = '';
-  modal.querySelector('#real-photo-preview').innerHTML = '';
-
-  // Gestion étoiles
+  document.getElementById('real-cocktail-nom').textContent = recette.nom;
   let etoilesVal = 0;
   const etoiles = modal.querySelectorAll('.etoile');
   etoiles.forEach(e => e.classList.remove('active'));
-
   etoiles.forEach(e => {
     e.onclick = () => {
       etoilesVal = parseInt(e.dataset.val);
       etoiles.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= etoilesVal));
     };
   });
-
-  // Preview photo
+  modal.querySelector('#real-plus').value = '';
+  modal.querySelector('#real-moins').value = '';
+  modal.querySelector('#real-note').value = '';
+  modal.querySelector('#real-photo').value = '';
+  modal.querySelector('#real-photo-preview').innerHTML = '';
   modal.querySelector('#real-photo').onchange = function() {
     const file = this.files[0];
     if (!file) return;
@@ -2744,23 +2772,16 @@ function ouvrirModalRealisation(portions) {
     };
     reader.readAsDataURL(file);
   };
-
   modal.querySelector('#btn-confirmer-realisation').onclick = async () => {
-    const date     = modal.querySelector('#real-date').value;
-    const portions = parseInt(modal.querySelector('#real-portions').value) || 1;
-    const plus     = modal.querySelector('#real-plus').value.trim();
-    const moins    = modal.querySelector('#real-moins').value.trim();
-    const noteLib  = modal.querySelector('#real-note').value.trim();
+    const plus = modal.querySelector('#real-plus').value.trim();
+    const moins = modal.querySelector('#real-moins').value.trim();
+    const noteLib = modal.querySelector('#real-note').value.trim();
     const photoFile = modal.querySelector('#real-photo').files[0];
-
-    // Construire la note JSON
     const noteObj = {};
     if (etoilesVal) noteObj.etoiles = etoilesVal;
     if (plus) noteObj.plus = plus;
     if (moins) noteObj.moins = moins;
     if (noteLib) noteObj.note = noteLib;
-
-    // Upload photo si présente
     let photoUrl = null;
     if (photoFile) {
       const ext = photoFile.name.split('.').pop();
@@ -2773,27 +2794,9 @@ function ouvrirModalRealisation(portions) {
         photoUrl = urlData?.publicUrl || null;
       }
     }
-
-    // Enregistrer la réalisation
-    await db.from('realisations').insert({
-      user_id:     currentUser.id,
-      recette_id:  r.id,
-      recette_nom: r.nom,
-      date,
-      portions,
-      note: Object.keys(noteObj).length ? JSON.stringify(noteObj) : null,
-      photo_url: photoUrl
-    });
-
-    // Décrémenter la cave
-    await decrementerCave(r, portions);
-
-fermerModal('modal-realisation');
-lancerDegustationAveugle(r, portions, date);
-   
-afficherToastRealisation(r.nom, date);
+    fermerModal('modal-realisation');
+    if (callback) callback(noteObj, photoUrl);
   };
-
   afficherModal('modal-realisation');
 }
  
