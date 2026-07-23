@@ -388,8 +388,7 @@
   <!-- MODAL : SESSION ACTIVE -->
 <div class="modal-overlay modal-large" id="modal-session-active">
   <div class="modal">
-    <button class="modal-close" onclick="document.getElementById('modal-session-active').classList.remove('visible')">✕</button>
-    <div id="session-active-contenu"></div>
+onclick="document.getElementById('modal-session-active').classList.remove('visible'); if(realtimeSession) realtimeSession.unsubscribe();"    <div id="session-active-contenu"></div>
   </div>
 </div>
   <!-- =============================================
