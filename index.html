@@ -366,8 +366,7 @@
 <!-- MODAL : NOUVELLE SESSION -->
 <div class="modal-overlay" id="modal-nouvelle-session">
   <div class="modal">
-    <button class="modal-close" onclick="fermerModal('modal-nouvelle-session')">✕</button>
-    <h2 style="margin-bottom:1.25rem">🎉 Nouvelle session</h2>
+onclick="document.getElementById('modal-nouvelle-session').classList.remove('visible')"    <h2 style="margin-bottom:1.25rem">🎉 Nouvelle session</h2>
 
     <label class="modal-label">Nom de la soirée</label>
     <input type="text" id="session-nom" class="modal-input" placeholder="Ex : Apéro vendredi, Soirée Marie…" />
