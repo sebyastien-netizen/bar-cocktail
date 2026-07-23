@@ -2232,9 +2232,10 @@ async function chargerSessions() {
   const container = document.getElementById('sessions-container');
   if (!container) return;
 
-  const { data: sessions } = await db.from('sessions_invites')
+const { data: sessions } = await db.from('sessions_invites')
     .select('*')
     .eq('user_id', currentUser.id)
+    .eq('is_master', true)
     .order('created_at', { ascending: false });
 
   renderSessions(sessions || []);
