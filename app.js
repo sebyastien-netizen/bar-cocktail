@@ -2396,20 +2396,74 @@ function renderSessionActive(session) {
 }
 let realtimeSession = null;
 
-function abonnerRealtimeSession(sessionId) {
+function abonnerRealtimeSession(session) {
   if (realtimeSession) realtimeSession.unsubscribe();
 
-  realtimeSession = db.channel('session-' + sessionId)
+  realtimeSession = db.channel('session-invites-' + session.token)
     .on('postgres_changes', {
-      event: 'UPDATE',
+      event: '*',
       schema: 'public',
       table: 'sessions_invites',
-      filter: `id=eq.${sessionId}`
+      filter: `nom_session=eq.${session.nom_session}`
     }, payload => {
-      const updated = payload.new;
-      rafraichirInvite(updated);
+      chargerInvitesSession(session);
     })
     .subscribe();
+
+  chargerInvitesSession(session);
+}
+
+async function chargerInvitesSession(session) {
+  const { data: invites } = await db.from('sessions_invites')
+    .select('*')
+    .eq('nom_session', session.nom_session)
+    .eq('is_master', false)
+    .eq('user_id', currentUser.id);
+
+  renderInvitesListe(invites || [], session);
+}
+
+function renderInvitesListe(invites, session) {
+  const liste = document.getElementById('session-invites-liste');
+  if (!liste) return;
+
+  if (invites.length === 0) {
+    liste.innerHTML = '<div style="font-size:0.85rem;opacity:0.4;text-align:center;padding:1rem">En attente d\'invités…</div>';
+    return;
+  }
+
+  liste.innerHTML = invites.map(inv => {
+    const profil = inv.profil_gustatif || {};
+    const axes = Object.entries(profil).filter(([k, v]) => v > 0).map(([k, v]) => k).join(' · ') || '—';
+    const recette = inv.recette_id ? recettes.find(r => r.id === inv.recette_id)?.nom || inv.recette_id : '—';
+
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-weight:600">${inv.nom_invite || 'Invité'}</div>
+          <span style="font-size:0.75rem;opacity:0.5">${inv.choix_type === 'seb' ? '✨ Laisse Seb choisir' : '🍸 A choisi'}</span>
+        </div>
+        <div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">Profil : ${axes}</div>
+        <div style="font-size:0.82rem;margin-bottom:10px">Cocktail : <strong>${recette}</strong></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-primary" style="flex:1;font-size:0.78rem" 
+            onclick="lancerJeu('${inv.id}', 'degustation')">🍸 Dégustation</button>
+          <button class="btn-primary" style="flex:1;font-size:0.78rem;background:transparent;border:1px solid var(--border)" 
+            onclick="lancerJeu('${inv.id}', 'devine')">🔍 Devine</button>
+        </div>
+        ${inv.recette_id ? `
+        <button style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:0.82rem"
+          onclick="allerVersRecette('${inv.recette_id}')">→ Voir la recette</button>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function lancerJeu(inviteId, jeu) {
+  await db.from('sessions_invites')
+    .update({ jeu_actif: jeu })
+    .eq('id', inviteId);
 }
 
 function rafraichirInvite(data) {
