@@ -2316,9 +2316,6 @@ function ouvrirModalNouvelleSession() {
       </div>
     </div>
   `).join('');
-
-`).join('');
-
   document.getElementById('modal-nouvelle-session').classList.add('visible');
 } 
 async function creerSession() {
