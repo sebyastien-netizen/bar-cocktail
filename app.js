@@ -51,7 +51,10 @@ function afficherApp() {
   chargerEquipements();
   chargerConcoctions();
   chargerDashboard();
-  afficherOnglet('dashboard');
+document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+document.getElementById('section-dashboard')?.classList.remove('hidden');
+document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+document.querySelector('nav button[data-tab="dashboard"]')?.classList.add('active');
 }
  
 // --- Login ---
