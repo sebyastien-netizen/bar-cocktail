@@ -440,9 +440,9 @@ ecouterJeu();
       event: 'UPDATE',
       schema: 'public',
       table: 'sessions_invites'
-    }, async payload => {
-      console.log('Realtime reçu:', payload.new.jeu_actif, payload.new.id);
+ }, async payload => {
       const jeu = payload.new.jeu_actif;
+      if (jeu === 'degustation' && document.getElementById('screen-deg-score').classList.contains('active')) return;
       if (jeu === 'degustation') {
         const recetteId = payload.new.recette_id;
         const { data: r } = await db.from('recettes').select('*').eq('id', recetteId).single();
