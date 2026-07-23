@@ -348,8 +348,10 @@ function questionSuivante() {
 async function afficherChoixCocktails() {
   afficherScreen('screen-choix');
 const ids = session.recettes_disponibles || [];
- 
-  const { data: recettesData } = await db.from('recettes').select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url').in('id', ids);
+console.log('ids:', ids, 'session:', session.token);
+
+  const { data: recettesData, error: errRecettes } = await db.from('recettes').select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url').in('id', ids);
+console.log('recettesData:', recettesData, 'errRecettes:', errRecettes);
 
   const scored = (recettesData || []).map(r => {
     const axes = ['sucre','amer','acide','fruite','fume','floral','epice','cremeux'];
