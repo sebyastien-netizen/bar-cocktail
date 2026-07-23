@@ -142,7 +142,118 @@ let pseudo = '';
 let inviteId = null;
 let profilGustatif = { sucre: 0, amer: 0, acide: 0, fruite: 0, fume: 0, floral: 0, epice: 0, cremeux: 0 };
 let questionActuelle = 0;
+const DEG_ETAPES = [
+  { titre: 'VISUEL', question: 'La robe et la couleur…', choix: [
+    { label: 'Claire, transparente', icon: '💧', axe: 'acide' },
+    { label: 'Dorée, ambrée', icon: '🥃', axe: 'sucre' },
+    { label: 'Rouge, rosée', icon: '🌹', axe: 'fruite' },
+    { label: 'Trouble, crémeuse', icon: '🌫️', axe: 'cremeux' }
+  ]},
+  { titre: 'NEZ', question: 'Au nez tu détectes…', choix: [
+    { label: 'Fruits frais', icon: '🍋', axe: 'fruite' },
+    { label: 'Fleurs, herbes', icon: '🌸', axe: 'floral' },
+    { label: 'Fumé, boisé', icon: '🪵', axe: 'fume' },
+    { label: 'Épices, chaleur', icon: '🌶', axe: 'epice' }
+  ]},
+  { titre: 'BOUCHE', question: 'En bouche tu ressens…', choix: [
+    { label: 'Sucré, rond', icon: '🍯', axe: 'sucre' },
+    { label: 'Amer, végétal', icon: '🌿', axe: 'amer' },
+    { label: 'Acide, vif', icon: '⚡', axe: 'acide' },
+    { label: 'Crémeux, onctueux', icon: '🍦', axe: 'cremeux' }
+  ]},
+  { titre: 'FINISH', question: 'La finale est…', choix: [
+    { label: 'Courte, légère', icon: '💨', axe: 'acide' },
+    { label: 'Longue, persistante', icon: '🔥', axe: 'fume' },
+    { label: 'Douce, sucrée', icon: '🍬', axe: 'sucre' },
+    { label: 'Amère, sèche', icon: '🍂', axe: 'amer' }
+  ]}
+];
 
+let degEtapeActuelle = 0;
+let degReponses = [];
+let degRecette = null;
+
+function lancerDegustation(recetteData) {
+  degEtapeActuelle = 0;
+  degReponses = Array(DEG_ETAPES.length).fill(null);
+  degRecette = recetteData;
+  afficherScreen('screen-degustation');
+  renderDegEtape(0);
+}
+
+function renderDegEtape(index) {
+  const etape = DEG_ETAPES[index];
+  document.querySelectorAll('#deg-step-bar .step-dot').forEach((d, i) => d.classList.toggle('active', i <= index));
+  document.getElementById('deg-etape-titre').textContent = etape.titre;
+  document.getElementById('deg-etape-question').textContent = etape.question;
+  document.getElementById('deg-etape-choix').innerHTML = etape.choix.map((c, i) => `
+    <div class="choice-btn ${degReponses[index] === i ? 'selected' : ''}" onclick="degSelectionner(${i})">
+      <div class="choice-icon">${c.icon}</div>
+      <div class="choice-label">${c.label}</div>
+    </div>
+  `).join('');
+  document.getElementById('deg-intensite').value = 3;
+}
+
+function degSelectionner(i) {
+  degReponses[degEtapeActuelle] = i;
+  document.querySelectorAll('#deg-etape-choix .choice-btn').forEach((b, idx) => b.classList.toggle('selected', idx === i));
+}
+
+function degSuivant() {
+  if (degReponses[degEtapeActuelle] === null) return;
+  if (degEtapeActuelle < DEG_ETAPES.length - 1) {
+    degEtapeActuelle++;
+    renderDegEtape(degEtapeActuelle);
+  } else {
+    calculerScoreDegustation();
+  }
+}
+
+function calculerScoreDegustation() {
+  if (!degRecette) return;
+  let score = 0;
+  let total = 0;
+
+  DEG_ETAPES.forEach((etape, i) => {
+    if (degReponses[i] === null) return;
+    const choix = etape.choix[degReponses[i]];
+    const axe = choix.axe;
+    const intensite = parseInt(document.getElementById('deg-intensite').value);
+    const valDetectee = intensite;
+    const valReelle = degRecette[`gout_${axe}`] || 0;
+    const diff = Math.abs(valDetectee - valReelle);
+    score += Math.max(0, 5 - diff);
+    total += 5;
+  });
+
+  const scoreTotal = total > 0 ? Math.round((score / total) * 100) : 0;
+  const mention = scoreTotal >= 85 ? '🏆 Palais d\'expert' : scoreTotal >= 70 ? '👌 Bon palais' : scoreTotal >= 50 ? '🙂 En développement' : '🌱 À travailler';
+
+  afficherScreen('screen-deg-score');
+  document.getElementById('deg-score-val').textContent = scoreTotal;
+  document.getElementById('deg-score-mention').textContent = mention;
+  document.getElementById('deg-score-recette').textContent = degRecette.nom || '';
+  document.getElementById('deg-score-detail').innerHTML = `
+    <div style="font-size:11px;opacity:0.5;margin-bottom:10px">DÉTAIL PAR ÉTAPE</div>
+    ${DEG_ETAPES.map((e, i) => {
+      const choix = e.choix[degReponses[i]];
+      return `<div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:4px 0;border-bottom:0.5px solid rgba(200,169,110,0.1)">
+        <span style="opacity:0.6">${e.titre}</span>
+        <span>${choix ? choix.label : '—'}</span>
+      </div>`;
+    }).join('')}
+  `;
+
+  sauvegarderDegustation(scoreTotal);
+}
+
+async function sauvegarderDegustation(score) {
+  if (!inviteId) return;
+  await db.from('sessions_invites')
+    .update({ degustation_resultat: { score, reponses: degReponses }, statut: 'termine' })
+    .eq('id', inviteId);
+}
 const QUESTIONS = [
   { texte: 'Tu préfères plutôt…', choix: [
     { label: 'Acidulé, vif', icon: '🍋', profil: { acide: 2 } },
@@ -317,7 +428,8 @@ async function envoyerProfil(recetteId, choixType) {
     })
     .select()
     .single();
-  inviteId = data?.id;
+inviteId = data?.id;
+ecouterJeu();
 }
 
 init();
