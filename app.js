@@ -2391,7 +2391,41 @@ function renderSessionActive(session) {
     </div>
   `;
 }
+let realtimeSession = null;
 
+function abonnerRealtimeSession(sessionId) {
+  if (realtimeSession) realtimeSession.unsubscribe();
+
+  realtimeSession = db.channel('session-' + sessionId)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'sessions_invites',
+      filter: `id=eq.${sessionId}`
+    }, payload => {
+      const updated = payload.new;
+      rafraichirInvite(updated);
+    })
+    .subscribe();
+}
+
+function rafraichirInvite(data) {
+  const liste = document.getElementById('session-invites-liste');
+  if (!liste) return;
+
+  const profil = data.profil_gustatif || {};
+  const axes = Object.entries(profil).filter(([k, v]) => v > 0).map(([k, v]) => k).join(' · ') || '—';
+  const recette = data.recette_id
+    ? recettes.find(r => r.id === data.recette_id)?.nom || data.recette_id
+    : null;
+
+  liste.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:600">${data.nom_invite || 'Invité'}</div>
+        <span style="font-size:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">
+          ${data.choix_type === 'seb' ? '✨ Laisse Seb choisir' : '🍸 A choisi'}
+        </span>
 function allerVersRecette(id) {
   document.getElementById('modal-session-active').classList.remove('visible');
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
