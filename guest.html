@@ -101,7 +101,35 @@
     <div style="font-size:22px;margin-top:8px">⏳</div>
   </div>
 </div>
+<!-- ÉCRAN 5 : DÉGUSTATION GUIDÉE -->
+<div class="screen" id="screen-degustation">
+  <div class="step-bar" id="deg-step-bar">
+    <div class="step-dot active"></div>
+    <div class="step-dot"></div>
+    <div class="step-dot"></div>
+    <div class="step-dot"></div>
+  </div>
+  <div class="card" id="deg-etape-card">
+    <div id="deg-etape-titre" style="font-size:13px;opacity:0.5;margin-bottom:8px"></div>
+    <div id="deg-etape-question" style="font-size:18px;font-weight:600;margin-bottom:20px"></div>
+    <div class="choice-grid" id="deg-etape-choix"></div>
+    <label style="margin-top:20px">INTENSITÉ</label>
+    <input type="range" id="deg-intensite" min="1" max="5" value="3" />
+    <div class="range-labels"><span>Faible</span><span>Intense</span></div>
+  </div>
+  <button class="btn" id="deg-btn-suivant" onclick="degSuivant()">Suivant →</button>
+</div>
 
+<!-- ÉCRAN 6 : SCORE DÉGUSTATION -->
+<div class="screen" id="screen-deg-score">
+  <div class="card" style="text-align:center;padding:28px">
+    <div style="font-size:48px;font-weight:600;color:#c8a96e;margin-bottom:4px" id="deg-score-val"></div>
+    <div style="font-size:13px;opacity:0.5;margin-bottom:8px">/ 100</div>
+    <div style="font-size:16px;font-weight:500;margin-bottom:16px" id="deg-score-mention"></div>
+    <div style="font-size:13px;opacity:0.6" id="deg-score-recette"></div>
+  </div>
+  <div class="card" id="deg-score-detail" style="margin-top:8px"></div>
+</div>
 <script>
 const SUPABASE_URL = 'https://wqsprjlocuhandhvpytx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_g4pDtkemUi-6VUG6qgVJWw_PAy5YibN';
