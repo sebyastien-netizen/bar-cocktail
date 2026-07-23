@@ -2091,7 +2091,13 @@ async function chargerDashboard() {
  
  renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations });
 }
- 
+ // =============================================
+// SESSIONS
+// =============================================
+
+async function chargerSessions() {
+  document.getElementById('sessions-container').innerHTML = '<p style="padding:1rem;color:var(--text-muted)">Chargement sessions...</p>';
+}
 function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil }) {
   const container = document.getElementById('dashboard-container');
   const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
