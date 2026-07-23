@@ -427,6 +427,7 @@ async function envoyerProfil(recetteId, choixType) {
     })
     .select()
     .single();
+if (error) console.error('envoyerProfil error:', error);
 inviteId = data?.id;
 ecouterJeu();
 }
