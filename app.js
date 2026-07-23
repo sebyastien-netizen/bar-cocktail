@@ -898,13 +898,19 @@ function renderFiche(portions) {
         <div class="fiche-variante-label">Version prestige</div>
         <div class="fiche-variante-desc">${r.variante_prestige}</div>
       </div>` : ''}
-      ${r.variante_mocktail_id ? `
-      <div class="fiche-variante">
-        <div class="fiche-variante-label">Mocktail associé</div>
-        <button class="btn-variante-link" onclick="fermerModal('modal-fiche-recette'); setTimeout(()=>{ changerSection('mocktail'); ouvrirFicheRecette('${r.variante_mocktail_id}'); }, 200)">
-          Voir ${recettes.find(x=>x.id===r.variante_mocktail_id)?.nom || r.variante_mocktail_id} →
-        </button>
-      </div>` : ''}
+     <div class="fiche-variante">
+  <div class="fiche-variante-label">Mocktail associé</div>
+  ${r.variante_mocktail_id ? `
+  <button class="btn-variante-link" onclick="fermerModal('modal-fiche-recette'); setTimeout(()=>{ changerSection('mocktail'); ouvrirFicheRecette('${r.variante_mocktail_id}'); }, 200)">
+    Voir ${recettes.find(x=>x.id===r.variante_mocktail_id)?.nom || r.variante_mocktail_id} →
+  </button>` : `
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:13px;color:var(--text-muted);">Pas de mocktail dédié</span>
+    <button class="btn-variante-link" onclick="fermerModal('modal-fiche-recette'); setTimeout(()=>{ changerSection('mocktail'); }, 200)">
+      Explorer les mocktails →
+    </button>
+  </div>`}
+</div>
       ${r.variante_notes ? `
       <div class="fiche-variante">
         <div class="fiche-variante-label">Notes</div>
