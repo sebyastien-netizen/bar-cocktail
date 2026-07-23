@@ -2350,8 +2350,9 @@ async function ouvrirSession(id) {
   if (!session) { alert('Session introuvable'); return; }
 
   sessionActive = session;
-  renderSessionActive(session);
-  document.getElementById('modal-session-active').classList.add('visible');
+ renderSessionActive(session);
+abonnerRealtimeSession(session.id);
+document.getElementById('modal-session-active').classList.add('visible');
 }
 
 function renderSessionActive(session) {
