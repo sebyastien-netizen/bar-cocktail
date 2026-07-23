@@ -435,13 +435,13 @@ ecouterJeu();
   function ecouterJeu() {
   console.log('ecouterJeu inviteId=', inviteId);
   if (!inviteId) return;
-  db.channel('jeu-' + inviteId)
+ db.channel('jeu-' + inviteId)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
-      table: 'sessions_invites',
-      filter: `id=eq.${inviteId}`
+      table: 'sessions_invites'
     }, async payload => {
+      console.log('Realtime reçu:', payload.new.jeu_actif, payload.new.id);
       const jeu = payload.new.jeu_actif;
       if (jeu === 'degustation') {
         const recetteId = payload.new.recette_id;
