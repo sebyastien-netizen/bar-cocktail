@@ -2223,7 +2223,73 @@ const nbRefs = (cave?.categories || []).reduce((n, c) => n + c.items.filter(i =>
     </div>
   `;
 }
- 
+
+// =============================================
+// SESSIONS
+// =============================================
+
+async function chargerSessions() {
+  const container = document.getElementById('sessions-container');
+  if (!container) return;
+
+  const { data: sessions } = await db.from('sessions_invites')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  renderSessions(sessions || []);
+}
+
+function renderSessions(sessions) {
+  const container = document.getElementById('sessions-container');
+  const actives = sessions.filter(s => new Date(s.expires_at) > new Date());
+  const passees = sessions.filter(s => new Date(s.expires_at) <= new Date());
+
+  container.innerHTML = `
+    <div class="cave-header">
+      <h2>🎉 Sessions cocktail</h2>
+      <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
+    </div>
+
+    ${actives.length > 0 ? `
+    <div class="section-label">EN COURS</div>
+    ${actives.map(s => renderCarteSession(s)).join('')}
+    ` : `
+    <div class="empty-state">
+      <p>Aucune session active</p>
+      <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">Lancer une soirée</button>
+    </div>
+    `}
+
+    ${passees.length > 0 ? `
+    <div class="section-label" style="margin-top:1.5rem">PASSÉES</div>
+    ${passees.slice(0, 5).map(s => renderCarteSession(s, true)).join('')}
+    ` : ''}
+  `;
+}
+
+function renderCarteSession(s, passee = false) {
+  const nbInvites = 0; // sera enrichi avec invités réels
+  const expires = new Date(s.expires_at);
+  const heuresRestantes = Math.max(0, Math.ceil((expires - new Date()) / 3600000));
+
+  return `
+    <div class="dash-stat" style="margin-bottom:0.75rem;padding:1rem 1.25rem;cursor:${passee ? 'default' : 'pointer'}"
+         ${!passee ? `onclick="ouvrirSession('${s.id}')"` : ''}>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <span style="font-weight:600;font-size:1rem">${s.nom_session || 'Session sans nom'}</span>
+        ${!passee
+          ? `<span class="badge badge-ok">${heuresRestantes}h restantes</span>`
+          : `<span class="badge badge-3">Terminée</span>`}
+      </div>
+      <div style="font-size:0.8rem;opacity:0.6">
+        Mode : ${s.mode_choix === 'verrouille' ? '🔒 Verrouillé' : '🔓 Libre'} · 
+        ${s.recettes_disponibles?.length || 0} recette(s) · 
+        ${passee ? new Date(s.created_at).toLocaleDateString('fr-FR') : heuresRestantes + 'h restantes'}
+      </div>
+    </div>
+  `;
+}
 // =============================================
 // RECHARGEMENT ANECDOTE / CONSEIL
 // =============================================
