@@ -349,8 +349,7 @@ async function afficherChoixCocktails() {
   afficherScreen('screen-choix');
 const ids = session.recettes_disponibles || [];
   const ids = inviteData?.recettes_disponibles || [];
-  console.log('ids:', ids);
-
+ 
   const { data: recettesData } = await db.from('recettes').select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url').in('id', ids);
 
   const scored = (recettesData || []).map(r => {
