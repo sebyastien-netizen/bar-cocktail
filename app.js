@@ -2326,13 +2326,14 @@ async function creerSession() {
   const token = Math.random().toString(36).substring(2, 10);
   const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
 
-  const { error } = await db.from('sessions_invites').insert({
+ const { error } = await db.from('sessions_invites').insert({
     user_id: currentUser.id,
     token,
     nom_session: nom,
     mode_choix: modeSessionActif,
     recettes_disponibles: recettesDisponibles,
-    expires_at: expiresAt
+    expires_at: expiresAt,
+    is_master: true
   });
 
   if (error) { alert('Erreur création session : ' + error.message); return; }
