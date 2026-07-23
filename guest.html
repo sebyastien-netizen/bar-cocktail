@@ -1,1 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bar de Seb</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0d0d1a; color: #e8d5a8; min-height: 100vh; padding: 24px 16px; }
+    .logo { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #c8a96e; }
+    .logo-text { font-size: 13px; font-weight: 500; color: #c8a96e; letter-spacing: 0.08em; }
+    .card { background: rgba(200,169,110,0.06); border: 0.5px solid rgba(200,169,110,0.2); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .title { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: rgba(232,213,168,0.5); }
+    label { display: block; font-size: 12px; color: rgba(232,213,168,0.5); letter-spacing: 0.05em; margin-bottom: 6px; margin-top: 16px; }
+    input[type=text] { width: 100%; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 12px 14px; color: #e8d5a8; font-size: 15px; }
+    input[type=text]::placeholder { color: rgba(232,213,168,0.3); }
+    .btn { width: 100%; background: #c8a96e; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 600; color: #1a1206; cursor: pointer; margin-top: 20px; }
+    .btn-ghost { background: transparent; border: 0.5px solid rgba(200,169,110,0.3); color: #c8a96e; margin-top: 10px; }
+    .step-bar { display: flex; gap: 6px; margin-bottom: 20px; }
+    .step-dot { height: 4px; flex: 1; background: rgba(200,169,110,0.2); border-radius: 2px; }
+    .step-dot.active { background: #c8a96e; }
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .choice-btn { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px 10px; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .choice-btn.selected { background: rgba(200,169,110,0.15); border-color: #c8a96e; }
+    .choice-icon { font-size: 24px; margin-bottom: 6px; }
+    .choice-label { font-size: 13px; color: rgba(232,213,168,0.7); }
+    .choice-btn.selected .choice-label { color: #c8a96e; }
+    .cocktail-card { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; }
+    .cocktail-card.selected { border-color: #c8a96e; background: rgba(200,169,110,0.08); }
+    .cocktail-thumb { width: 48px; height: 48px; border-radius: 10px; background: rgba(200,169,110,0.15); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; overflow: hidden; }
+    .cocktail-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .cocktail-name { font-size: 15px; font-weight: 500; }
+    .cocktail-meta { font-size: 12px; color: rgba(232,213,168,0.45); margin-top: 2px; }
+    .match-badge { margin-left: auto; background: rgba(200,169,110,0.2); color: #c8a96e; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; flex-shrink: 0; }
+    .hidden { display: none; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .error { color: #e05a4e; font-size: 13px; text-align: center; margin-top: 12px; }
+    .success-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+    input[type=range] { width: 100%; accent-color: #c8a96e; margin: 8px 0; }
+    .range-labels { display: flex; justify-content: space-between; font-size: 11px; color: rgba(232,213,168,0.4); }
+  </style>
+</head>
+<body>
 
+<div class="logo"><div class="logo-dot"></div><div class="logo-text">BAR DE SEB</div></div>
+
+<!-- ÉCRAN 1 : ACCUEIL -->
+<div class="screen active" id="screen-accueil">
+  <div class="card">
+    <div class="title">Bonsoir !</div>
+    <div class="subtitle">Choisis un pseudo pour la soirée</div>
+    <label>TON PRÉNOM OU PSEUDO</label>
+    <input type="text" id="input-pseudo" placeholder="Ex : Marie, Tibo…" />
+  </div>
+  <div id="error-accueil" class="error hidden"></div>
+  <button class="btn" onclick="validerAccueil()">Continuer →</button>
+</div>
+
+<!-- ÉCRAN 2 : QUESTIONNAIRE -->
+<div class="screen" id="screen-questionnaire">
+  <div class="step-bar">
+    <div class="step-dot active" id="step-1"></div>
+    <div class="step-dot" id="step-2"></div>
+    <div class="step-dot" id="step-3"></div>
+    <div class="step-dot" id="step-4"></div>
+    <div class="step-dot" id="step-5"></div>
+  </div>
+  <div class="card">
+    <div id="question-texte" class="title" style="font-size:18px;margin-bottom:16px"></div>
+    <div class="choice-grid" id="question-choix"></div>
+    <label style="margin-top:20px">INTENSITÉ</label>
+    <input type="range" id="question-intensite" min="1" max="5" value="3" />
+    <div class="range-labels"><span>Doux</span><span>Intense</span></div>
+  </div>
+  <button class="btn" onclick="questionSuivante()">Suivant →</button>
+</div>
+
+<!-- ÉCRAN 3 : CHOIX COCKTAIL -->
+<div class="screen" id="screen-choix">
+  <div class="card" style="margin-bottom:16px">
+    <div class="title" style="font-size:17px">Cocktails pour toi</div>
+    <div class="subtitle" id="choix-subtitle"></div>
+  </div>
+  <div id="cocktails-liste"></div>
+  <button class="btn btn-ghost" onclick="laisserSebChoisir()">Laisser Seb choisir pour moi ✨</button>
+</div>
+
+<!-- ÉCRAN 4 : CONFIRMATION -->
+<div class="screen" id="screen-confirmation">
+  <div class="card" style="text-align:center">
+    <div class="success-icon">🍸</div>
+    <div class="title" style="font-size:18px;margin-bottom:8px" id="confirm-titre"></div>
+    <div class="subtitle" id="confirm-sous-titre"></div>
+  </div>
+  <div class="card" style="text-align:center;margin-top:8px">
+    <div style="font-size:13px;color:rgba(232,213,168,0.5)">Seb prépare ton cocktail…</div>
+    <div style="font-size:22px;margin-top:8px">⏳</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://zkiqjnmgwjdaowanrjov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpraXFqbm1nd2pkYW93YW5yam92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4MjQ2NzksImV4cCI6MjAyNTQwMDY3OX0.Jm0gmmHMRNPNMqsHHvhw4BBWWLP_V7fE6aTTKJBBs9s';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const token = params.get('session');
+let session = null;
+let pseudo = '';
+let inviteId = null;
+let profilGustatif = { sucre: 0, amer: 0, acide: 0, fruite: 0, fume: 0, floral: 0, epice: 0, cremeux: 0 };
+let questionActuelle = 0;
+
+const QUESTIONS = [
+  { texte: 'Tu préfères plutôt…', choix: [
+    { label: 'Acidulé, vif', icon: '🍋', profil: { acide: 2 } },
+    { label: 'Sucré, rond', icon: '🍯', profil: { sucre: 2 } },
+    { label: 'Amer, végétal', icon: '🌿', profil: { amer: 2 } },
+    { label: 'Épicé, chaud', icon: '🌶', profil: { epice: 2 } }
+  ]},
+  { texte: 'Comme arôme, tu aimes…', choix: [
+    { label: 'Fruits frais', icon: '🍓', profil: { fruite: 2 } },
+    { label: 'Fleurs, herbes', icon: '🌸', profil: { floral: 2 } },
+    { label: 'Fumé, boisé', icon: '🪵', profil: { fume: 2 } },
+    { label: 'Crémeux, vanillé', icon: '🍦', profil: { cremeux: 2 } }
+  ]},
+  { texte: 'En bouche tu préfères…', choix: [
+    { label: 'Léger et frais', icon: '💧', profil: { acide: 1, sucre: -1 } },
+    { label: 'Riche et généreux', icon: '🔥', profil: { cremeux: 1, sucre: 1 } },
+    { label: 'Sec et nerveux', icon: '⚡', profil: { amer: 1, acide: 1 } },
+    { label: 'Doux et équilibré', icon: '☁️', profil: { sucre: 1, floral: 1 } }
+  ]},
+  { texte: 'Avec de l\'alcool tu préfères…', choix: [
+    { label: 'Peu ou pas', icon: '🌊', profil: { sucre: 1 } },
+    { label: 'Modéré', icon: '🌙', profil: {} },
+    { label: 'Bien présent', icon: '🔥', profil: { amer: 1 } },
+    { label: 'Corsé', icon: '💥', profil: { amer: 2, fume: 1 } }
+  ]},
+  { texte: 'Ce soir tu as envie de…', choix: [
+    { label: 'Festif, pétillant', icon: '🎉', profil: { acide: 1, fruite: 1 } },
+    { label: 'Lounge, relaxant', icon: '🌙', profil: { cremeux: 1, floral: 1 } },
+    { label: 'Exotique, surprenant', icon: '🌴', profil: { fume: 1, epice: 1 } },
+    { label: 'Classique, raffiné', icon: '🎩', profil: { amer: 1, floral: 1 } }
+  ]}
+];
+
+let reponsesQuestionnaire = Array(QUESTIONS.length).fill(null);
+
+async function init() {
+  if (!token) { afficherErreur('Lien invalide — scanne le QR code du bar.'); return; }
+  const { data, error } = await db.from('sessions_invites').select('*').eq('token', token).single();
+  if (error || !data) { afficherErreur('Session introuvable ou expirée.'); return; }
+  if (new Date(data.expires_at) < new Date()) { afficherErreur('Cette session a expiré.'); return; }
+  session = data;
+}
+
+function afficherErreur(msg) {
+  document.body.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="color:#e05a4e;font-size:15px">${msg}</div></div>`;
+}
+
+function afficherScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function validerAccueil() {
+  pseudo = document.getElementById('input-pseudo').value.trim();
+  if (!pseudo) { document.getElementById('error-accueil').textContent = 'Entre un prénom ou pseudo.'; document.getElementById('error-accueil').classList.remove('hidden'); return; }
+  afficherScreen('screen-questionnaire');
+  afficherQuestion(0);
+}
+
+function afficherQuestion(index) {
+  questionActuelle = index;
+  document.querySelectorAll('.step-dot').forEach((d, i) => d.classList.toggle('active', i <= index));
+  const q = QUESTIONS[index];
+  document.getElementById('question-texte').textContent = q.texte;
+  document.getElementById('question-choix').innerHTML = q.choix.map((c, i) => `
+    <div class="choice-btn ${reponsesQuestionnaire[index] === i ? 'selected' : ''}" onclick="selectionnerChoix(${i})">
+      <div class="choice-icon">${c.icon}</div>
+      <div class="choice-label">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectionnerChoix(i) {
+  reponsesQuestionnaire[questionActuelle] = i;
+  document.querySelectorAll('.choice-btn').forEach((b, idx) => b.classList.toggle('selected', idx === i));
+}
+
+function questionSuivante() {
+  if (reponsesQuestionnaire[questionActuelle] === null) return;
+  const q = QUESTIONS[questionActuelle];
+  const choix = q.choix[reponsesQuestionnaire[questionActuelle]];
+  const intensite = parseInt(document.getElementById('question-intensite').value);
+  Object.entries(choix.profil).forEach(([k, v]) => { profilGustatif[k] = (profilGustatif[k] || 0) + v * (intensite / 3); });
+
+  if (questionActuelle < QUESTIONS.length - 1) {
+    afficherQuestion(questionActuelle + 1);
+  } else {
+    afficherChoixCocktails();
+  }
+}
+
+async function afficherChoixCocktails() {
+  afficherScreen('screen-choix');
+  const { data: inviteData } = await db.from('sessions_invites').select('recettes_disponibles').eq('token', token).single();
+  const ids = inviteData?.recettes_disponibles || [];
+
+  const { data: recettesData } = await db.from('recettes').select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url').in('id', ids);
+
+  const scored = (recettesData || []).map(r => {
+    const axes = ['sucre','amer','acide','fruite','fume','floral','epice','cremeux'];
+    let score = 0, total = 0;
+    axes.forEach(a => {
+      const rv = r[`gout_${a}`] || 0;
+      const pv = profilGustatif[a] || 0;
+      if (rv > 0 || pv > 0) { score += Math.max(0, 5 - Math.abs(rv - pv)); total += 5; }
+    });
+    return { ...r, score: total > 0 ? Math.round((score / total) * 100) : 50 };
+  }).sort((a, b) => b.score - a.score);
+
+  if (session.mode_choix === 'verrouille') {
+    await envoyerProfil(null, 'seb');
+    afficherScreen('screen-confirmation');
+    document.getElementById('confirm-titre').textContent = 'Seb choisit pour toi !';
+    document.getElementById('confirm-sous-titre').textContent = 'Ton profil gustatif a été envoyé.';
+    return;
+  }
+
+  document.getElementById('choix-subtitle').textContent = `${scored.length} cocktail(s) correspondent à ton profil`;
+  document.getElementById('cocktails-liste').innerHTML = scored.map(r => `
+    <div class="cocktail-card" onclick="selectionnerCocktail('${r.id}', this)">
+      <div class="cocktail-thumb">
+        ${r.photo_url ? `<img src="${r.photo_url}" alt="${r.nom}" />` : '🍸'}
+      </div>
+      <div>
+        <div class="cocktail-name">${r.nom}</div>
+        <div class="cocktail-meta">${r.base_alcool || ''}</div>
+      </div>
+      <div class="match-badge">${r.score}%</div>
+    </div>
+  `).join('');
+}
+
+let cocktailChoisi = null;
+
+function selectionnerCocktail(id, el) {
+  cocktailChoisi = id;
+  document.querySelectorAll('.cocktail-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  setTimeout(() => confirmerCocktail(), 400);
+}
+
+async function confirmerCocktail() {
+  if (!cocktailChoisi) return;
+  await envoyerProfil(cocktailChoisi, 'invite');
+  afficherScreen('screen-confirmation');
+  document.getElementById('confirm-titre').textContent = 'Parfait !';
+  document.getElementById('confirm-sous-titre').textContent = 'Seb prépare ton cocktail.';
+}
+
+async function laisserSebChoisir() {
+  await envoyerProfil(null, 'seb');
+  afficherScreen('screen-confirmation');
+  document.getElementById('confirm-titre').textContent = 'Seb choisit pour toi !';
+  document.getElementById('confirm-sous-titre').textContent = 'Fais-lui confiance 😏';
+}
+
+async function envoyerProfil(recetteId, choixType) {
+  const { data } = await db.from('sessions_invites').insert({
+    user_id: session.user_id,
+    token: Math.random().toString(36).substring(2, 10),
+    nom_invite: pseudo,
+    mode_choix: session.mode_choix,
+    recettes_disponibles: session.recettes_disponibles,
+    profil_gustatif: profilGustatif,
+    recette_id: recetteId,
+    choix_type: choixType,
+    statut: 'en_attente',
+    expires_at: session.expires_at
+  }).select().single();
+  inviteId = data?.id;
+}
+
+init();
+</script>
+</body>
+</html>
