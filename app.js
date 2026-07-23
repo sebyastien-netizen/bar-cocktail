@@ -2399,12 +2399,12 @@ let realtimeSession = null;
 function abonnerRealtimeSession(session) {
   if (realtimeSession) realtimeSession.unsubscribe();
 
-  realtimeSession = db.channel('session-invites-' + session.token)
+realtimeSession = db.channel('session-invites-' + session.token)
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'sessions_invites',
-      filter: `nom_session=eq.${session.nom_session}`
+      filter: `user_id=eq.${currentUser.id}`
     }, payload => {
       chargerInvitesSession(session);
     })
@@ -2416,9 +2416,9 @@ function abonnerRealtimeSession(session) {
 async function chargerInvitesSession(session) {
   const { data: invites } = await db.from('sessions_invites')
     .select('*')
-    .eq('nom_session', session.nom_session)
+    .eq('user_id', currentUser.id)
     .eq('is_master', false)
-    .eq('user_id', currentUser.id);
+    .eq('nom_session', session.nom_session);
 
   renderInvitesListe(invites || [], session);
 }
