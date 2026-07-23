@@ -272,7 +272,8 @@ async function laisserSebChoisir() {
 }
 
 async function envoyerProfil(recetteId, choixType) {
-  const { data } = await db.from('sessions_invites')
+  console.log('envoyerProfil', { pseudo, profilGustatif, recetteId, choixType, token });
+  const { data, error } = await db.from('sessions_invites')
     .update({
       nom_invite: pseudo,
       profil_gustatif: profilGustatif,
@@ -283,6 +284,7 @@ async function envoyerProfil(recetteId, choixType) {
     .eq('token', token)
     .select()
     .single();
+  console.log('result', { data, error });
   inviteId = data?.id;
 }
 
