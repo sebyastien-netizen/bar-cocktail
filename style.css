@@ -2645,3 +2645,34 @@ main { overflow-x: hidden; }
 #modal-degustation-aveugle {
   z-index: 10000;
 }
+.btn-mode-session {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+.btn-mode-session.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  opacity: 1;
+}
+.session-recette-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.session-recette-item:hover { background: var(--surface-hover); }
+.session-recette-item input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
+.session-recette-item-nom { font-size: 0.9rem; }
+.session-recette-item-meta { font-size: 0.75rem; opacity: 0.5; }
+.session-recettes-hint { font-size: 0.78rem; opacity: 0.45; margin-bottom: 0.75rem; }
