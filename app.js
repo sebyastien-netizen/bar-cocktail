@@ -2290,8 +2290,57 @@ function renderCarteSession(s, passee = false) {
     </div>
   `;
 }
+let modeSessionActif = 'libre';
+
+function setModeSession(mode) {
+  modeSessionActif = mode;
+  document.getElementById('btn-mode-libre').classList.toggle('active', mode === 'libre');
+  document.getElementById('btn-mode-verrouille').classList.toggle('active', mode === 'verrouille');
+}
+
 function ouvrirModalNouvelleSession() {
-  alert('Modal nouvelle session — à coder');
+  modeSessionActif = 'libre';
+  document.getElementById('session-nom').value = '';
+  document.getElementById('btn-mode-libre').classList.add('active');
+  document.getElementById('btn-mode-verrouille').classList.remove('active');
+
+  // Liste recettes réalisables
+  const realisables = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
+  const liste = document.getElementById('session-recettes-liste');
+  liste.innerHTML = realisables.map(r => `
+    <div class="session-recette-item" onclick="this.querySelector('input').click()">
+      <input type="checkbox" value="${r.id}" checked />
+      <div>
+        <div class="session-recette-item-nom">${r.nom}</div>
+        <div class="session-recette-item-meta">${r.base_alcool || ''} · ${(r.gouts || []).slice(0,2).join(' · ')}</div>
+      </div>
+    </div>
+  `).join('');
+
+  ouvrirModal('modal-nouvelle-session');
+}
+
+async function creerSession() {
+  const nom = document.getElementById('session-nom').value.trim() || 'Session sans nom';
+  const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
+  const recettesDisponibles = Array.from(checks).map(c => c.value);
+
+  const token = Math.random().toString(36).substring(2, 10);
+  const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
+
+  const { error } = await db.from('sessions_invites').insert({
+    user_id: currentUser.id,
+    token,
+    nom_session: nom,
+    mode_choix: modeSessionActif,
+    recettes_disponibles: recettesDisponibles,
+    expires_at: expiresAt
+  });
+
+  if (error) { alert('Erreur création session : ' + error.message); return; }
+
+  fermerModal('modal-nouvelle-session');
+  chargerSessions();
 }
 
 function ouvrirSession(id) {
