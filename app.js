@@ -2317,8 +2317,10 @@ function ouvrirModalNouvelleSession() {
     </div>
   `).join('');
 
-document.getElementById('modal-nouvelle-session').classList.add('visible');
- 
+`).join('');
+
+  document.getElementById('modal-nouvelle-session').classList.add('visible');
+} 
 async function creerSession() {
   const nom = document.getElementById('session-nom').value.trim() || 'Session sans nom';
   const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
