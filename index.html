@@ -385,7 +385,13 @@
     <button class="btn-primary" style="width:100%" onclick="creerSession()">Lancer la session →</button>
   </div>
 </div>
-  
+  <!-- MODAL : SESSION ACTIVE -->
+<div class="modal-overlay modal-large" id="modal-session-active">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('modal-session-active').classList.remove('visible')">✕</button>
+    <div id="session-active-contenu"></div>
+  </div>
+</div>
   <!-- =============================================
      PANNEAU AJUSTEMENT GUSTATIF
      À coller dans index.html juste avant </body>
