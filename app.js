@@ -2338,8 +2338,8 @@ async function creerSession() {
 
   if (error) { alert('Erreur création session : ' + error.message); return; }
 
-  fermerModal('modal-nouvelle-session');
-  chargerSessions();
+document.getElementById('modal-nouvelle-session').classList.add('hidden');
+ chargerSessions();
 }
 
 function ouvrirSession(id) {
