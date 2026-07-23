@@ -272,19 +272,23 @@ async function laisserSebChoisir() {
 }
 
 async function envoyerProfil(recetteId, choixType) {
-  console.log('envoyerProfil', { pseudo, profilGustatif, recetteId, choixType, token });
   const { data, error } = await db.from('sessions_invites')
-    .update({
+    .insert({
+      user_id: session.user_id,
+      token: Math.random().toString(36).substring(2, 10),
+      nom_session: session.nom_session,
       nom_invite: pseudo,
       profil_gustatif: profilGustatif,
       recette_id: recetteId,
       choix_type: choixType,
-      statut: 'en_attente'
+      statut: 'en_attente',
+      is_master: false,
+      mode_choix: session.mode_choix,
+      recettes_disponibles: session.recettes_disponibles,
+      expires_at: session.expires_at
     })
-    .eq('token', token)
     .select()
     .single();
-  console.log('result', { data, error });
   inviteId = data?.id;
 }
 
