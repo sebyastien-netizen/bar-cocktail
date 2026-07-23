@@ -2353,7 +2353,7 @@ async function ouvrirSession(id) {
 
   sessionActive = session;
  renderSessionActive(session);
-abonnerRealtimeSession(session.id);
+abonnerRealtimeSession(session);
 document.getElementById('modal-session-active').classList.add('visible');
 }
 
