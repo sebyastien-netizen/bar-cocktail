@@ -2290,6 +2290,13 @@ function renderCarteSession(s, passee = false) {
     </div>
   `;
 }
+function ouvrirModalNouvelleSession() {
+  alert('Modal nouvelle session — à coder');
+}
+
+function ouvrirSession(id) {
+  alert('Ouverture session ' + id + ' — à coder');
+}
 // =============================================
 // RECHARGEMENT ANECDOTE / CONSEIL
 // =============================================
