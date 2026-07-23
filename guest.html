@@ -432,6 +432,27 @@ inviteId = data?.id;
 ecouterJeu();
 }
 
+  function ecouterJeu() {
+  console.log('ecouterJeu inviteId=', inviteId);
+  if (!inviteId) return;
+  db.channel('jeu-' + inviteId)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'sessions_invites',
+      filter: `id=eq.${inviteId}`
+    }, async payload => {
+      const jeu = payload.new.jeu_actif;
+      if (jeu === 'degustation') {
+        const recetteId = payload.new.recette_id;
+        const { data: r } = await db.from('recettes').select('*').eq('id', recetteId).single();
+        lancerDegustation(r);
+      }
+    })
+    .subscribe();
+}
+
+init();
 init();
 </script>
 </body>
