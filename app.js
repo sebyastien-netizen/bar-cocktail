@@ -2317,8 +2317,8 @@ function ouvrirModalNouvelleSession() {
     </div>
   `).join('');
 
-document.getElementById('modal-nouvelle-session').classList.remove('hidden');}
-
+document.getElementById('modal-nouvelle-session').classList.add('visible');
+ 
 async function creerSession() {
   const nom = document.getElementById('session-nom').value.trim() || 'Session sans nom';
   const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
@@ -2338,7 +2338,7 @@ async function creerSession() {
 
   if (error) { alert('Erreur création session : ' + error.message); return; }
 
-document.getElementById('modal-nouvelle-session').classList.add('hidden');
+document.getElementById('modal-nouvelle-session').classList.remove('visible');
  chargerSessions();
 }
 
