@@ -2427,6 +2427,17 @@ function rafraichirInvite(data) {
         <span style="font-size:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">
           ${data.choix_type === 'seb' ? '✨ Laisse Seb choisir' : '🍸 A choisi'}
         </span>
+      </div>
+      <div style="font-size:0.78rem;opacity:0.5;margin-bottom:10px">Profil : ${axes}</div>
+      ${recette ? `<div style="font-size:0.85rem;margin-bottom:10px">Demande : <strong>${recette}</strong></div>` : ''}
+      <button class="btn-primary" style="width:100%;font-size:0.85rem" 
+        onclick="allerVersRecette('${data.recette_id || sessionActive?.recettes_disponibles?.[0]}')">
+        → Préparer
+      </button>
+    </div>
+  `;
+}
+
 function allerVersRecette(id) {
   document.getElementById('modal-session-active').classList.remove('visible');
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
