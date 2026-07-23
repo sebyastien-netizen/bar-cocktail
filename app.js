@@ -51,6 +51,7 @@ function afficherApp() {
   chargerEquipements();
   chargerConcoctions();
   chargerDashboard();
+  afficherOnglet('dashboard');
 }
  
 // --- Login ---
