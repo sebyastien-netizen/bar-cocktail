@@ -347,8 +347,7 @@ function questionSuivante() {
 
 async function afficherChoixCocktails() {
   afficherScreen('screen-choix');
-  const { data: inviteData } = await db.from('sessions_invites').select('recettes_disponibles').eq('token', token).single();
-  console.log('recettes_disponibles:', inviteData?.recettes_disponibles);
+const ids = session.recettes_disponibles || [];
   const ids = inviteData?.recettes_disponibles || [];
   console.log('ids:', ids);
 
