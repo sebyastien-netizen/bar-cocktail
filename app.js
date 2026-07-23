@@ -110,6 +110,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(btn => {
     document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
     document.getElementById('section-' + tab)?.classList.remove('hidden');
     ongletActif = tab;
+    if (tab === 'sessions') chargerSessions();
   });
 });
  
