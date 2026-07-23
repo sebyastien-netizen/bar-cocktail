@@ -123,7 +123,7 @@
     </div>
   </div>
 
-  <!-- MODAL : FICHE PLANTE -->
+  <!--  : FICHE PLANTE -->
   <div class="modal-overlay modal-large" id="modal-fiche-plante">
     <div class="modal modal-fiche">
       <button class="modal-close" onclick="fermerModal('modal-fiche-plante')">✕</button>
@@ -363,6 +363,29 @@
     <div class="historique-corps"></div>
   </div>
 </div>
+<!-- MODAL : NOUVELLE SESSION -->
+<div class="modal-overlay" id="modal-nouvelle-session">
+  <div class="modal">
+    <button class="modal-close" onclick="fermerModal('modal-nouvelle-session')">✕</button>
+    <h2 style="margin-bottom:1.25rem">🎉 Nouvelle session</h2>
+
+    <label class="modal-label">Nom de la soirée</label>
+    <input type="text" id="session-nom" class="modal-input" placeholder="Ex : Apéro vendredi, Soirée Marie…" />
+
+    <label class="modal-label" style="margin-top:1rem">Mode invités</label>
+    <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem">
+      <button class="btn-mode-session active" id="btn-mode-libre" onclick="setModeSession('libre')">🔓 Libre — ils choisissent</button>
+      <button class="btn-mode-session" id="btn-mode-verrouille" onclick="setModeSession('verrouille')">🔒 Verrouillé — je choisis</button>
+    </div>
+
+    <label class="modal-label">Recettes disponibles ce soir</label>
+    <div class="session-recettes-hint">Sélectionne les cocktails proposés aux invités</div>
+    <div id="session-recettes-liste" style="max-height:280px;overflow-y:auto;margin-bottom:1.25rem"></div>
+
+    <button class="btn-primary" style="width:100%" onclick="creerSession()">Lancer la session →</button>
+  </div>
+</div>
+  
   <!-- =============================================
      PANNEAU AJUSTEMENT GUSTATIF
      À coller dans index.html juste avant </body>
