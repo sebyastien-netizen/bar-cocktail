@@ -2341,9 +2341,68 @@ document.getElementById('modal-nouvelle-session').classList.remove('visible');
  chargerSessions();
 }
 
-function ouvrirSession(id) {
-  alert('Ouverture session ' + id + ' — à coder');
+async function ouvrirSession(id) {
+  const { data: session } = await db.from('sessions_invites')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (!session) { alert('Session introuvable'); return; }
+
+  sessionActive = session;
+  renderSessionActive(session);
+  document.getElementById('modal-session-active').classList.add('visible');
 }
+
+function renderSessionActive(session) {
+  const invites = session.invites || [];
+  const recettesSession = recettes.filter(r => session.recettes_disponibles?.includes(r.id));
+  const qrUrl = `https://bar-cocktail-smoky.vercel.app/guest.html?session=${session.token}`;
+
+  document.getElementById('session-active-contenu').innerHTML = `
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:1.2rem;font-weight:600;margin-bottom:4px">${session.nom_session || 'Session sans nom'}</div>
+      <div style="font-size:0.8rem;opacity:0.5">
+        ${session.mode_choix === 'verrouille' ? '🔒 Verrouillé' : '🔓 Libre'} · 
+        ${recettesSession.length} recette(s) · 
+        ${Math.max(0, Math.ceil((new Date(session.expires_at) - new Date()) / 3600000))}h restantes
+      </div>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:1.25rem;text-align:center">
+      <div style="font-size:0.75rem;opacity:0.5;margin-bottom:8px">QR CODE INVITÉS</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}" width="140" height="140" style="border-radius:8px" />
+      <div style="font-size:0.7rem;opacity:0.4;margin-top:6px;word-break:break-all">${qrUrl}</div>
+    </div>
+
+    <div style="font-size:0.75rem;font-weight:600;opacity:0.5;margin-bottom:10px">INVITÉS CONNECTÉS</div>
+    <div id="session-invites-liste">
+      <div style="font-size:0.85rem;opacity:0.4;text-align:center;padding:1rem">En attente d'invités…</div>
+    </div>
+
+    <div style="font-size:0.75rem;font-weight:600;opacity:0.5;margin:1rem 0 10px">RECETTES DISPONIBLES</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${recettesSession.map(r => `
+        <span style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:0.78rem;cursor:pointer"
+          onclick="allerVersRecette('${r.id}')">
+          ${r.nom}
+        </span>
+      `).join('')}
+    </div>
+  `;
+}
+
+function allerVersRecette(id) {
+  document.getElementById('modal-session-active').classList.remove('visible');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+  document.querySelector('nav button[data-tab="recettes"]').classList.add('active');
+  document.getElementById('section-recettes').classList.remove('hidden');
+  sectionRecette = 'cocktail';
+  ouvrirFicheRecette(id);
+}
+
+let sessionActive = null;
 // =============================================
 // RECHARGEMENT ANECDOTE / CONSEIL
 // =============================================
