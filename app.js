@@ -2398,18 +2398,16 @@ let realtimeSession = null;
 
 function abonnerRealtimeSession(session) {
   if (realtimeSession) realtimeSession.unsubscribe();
-
-realtimeSession = db.channel('session-invites-' + session.token)
+  realtimeSession = db.channel('session-invites-' + session.token)
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'sessions_invites',
-      filter: `user_id=eq.${currentUser.id}`
+      filter: `nom_session=eq.${session.nom_session}`
     }, payload => {
       chargerInvitesSession(session);
     })
     .subscribe();
-
   chargerInvitesSession(session);
 }
 
