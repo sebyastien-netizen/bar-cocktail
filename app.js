@@ -1617,6 +1617,45 @@ const photosCount = (c.etapes || []).filter(e => e.photo_url).length;
         </button>` : ''}
       </div>` : ''}
 
+      ${etapesTotal > 0 && c.date_creation && c.date_fin ? (() => {
+        const debut = new Date(c.date_creation);
+        const fin = new Date(c.date_fin);
+        const aujourdhui = new Date();
+        aujourdhui.setHours(0,0,0,0);
+        const totalJours = Math.ceil((fin - debut) / 86400000);
+        const joursEcoules = Math.min(Math.ceil((aujourdhui - debut) / 86400000), totalJours);
+        const pctCurseur = Math.round((joursEcoules / totalJours) * 100);
+        const etapesAvecDate = (c.etapes || []).filter(e => e.date_etape).sort((a,b) => new Date(a.date_etape) - new Date(b.date_etape));
+        const phases = etapesAvecDate.map((e, i) => {
+          const dateDebut = i === 0 ? debut : new Date(etapesAvecDate[i-1].date_etape);
+          const dateFin = new Date(e.date_etape);
+          const duree = Math.max(1, Math.ceil((dateFin - dateDebut) / 86400000));
+          const active = aujourdhui >= dateDebut && aujourdhui <= dateFin;
+          return { titre: e.titre, duree, active, faite: e.faite };
+        });
+        const totalDuree = phases.reduce((s, p) => s + p.duree, 0);
+        const couleurs = ['#1D9E75','#EF9F27','#378ADD','#D85A30','#7F77DD','#639922'];
+        const phaseActive = phases.find(p => p.active) || phases.filter(p => !p.faite)[0];
+        return `
+          <div style="margin:12px 0;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">
+              Jour ${joursEcoules}/${totalJours} · 
+              <span style="color:var(--text-accent);font-weight:500;">${phaseActive ? 'Phase : ' + phaseActive.titre : 'Terminé'}</span>
+              · Prêt dans ${Math.max(0, totalJours - joursEcoules)}j
+            </div>
+            <div style="position:relative;">
+              <div style="display:flex;gap:2px;height:10px;border-radius:6px;overflow:hidden;">
+                ${phases.map((p, i) => `<div style="flex:${p.duree};background:${p.faite ? couleurs[i % couleurs.length] : 'var(--border-strong)'};opacity:${p.faite ? 1 : 0.35};"></div>`).join('')}
+              </div>
+              <div style="position:absolute;top:-2px;left:${pctCurseur}%;width:3px;height:14px;background:var(--text-primary);border-radius:2px;transform:translateX(-50%);opacity:0.8;"></div>
+            </div>
+            <div style="display:flex;gap:2px;margin-top:4px;">
+              ${phases.map((p, i) => `<div style="flex:${p.duree};font-size:10px;color:${p.faite ? couleurs[i % couleurs.length] : 'var(--text-muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.titre}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      })() : ''}
+
       ${c.description ? `<p class="conc-desc">${c.description}</p>` : ''}
 
       ${etapesTotal > 0 ? `
