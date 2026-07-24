@@ -493,6 +493,7 @@ async function lancerDevine(recette) {
     .eq('recette_id', recette.id);
 
   devineVraisIngredients = ingredients.map(i => i.nom);
+  devineRecette = recette; // ← AJOUTER ICI
 
   // Constituer les leurres — exclure ceux qui ressemblent aux vrais
   const vraisLower = devineVraisIngredients.map(v => v.toLowerCase());
