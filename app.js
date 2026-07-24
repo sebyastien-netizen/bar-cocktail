@@ -1518,6 +1518,7 @@ async function chargerConcoctions() {
   }));
  
   renderConcoctions();
+  demarrerTimerConcoctions(); // ← AJOUT
 }
  
 function renderConcoctions() {
@@ -1551,6 +1552,19 @@ function renderConcoctions() {
     ${concoctions.length === 0 ? '<div class="empty-state">Aucune concoction en cours. Commencez par le génépi !</div>' : ''}
   `;
 }
+
+// ← COLLER ICI après renderConcoctions
+function demarrerTimerConcoctions() {
+  const maintenant = new Date();
+  const demainMinuit = new Date();
+  demainMinuit.setHours(24, 0, 0, 0);
+  const msJusquaMinuit = demainMinuit - maintenant;
+
+  setTimeout(() => {
+    renderConcoctions();
+    setInterval(renderConcoctions, 86400000);
+  }, msJusquaMinuit);
+}
  
 function renderConcoction(c, typeLabels, statutLabels, statutClass) {
   const today = new Date();
@@ -1573,8 +1587,11 @@ function renderConcoction(c, typeLabels, statutLabels, statutClass) {
   }
  
   const urgenceClass = joursEtape !== null && joursEtape <= 3 ? 'conc-urgent' : '';
+ const dernierePhoto = [...(c.etapes || [])].reverse().find(e => e.photo_url);
+const photosCount = (c.etapes || []).filter(e => e.photo_url).length;
  
-  return `
+
+ return `
     <div class="conc-card ${urgenceClass}">
       <div class="conc-card-header">
         <div>
@@ -1590,9 +1607,18 @@ function renderConcoction(c, typeLabels, statutLabels, statutClass) {
           ${joursFin > 0 ? `<span class="countdown-val">${joursFin}</span><span class="countdown-label">jours</span>` : '<span class="countdown-val">🎉</span>'}
         </div>` : ''}
       </div>
- 
+
+      ${dernierePhoto ? `
+      <div style="margin:10px 0;border-radius:10px;overflow:hidden;position:relative;">
+        <img src="${dernierePhoto.photo_url}" style="width:100%;max-height:160px;object-fit:cover;display:block;">
+        ${photosCount > 1 ? `
+        <button onclick="ouvrirGalerieEvolution('${c.id}')" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">
+          📷 Voir l'évolution (${photosCount})
+        </button>` : ''}
+      </div>` : ''}
+
       ${c.description ? `<p class="conc-desc">${c.description}</p>` : ''}
- 
+
       ${etapesTotal > 0 ? `
       <div class="conc-etapes">
         <div class="conc-etapes-progress">
@@ -1610,15 +1636,22 @@ function renderConcoction(c, typeLabels, statutLabels, statutClass) {
               <div class="etape-content">
                 <div class="etape-titre-conc">${e.titre}</div>
                 <div class="etape-desc-conc">${e.description}</div>
+                <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+                  ${e.photo_url ? `<img src="${e.photo_url}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">` : ''}
+                  <label style="font-size:0.75rem;color:var(--text-accent);cursor:pointer;">
+                    ${e.photo_url ? '↺ Changer' : '📷 Ajouter photo'}
+                    <input type="file" accept="image/*" style="display:none" onchange="uploaderPhotoEtape(${e.id},'${c.id}',this)">
+                  </label>
+                </div>
                 ${e.date_etape ? '<div class="etape-date">' + formatDate(e.date_etape) + (joursEtape !== null && e === prochaineEtape ? ' <span class="etape-jours' + (joursEtape <= 3 ? ' jours-urgent' : '') + '">(' + (joursEtape > 0 ? 'dans ' + joursEtape + 'j' : "aujourd'hui !") + ')</span>' : '') + '</div>' : ''}
               </div>
             </div>
           `).join('')}
         </div>
       </div>` : ''}
- 
+
       ${c.notes ? `<div class="conc-notes">💡 ${c.notes}</div>` : ''}
- 
+
       <div class="conc-actions">
         ${c.statut === 'en_cours' ? `<button class="btn btn-outline btn-sm" onclick="marquerPret('${c.id}')">✅ Marquer prêt</button>` : ''}
         ${c.statut === 'pret' ? `<button class="btn btn-outline btn-sm" onclick="marquerEnCours('${c.id}')">↩ Remettre en cours</button>` : ''}
@@ -1643,7 +1676,50 @@ async function toggleEtapeConcoction(concId, etapeId, faite) {
   }
   renderConcoctions();
 }
- 
+ async function uploaderPhotoEtape(etapeId, concId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop();
+  const path = `concoctions/${concId}/${etapeId}.${ext}`;
+  const { error: upErr } = await db.storage.from('photos-realisations').upload(path, file, { upsert: true });
+  if (upErr) { console.error('upload error', upErr); return; }
+  const { data } = db.storage.from('photos-realisations').getPublicUrl(path);
+  await db.from('concoction_etapes').update({ photo_url: data.publicUrl }).eq('id', etapeId);
+  const conc = concoctions.find(c => c.id === concId);
+  if (conc) {
+    const etape = conc.etapes.find(e => e.id === etapeId);
+    if (etape) etape.photo_url = data.publicUrl;
+  }
+  renderConcoctions();
+}
+
+function ouvrirGalerieEvolution(concId) {
+  const conc = concoctions.find(c => c.id === concId);
+  if (!conc) return;
+  const photos = (conc.etapes || []).filter(e => e.photo_url);
+  if (photos.length === 0) return;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;gap:1rem;';
+  modal.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;">
+      <div style="color:#fff;font-size:1rem;font-weight:500;">Évolution — ${conc.nom}</div>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:480px;overflow-y:auto;max-height:80vh;">
+      ${photos.map(e => `
+        <div style="background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;">
+          <img src="${e.photo_url}" style="width:100%;max-height:260px;object-fit:cover;display:block;">
+          <div style="padding:8px 12px;">
+            <div style="color:#fff;font-size:0.85rem;font-weight:500;">${e.titre}</div>
+            ${e.date_etape ? `<div style="color:rgba(255,255,255,0.5);font-size:0.75rem;">${formatDate(e.date_etape)}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 async function marquerPret(concId) {
   await db.from('concoctions').update({ statut: 'pret' }).eq('id', concId).eq('user_id', currentUser.id);
   const conc = concoctions.find(c => c.id === concId);
