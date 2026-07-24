@@ -909,10 +909,13 @@ function renderFiche(portions) {
             </div>`;
         }).join('')}
       </div>
-      ${batch ? `
-      <div class="fiche-batch-info">
-        <strong>Batch :</strong> ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')} + ${batch.eau}cl eau = ${batch.total}cl total
-      </div>` : ''}
+${batch ? `
+<div class="fiche-batch-wrap">
+  <div class="fiche-batch-info">
+    <strong>Batch ${portions} verres :</strong> ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')} + ${batch.eau}cl eau = <strong>${batch.total}cl total</strong>
+  </div>
+  ${getBatchConseils(r, portions)}
+</div>` : ''}
     </div>
 
     <!-- MATÉRIELS -->
