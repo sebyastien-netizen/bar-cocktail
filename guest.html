@@ -559,14 +559,34 @@ db.from('sessions_invites')
     .eq('id', inviteId);
 }
 
-function afficherScoreDevine(score, total, bons, faux) {
-  document.getElementById('devine-score-bons').textContent = bons;
-  document.getElementById('devine-score-faux').textContent = faux;
-  document.getElementById('devine-score-total').textContent = total;
-  document.getElementById('devine-score-points').textContent = score;
+function afficherScoreDevine(score, total, bons, faux, recette) {
+  const cochesValues = Array.from(document.querySelectorAll('#devine-ingredients input:checked')).map(i => i.value);
+  const bonsCoches = cochesValues.filter(c => devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase()));
+  const mauvaisCoches = cochesValues.filter(c => !devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase()));
+  const manques = devineVraisIngredients.filter(v => !cochesValues.some(c => c.toLowerCase() === v.toLowerCase()));
+
+  document.getElementById('devine-score-contenu').innerHTML = `
+    ${recette.photo_url ? `<img src="${recette.photo_url}" alt="${recette.nom}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:16px">${recette.nom}</div>
+    ${bonsCoches.length > 0 ? `
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.8rem;opacity:0.6;margin-bottom:6px">✅ Bien trouvés</div>
+        ${bonsCoches.map(i => `<div style="padding:8px 12px;background:rgba(80,200,100,0.15);border-radius:8px;margin-bottom:4px;font-size:0.9rem">${i}</div>`).join('')}
+      </div>` : ''}
+    ${mauvaisCoches.length > 0 ? `
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.8rem;opacity:0.6;margin-bottom:6px">❌ Mauvaises réponses</div>
+        ${mauvaisCoches.map(i => `<div style="padding:8px 12px;background:rgba(200,80,80,0.15);border-radius:8px;margin-bottom:4px;font-size:0.9rem">${i}</div>`).join('')}
+      </div>` : ''}
+    ${manques.length > 0 ? `
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.8rem;opacity:0.6;margin-bottom:6px">😶 Oubliés</div>
+        ${manques.map(i => `<div style="padding:8px 12px;background:rgba(150,150,150,0.15);border-radius:8px;margin-bottom:4px;font-size:0.9rem">${i}</div>`).join('')}
+      </div>` : ''}
+    <div style="margin-top:16px;font-size:1rem;font-weight:600">${bonsCoches.length} / ${total} ingrédients trouvés</div>
+  `;
   afficherScreen('screen-devine-score');
 }
-init();
 init();
 </script>
   <!-- Screen Devine les ingrédients -->
