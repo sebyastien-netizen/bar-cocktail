@@ -542,8 +542,9 @@ function validerDevine() {
   afficherScoreDevine(score, total, bons, faux);
   
   // Sauvegarder en BDD ensuite (sans attendre)
-  db.from('sessions_invites')
+db.from('sessions_invites')
     .update({
+      jeu_actif: 'devine-score',
       degustation_resultat: {
         jeu: 'devine',
         bons,
