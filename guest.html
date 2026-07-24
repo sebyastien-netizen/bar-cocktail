@@ -453,7 +453,106 @@ ecouterJeu();
     })
     .subscribe();
 }
+// Liste fixe de leurres pour le jeu Devine les ingrédients
+const LEURRES_INGREDIENTS = [
+  'Vodka', 'Gin', 'Rhum blanc', 'Rhum brun', 'Tequila', 'Mezcal', 'Bourbon',
+  'Scotch', 'Cognac', 'Calvados', 'Amaretto', 'Cointreau', 'Triple sec',
+  'Campari', 'Aperol', 'Vermouth rouge', 'Vermouth dry', 'Chartreuse verte',
+  'Chartreuse jaune', 'Bénédictine', 'Marasquin', 'Crème de pêche',
+  'Crème de mûre', 'Crème de violette', 'Baileys', 'Kahlúa',
+  'Jus de citron jaune', 'Jus de citron vert', 'Jus d\'orange',
+  'Jus de pamplemousse', 'Jus d\'ananas', 'Jus de cranberry',
+  'Sirop simple', 'Sirop d\'orgeat', 'Sirop d\'agave', 'Sirop de miel',
+  'Grenadine', 'Eau gazeuse', 'Tonic', 'Ginger beer', 'Ginger ale',
+  'Champagne', 'Prosecco', 'Cola', 'Lait entier', 'Crème liquide',
+  'Blanc d\'œuf', 'Aquafaba', 'Angostura bitter', 'Peychaud\'s bitter',
+  'Absinthe', 'Menthe fraîche', 'Basilic', 'Concombre', 'Gingembre frais',
+  'Cannelle', 'Muscade', 'Sel', 'Sucre brun', 'Miel', 'Marmelade d\'oranges',
+  'Sauce Worcestershire', 'Tabasco', 'Jus de tomate', 'Café espresso',
+  'Lait de coco', 'Crème de coco', 'Purée de fruit de la passion',
+  'Purée de pêche', 'Framboise fraîche', 'Cerise amarena', 'Olive'
+];
 
+let devineVraisIngredients = [];
+let devineChoix = [];
+
+async function lancerDevine(recette) {
+  // Charger les vrais ingrédients depuis recette_ingredients
+  const { data: ingredients } = await db
+    .from('recette_ingredients')
+    .select('nom')
+    .eq('recette_id', recette.id);
+
+  devineVraisIngredients = ingredients.map(i => i.nom);
+
+  // Constituer les leurres — exclure ceux qui ressemblent aux vrais
+  const vraisLower = devineVraisIngredients.map(v => v.toLowerCase());
+  const leurresTous = LEURRES_INGREDIENTS.filter(l =>
+    !vraisLower.some(v => l.toLowerCase().includes(v) || v.includes(l.toLowerCase()))
+  );
+
+  // Piocher 8 leurres aléatoires
+  const leurres = leurresTous
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 8);
+
+  // Mélanger vrais + leurres
+  devineChoix = [...devineVraisIngredients, ...leurres]
+    .sort(() => Math.random() - 0.5);
+
+  afficherScreen('screen-devine');
+  renderDevine(recette);
+}
+
+function renderDevine(recette) {
+  const container = document.getElementById('devine-ingredients');
+  container.innerHTML = devineChoix.map(ing => `
+    <label class="devine-item">
+      <input type="checkbox" value="${ing}"> ${ing}
+    </label>
+  `).join('');
+}
+
+function validerDevine() {
+  const coches = Array.from(
+    document.querySelectorAll('#devine-ingredients input:checked')
+  ).map(i => i.value);
+
+  const bons = coches.filter(c =>
+    devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase())
+  ).length;
+
+  const faux = coches.filter(c =>
+    !devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase())
+  ).length;
+
+  const score = Math.max(0, bons - faux);
+  const total = devineVraisIngredients.length;
+
+  // Sauvegarder le résultat
+  db.from('sessions_invites')
+    .update({
+      degustation_resultat: {
+        jeu: 'devine',
+        bons,
+        faux,
+        score,
+        total,
+        reponses: coches,
+        vrais: devineVraisIngredients
+      }
+    })
+    .eq('id', inviteId)
+    .then(() => afficherScoreDevine(score, total, bons, faux));
+}
+
+function afficherScoreDevine(score, total, bons, faux) {
+  document.getElementById('devine-score-bons').textContent = bons;
+  document.getElementById('devine-score-faux').textContent = faux;
+  document.getElementById('devine-score-total').textContent = total;
+  document.getElementById('devine-score-points').textContent = score;
+  afficherScreen('screen-devine-score');
+}
 init();
 init();
 </script>
