@@ -554,11 +554,11 @@ function validerDevine() {
     .eq('id', inviteId);
 }
 
-function afficherScoreDevine(score, total, bons, faux, recette) {
-  const cochesValues = Array.from(document.querySelectorAll('#devine-ingredients input:checked')).map(i => i.value);
+function afficherScoreDevine(cochesValues, total, bons, faux, recette) {
   const bonsCoches = cochesValues.filter(c => devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase()));
   const mauvaisCoches = cochesValues.filter(c => !devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase()));
   const manques = devineVraisIngredients.filter(v => !cochesValues.some(c => c.toLowerCase() === v.toLowerCase()));
+  // ... reste identique
 
   document.getElementById('devine-score-contenu').innerHTML = `
     ${recette.photo_url ? `<img src="${recette.photo_url}" alt="${recette.nom}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
