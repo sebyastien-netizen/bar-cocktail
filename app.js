@@ -509,8 +509,11 @@ function getBatchInfo(r, p) {
   if (p < 4) return null;
   const ratio = p >= 7 ? 0.25 : 0.20;
   const totalSpiritueux = (r.ingredients || [])
-    .filter(i => i.quantite && i.unite === 'cl' && !i.optionnel)
-    .reduce((s, i) => s + (i.quantite * p), 0);
+    .filter(i => i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel)
+    .reduce((s, i) => {
+      const qte = i.unite === 'ml' ? i.quantite / 10 : i.quantite;
+      return s + (qte * p);
+    }, 0);
   const eau = Math.round(totalSpiritueux * ratio * 10) / 10;
   const total = Math.round((totalSpiritueux + eau) * 10) / 10;
   return { totalSpiritueux: Math.round(totalSpiritueux * 10) / 10, eau, total, ratio: Math.round(ratio * 100) };
@@ -918,8 +921,10 @@ ${batch ? `
 <div class="fiche-batch-wrap">
   <div class="fiche-batch-info">
     <strong>Batch ${portions} verres :</strong> 
-    ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')}
-    ${(r.ingredients || []).filter(i => i.unite === 'traits' || i.unite === 'trait').map(i => ` + ${(i.quantite || 1) * portions} traits ${i.nom}`).join('')}
+${(r.ingredients || []).filter(i => i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel).map(i => {
+  const qte = i.unite === 'ml' ? Math.round(i.quantite * portions / 10 * 10) / 10 : Math.round(i.quantite * portions * 10) / 10;
+  return `${qte}cl ${i.nom}`;
+}).join(' + ')}    ${(r.ingredients || []).filter(i => i.unite === 'traits' || i.unite === 'trait').map(i => ` + ${(i.quantite || 1) * portions} traits ${i.nom}`).join('')}
     + ${batch.eau}cl eau = <strong>${batch.total}cl total</strong>
   </div>
   ${getBatchConseils(r, portions)}
