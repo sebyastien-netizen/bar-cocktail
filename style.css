@@ -2676,3 +2676,45 @@ main { overflow-x: hidden; }
 .session-recette-item-nom { font-size: 0.9rem; }
 .session-recette-item-meta { font-size: 0.75rem; opacity: 0.5; }
 .session-recettes-hint { font-size: 0.78rem; opacity: 0.45; margin-bottom: 0.75rem; }
+.devine-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.devine-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.devine-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.devine-score-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.devine-score-ligne {
+  font-size: 1.1rem;
+}
+
+.devine-score-final {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-top: 8px;
+}
