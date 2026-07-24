@@ -434,15 +434,15 @@ inviteId = data?.id;
 ecouterJeu();
 }
 
-  function ecouterJeu() {
+function ecouterJeu() {
   console.log('ecouterJeu inviteId=', inviteId);
   if (!inviteId) return;
- db.channel('jeu-' + inviteId)
+  db.channel('jeu-' + inviteId)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'sessions_invites'
- }, async payload => {
+    }, async payload => {
       const jeu = payload.new.jeu_actif;
       if (jeu === 'degustation' && document.getElementById('screen-deg-score').classList.contains('active')) return;
       if (jeu === 'degustation') {
@@ -450,8 +450,15 @@ ecouterJeu();
         const { data: r } = await db.from('recettes').select('*').eq('id', recetteId).single();
         lancerDegustation(r);
       }
+      // ↓ AJOUTER ICI
+      if (jeu === 'devine') {
+        const recetteId = payload.new.recette_id;
+        const { data: r } = await db.from('recettes').select('*').eq('id', recetteId).single();
+        lancerDevine(r);
+      }
     })
     .subscribe();
+}
 }
 // Liste fixe de leurres pour le jeu Devine les ingrédients
 const LEURRES_INGREDIENTS = [
