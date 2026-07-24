@@ -559,7 +559,9 @@ function afficherScoreDevine(cochesValues, total, bons, faux, recette) {
   const bonsCoches = cochesValues.filter(c => devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase()));
   const mauvaisCoches = cochesValues.filter(c => !devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase()));
   const manques = devineVraisIngredients.filter(v => !cochesValues.some(c => c.toLowerCase() === v.toLowerCase()));
-  // ... reste identique
+
+  // Afficher le screen AVANT de remplir
+  afficherScreen('screen-devine-score');
 
   document.getElementById('devine-score-contenu').innerHTML = `
     ${recette.photo_url ? `<img src="${recette.photo_url}" alt="${recette.nom}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
@@ -581,7 +583,6 @@ function afficherScoreDevine(cochesValues, total, bons, faux, recette) {
       </div>` : ''}
     <div style="margin-top:16px;font-size:1rem;font-weight:600">${bonsCoches.length} / ${total} ingrédients trouvés</div>
   `;
-  afficherScreen('screen-devine-score');
 }
 init();
 </script>
