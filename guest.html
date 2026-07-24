@@ -523,27 +523,22 @@ function renderDevine(recette) {
 }
 
 function validerDevine() {
-  const coches = Array.from(
+  const cochesValues = Array.from(
     document.querySelectorAll('#devine-ingredients input:checked')
   ).map(i => i.value);
 
-  const bons = coches.filter(c =>
+  const bons = cochesValues.filter(c =>
     devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase())
   ).length;
-
-  const faux = coches.filter(c =>
+  const faux = cochesValues.filter(c =>
     !devineVraisIngredients.some(v => v.toLowerCase() === c.toLowerCase())
   ).length;
-
   const score = Math.max(0, bons - faux);
   const total = devineVraisIngredients.length;
 
-  // Sauvegarder le résultat
-// Afficher le score immédiatement
-  afficherScoreDevine(score, total, bons, faux);
-  
-  // Sauvegarder en BDD ensuite (sans attendre)
-db.from('sessions_invites')
+  afficherScoreDevine(cochesValues, total, bons, faux, devineRecette);
+
+  db.from('sessions_invites')
     .update({
       jeu_actif: 'devine-score',
       degustation_resultat: {
@@ -552,7 +547,7 @@ db.from('sessions_invites')
         faux,
         score,
         total,
-        reponses: coches,
+        reponses: cochesValues,
         vrais: devineVraisIngredients
       }
     })
