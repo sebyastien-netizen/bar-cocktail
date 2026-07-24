@@ -563,5 +563,28 @@ function afficherScoreDevine(score, total, bons, faux) {
 init();
 init();
 </script>
+  <!-- Screen Devine les ingrédients -->
+<div id="screen-devine" class="screen">
+  <div class="screen-content">
+    <div class="jeu-icon">🔍</div>
+    <h2>Devine les ingrédients</h2>
+    <p class="jeu-sous-titre">Coche tous les ingrédients qui composent ce cocktail</p>
+    <div id="devine-ingredients" class="devine-liste"></div>
+    <button class="btn-primary" onclick="validerDevine()">Valider mes réponses</button>
+  </div>
+</div>
+
+<!-- Screen Score Devine -->
+<div id="screen-devine-score" class="screen">
+  <div class="screen-content">
+    <div class="jeu-icon">🎯</div>
+    <h2>Résultat</h2>
+    <div class="devine-score-bloc">
+      <div class="devine-score-ligne">✅ Bons ingrédients : <strong id="devine-score-bons"></strong> / <strong id="devine-score-total"></strong></div>
+      <div class="devine-score-ligne">❌ Mauvais coches : <strong id="devine-score-faux"></strong></div>
+      <div class="devine-score-final">Score : <strong id="devine-score-points"></strong> pts</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
