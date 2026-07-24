@@ -925,8 +925,7 @@ ${(r.ingredients || []).filter(i => i.quantite && (i.unite === 'cl' || i.unite =
   const qte = i.unite === 'ml' ? Math.round(i.quantite * portions / 10 * 10) / 10 : Math.round(i.quantite * portions * 10) / 10;
   return `${qte}cl ${i.nom}`;
 }).join(' + ')}    ${(r.ingredients || []).filter(i => i.unite === 'traits' || i.unite === 'trait').map(i => ` + ${(i.quantite || 1) * portions} traits ${i.nom}`).join('')}
-    + ${batch.eau}cl eau = <strong>${batch.total}cl total</strong>
-  </div>
+= <strong>${batch.total}cl</strong> — <span style="opacity:0.7;font-size:0.85rem">avec dilution au service (shake ou mélanger/stirred) · ou ${batch.totalAvecEau}cl avec +20% eau si service direct sans dilution</span>  </div>
   ${getBatchConseils(r, portions)}
 </div>` : ''}
     </div>
