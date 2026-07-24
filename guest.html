@@ -444,7 +444,8 @@ function ecouterJeu() {
       table: 'sessions_invites'
     }, async payload => {
       const jeu = payload.new.jeu_actif;
-      if (jeu === 'degustation' && document.getElementById('screen-deg-score').classList.contains('active')) return;
+if (jeu === 'degustation' && document.getElementById('screen-deg-score').classList.contains('active')) return;
+if (jeu === 'devine' && document.getElementById('screen-devine-score').classList.contains('active')) return;
       if (jeu === 'degustation') {
         const recetteId = payload.new.recette_id;
         const { data: r } = await db.from('recettes').select('*').eq('id', recetteId).single();
