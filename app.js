@@ -544,6 +544,11 @@ function getBatchConseils(r, portions) {
 
   // J-1
   jm1.push('Préparer le batch : spiritueux + sirops. Mettre en bouteille hermétique, étiqueter, réfrigérer.');
+ const bitters = (r.ingredients || []).filter(i => i.unite === 'traits' || i.unite === 'trait');
+if (bitters.length > 0) {
+  const listeBitters = bitters.map(i => `${(i.quantite || 1) * portions} traits ${i.nom}`).join(', ');
+  jm1.push(`Intégrer les bitters directement au batch : ${listeBitters}.`);
+}
   if (agrumes) jm1.push('Presser les agrumes la veille si possible — conserver séparément au frais en bouteille fermée.');
   if (frais) jm1.push('Préparer les purées de fruits frais, filtrées et réfrigérées en bocal hermétique.');
 
@@ -912,7 +917,10 @@ function renderFiche(portions) {
 ${batch ? `
 <div class="fiche-batch-wrap">
   <div class="fiche-batch-info">
-    <strong>Batch ${portions} verres :</strong> ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')} + ${batch.eau}cl eau = <strong>${batch.total}cl total</strong>
+    <strong>Batch ${portions} verres :</strong> 
+    ${(r.ingredients || []).filter(i => i.quantite && i.unite === 'cl' && !i.optionnel).map(i => `${Math.round(i.quantite * portions * 10)/10}cl ${i.nom}`).join(' + ')}
+    ${(r.ingredients || []).filter(i => i.unite === 'traits' || i.unite === 'trait').map(i => ` + ${(i.quantite || 1) * portions} traits ${i.nom}`).join('')}
+    + ${batch.eau}cl eau = <strong>${batch.total}cl total</strong>
   </div>
   ${getBatchConseils(r, portions)}
 </div>` : ''}
