@@ -516,6 +516,81 @@ function getBatchInfo(r, p) {
   return { totalSpiritueux: Math.round(totalSpiritueux * 10) / 10, eau, total, ratio: Math.round(ratio * 100) };
 }
 
+function getBatchConseils(r, portions) {
+  const ings = (r.ingredients || []).map(i => i.nom.toLowerCase());
+  const has = (...mots) => mots.some(m => ings.some(i => i.includes(m)));
+
+  const frozen = has('glace pilée', 'blender', 'frozen');
+  const cafe = has('café', 'espresso', 'expresso', 'cold brew');
+  const oeuf = has('blanc d\'œuf', 'aquafaba', 'oeuf');
+  const creme = has('crème', 'lait');
+  const petillant = has('champagne', 'prosecco', 'eau gazeuse', 'tonic', 'ginger beer', 'ginger ale', 'cola', 'soda');
+  const menthe = has('menthe');
+  const agrumes = has('citron', 'pamplemousse', 'orange');
+  const frais = has('framboise', 'fraise', 'ananas frais', 'pêche fraîche');
+
+  if (frozen) {
+    return `<div class="batch-planning">
+      <div class="batch-planning-titre">⚠️ Batch impossible</div>
+      <div class="batch-planning-texte">Ce cocktail nécessite un blender et de la glace pilée — préparation sur place uniquement. Prévoir blender + glace pilée à destination.</div>
+    </div>`;
+  }
+
+  const jm1 = [];
+  const jourJ = [];
+  const deuxH = [];
+  const service = [];
+  const transport = [];
+
+  // J-1
+  jm1.push('Préparer le batch : spiritueux + sirops. Mettre en bouteille hermétique, étiqueter, réfrigérer.');
+  if (agrumes) jm1.push('Presser les agrumes la veille si possible — conserver séparément au frais en bouteille fermée.');
+  if (frais) jm1.push('Préparer les purées de fruits frais, filtrées et réfrigérées en bocal hermétique.');
+
+  // Jour J départ
+  jourJ.push('Sortir le batch du frigo 30 min avant départ si service à température ambiante.');
+  if (petillant) jourJ.push('Mettre au frais les éléments pétillants (ne jamais les intégrer au batch).');
+  if (menthe) jourJ.push('Cueillir ou emballer la menthe fraîche dans un linge humide — elle tient 6-8h.');
+  if (oeuf) jourJ.push('Prévoir les blancs d\'œuf ou aquafaba en petit contenant séparé — ne jamais intégrer au batch.');
+  if (creme) jourJ.push('Transporter crème/lait dans contenant isotherme séparé.');
+
+  // Transport
+  transport.push(`Batch (${portions} verres) en bouteille hermétique de ${Math.ceil(portions * 0.1)}L min, réfrigérée.`);
+  if (cafe) transport.push('Café/espresso : thermos isotherme séparé — ne pas mélanger au batch avant destination.');
+  if (petillant) transport.push('Éléments pétillants : bouteilles bien fermées, transportées debout et au frais.');
+  if (oeuf) transport.push('Blancs d\'œuf : petit contenant hermétique au frais.');
+
+  // 2h avant
+  if (cafe) deuxH.push('Préparer les expressos frais et les intégrer au batch 1-2h avant service max.');
+  if (agrumes) deuxH.push('Si jus non pressés la veille, presser maintenant et intégrer au batch.');
+  if (creme) deuxH.push('Sortir crème/lait du frais 15 min avant service.');
+  if (deuxH.length === 0) deuxH.push('Batch prêt — placer au frais jusqu\'au service.');
+
+  // Au service
+  service.push(`Shaker par tournées de 4 verres : ${Math.round(portions / 4 * 10) / 10} tournées prévues.`);
+  if (oeuf) service.push('Blanc d\'œuf : dry shake sans glace 5 sec, puis shake avec glace 10 sec — verre par verre.');
+  if (petillant) service.push('Verser l\'élément pétillant directement dans le verre après filtration — jamais dans le shaker.');
+  if (menthe) service.push('Disposer la menthe fraîche en garniture au dernier moment.');
+
+  const bloc = (titre, items, icon) => items.length === 0 ? '' : `
+    <div class="batch-etape">
+      <div class="batch-etape-titre">${icon} ${titre}</div>
+      <ul class="batch-etape-liste">
+        ${items.map(i => `<li>${i}</li>`).join('')}
+      </ul>
+    </div>`;
+
+  return `
+    <div class="batch-planning">
+      <div class="batch-planning-titre">📋 Planning événement — ${portions} verres</div>
+      ${bloc('J-1 — Préparation', jm1, '🗓️')}
+      ${bloc('Jour J — Départ', jourJ, '🚗')}
+      ${bloc('Transport', transport, '📦')}
+      ${bloc('2h avant service', deuxH, '⏱️')}
+      ${bloc('Au service', service, '🍸')}
+    </div>`;
+}
+
 // =============================================
 // RENDU FICHE PRINCIPALE
 // =============================================
