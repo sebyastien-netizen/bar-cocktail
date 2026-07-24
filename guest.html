@@ -538,6 +538,10 @@ function validerDevine() {
   const total = devineVraisIngredients.length;
 
   // Sauvegarder le résultat
+// Afficher le score immédiatement
+  afficherScoreDevine(score, total, bons, faux);
+  
+  // Sauvegarder en BDD ensuite (sans attendre)
   db.from('sessions_invites')
     .update({
       degustation_resultat: {
@@ -550,8 +554,7 @@ function validerDevine() {
         vrais: devineVraisIngredients
       }
     })
-    .eq('id', inviteId)
-    .then(() => afficherScoreDevine(score, total, bons, faux));
+    .eq('id', inviteId);
 }
 
 function afficherScoreDevine(score, total, bons, faux) {
