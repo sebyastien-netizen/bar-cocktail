@@ -2791,7 +2791,21 @@ function switchSousOngletConc(panel, btn) {
 }
 
 async function chargerLexiqueConc() {
- let grimoireList = [];
+  const { data } = await db.from('connaissances_transversales')
+    .select('*')
+    .eq('type', 'lexique')
+    .order('titre');
+  const container = document.getElementById('conc-lexique-contenu');
+  if (!container || !data) return;
+  container.innerHTML = data.map(entry => `
+    <div class="lexique-carte">
+      <div class="lexique-titre">${entry.titre}</div>
+      <div class="lexique-contenu">${entry.contenu}</div>
+    </div>
+  `).join('');
+}
+
+let grimoireList = [];
 let filtreGrimoireAlcool = null;
 let filtreGrimoireCategorie = '';
 
