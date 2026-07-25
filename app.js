@@ -2787,6 +2787,7 @@ function switchSousOngletConc(panel, btn) {
   document.getElementById('conc-panel-grimoire').style.display = panel === 'grimoire' ? '' : 'none';
   document.getElementById('conc-panel-lexique').style.display = panel === 'lexique' ? '' : 'none';
   if (panel === 'lexique') chargerLexiqueConc();
+  if (panel === 'grimoire') chargerGrimoire();
 }
 
 async function chargerLexiqueConc() {
