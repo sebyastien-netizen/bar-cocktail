@@ -2733,7 +2733,7 @@ async function rechargerConseil() {
   if (btn) btn.style.opacity = '1';
 }
 let plantesList = [];
-let filtreHerboFamille = '';
+let filtreHerboLexique = false;
 let filtreHerboUsage = '';
 let plantesOuverte = null;
  
@@ -2771,28 +2771,36 @@ function renderHerboristerie(plantes) {
   const familleLabel = { aromatique: 'Aromatiques', fleur: 'Fleurs', epice: 'Épices', agrume: 'Agrumes', autre: 'Autres' };
   const usageLabel   = { decoration: 'Déco', infusion: 'Infusion', maceration: 'Macération', sirop: 'Sirop', muddle: 'Muddle', zeste: 'Zeste' };
  
-  container.innerHTML = `
+container.innerHTML = `
     <div class="herbo-filtres">
-      <button class="herbo-filtre-btn ${!filtreHerboFamille && !filtreHerboUsage ? 'active' : ''}"
-        onclick="filtreHerboFamille=''; filtreHerboUsage=''; renderHerboristerie(plantesList)">Toutes</button>
+      <button class="herbo-filtre-btn ${!filtreHerboFamille && !filtreHerboUsage && !filtreHerboLexique ? 'active' : ''}"
+        onclick="filtreHerboFamille=''; filtreHerboUsage=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">Plantes</button>
       ${familles.map(f => `
         <button class="herbo-filtre-btn ${filtreHerboFamille === f ? 'active' : ''}"
-          onclick="filtreHerboFamille='${f}'; filtreHerboUsage=''; renderHerboristerie(plantesList)">
+          onclick="filtreHerboFamille='${f}'; filtreHerboUsage=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">
           ${familleLabel[f] || f}
         </button>`).join('')}
       <span class="herbo-filtre-sep">|</span>
       ${usages.map(u => `
         <button class="herbo-filtre-btn herbo-filtre-usage ${filtreHerboUsage === u ? 'active' : ''}"
-          onclick="filtreHerboUsage='${u}'; filtreHerboFamille=''; renderHerboristerie(plantesList)">
+          onclick="filtreHerboUsage='${u}'; filtreHerboFamille=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">
           ${usageLabel[u] || u}
         </button>`).join('')}
+      <span class="herbo-filtre-sep">|</span>
+      <button class="herbo-filtre-btn ${filtreHerboLexique ? 'active' : ''}"
+        onclick="filtreHerboLexique=true; filtreHerboFamille=''; filtreHerboUsage=''; renderHerboristerie(plantesList)">
+        📖 Lexique
+      </button>
     </div>
- 
+
+    ${filtreHerboLexique ? `<div id="herbo-lexique-contenu" class="herbo-lexique"></div>` : `
     <div class="herbo-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune plante trouvée.</div>' : ''}
       ${liste.map(p => renderCartePlante(p)).join('')}
-    </div>
+    </div>`}
   `;
+
+  if (filtreHerboLexique) chargerLexique();
 }
  
 // =============================================
