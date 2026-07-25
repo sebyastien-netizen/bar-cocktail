@@ -2791,6 +2791,161 @@ function switchSousOngletConc(panel, btn) {
 }
 
 async function chargerLexiqueConc() {
+ let grimoireList = [];
+let filtreGrimoireAlcool = null;
+let filtreGrimoireCategorie = '';
+
+async function chargerGrimoire() {
+  const container = document.getElementById('grimoire-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-state">Chargement…</div>';
+  const { data } = await db.from('grimoire').select('*').order('nom');
+  if (!data) return;
+  grimoireList = data;
+  renderGrimoire(data);
+}
+
+function renderGrimoire(recettes) {
+  const container = document.getElementById('grimoire-container');
+  if (!container) return;
+
+  const categories = [...new Set(recettes.map(r => r.categorie).filter(Boolean))].sort();
+  let liste = recettes;
+  if (filtreGrimoireAlcool !== null) liste = liste.filter(r => r.avec_alcool === filtreGrimoireAlcool);
+  if (filtreGrimoireCategorie) liste = liste.filter(r => r.categorie === filtreGrimoireCategorie);
+
+  const catLabels = {
+    'maceration': 'Macération', 'infusion': 'Infusion', 'liqueur': 'Liqueur',
+    'creme-de': 'Crème de...', 'sirop': 'Sirop', 'cordial': 'Cordial',
+    'shrub': 'Shrub', 'teinture': 'Teinture', 'oleosaccharum': 'Oléosaccharum',
+    'kefir-de-fruits': 'Kéfir de fruits', 'bitter-maison': 'Bitter maison'
+  };
+
+  container.innerHTML = `
+    <div class="herbo-filtres">
+      <button class="herbo-filtre-btn ${filtreGrimoireAlcool === null && !filtreGrimoireCategorie ? 'active' : ''}"
+        onclick="filtreGrimoireAlcool=null; filtreGrimoireCategorie=''; renderGrimoire(grimoireList)">Tout</button>
+      <button class="herbo-filtre-btn ${filtreGrimoireAlcool === true ? 'active' : ''}"
+        onclick="filtreGrimoireAlcool=true; filtreGrimoireCategorie=''; renderGrimoire(grimoireList)">🍶 Avec alcool</button>
+      <button class="herbo-filtre-btn ${filtreGrimoireAlcool === false ? 'active' : ''}"
+        onclick="filtreGrimoireAlcool=false; filtreGrimoireCategorie=''; renderGrimoire(grimoireList)">🌿 Sans alcool</button>
+      <span class="herbo-filtre-sep">|</span>
+      ${categories.map(c => `
+        <button class="herbo-filtre-btn ${filtreGrimoireCategorie === c ? 'active' : ''}"
+          onclick="filtreGrimoireCategorie='${c}'; filtreGrimoireAlcool=null; renderGrimoire(grimoireList)">
+          ${catLabels[c] || c}
+        </button>`).join('')}
+    </div>
+    <div class="herbo-grille">
+      ${liste.length === 0 ? '<div class="empty-state">Aucune recette trouvée.</div>' : ''}
+      ${liste.map(r => `
+        <div class="herbo-carte" onclick="ouvrirFicheGrimoire('${r.id}')">
+          <div class="herbo-carte-top">
+            <span class="herbo-emoji">${r.avec_alcool ? '🍶' : '🌿'}</span>
+            <div class="herbo-carte-info">
+              <div class="herbo-nom">${r.nom}</div>
+              <div class="herbo-latin">${catLabels[r.categorie] || r.categorie}</div>
+            </div>
+            <span class="herbo-saison ${r.avec_alcool ? 'herbo-saison--ok' : 'herbo-saison--off'}">
+              ${r.avec_alcool ? '🍸 Alcool' : '🥤 Sans'}
+            </span>
+          </div>
+          <div class="herbo-profil">${r.description ? r.description.substring(0, 80) + '…' : ''}</div>
+          <div class="herbo-usages">
+            ${r.duree_jours ? `<span class="herbo-usage-tag">⏱ ${r.duree_jours}j</span>` : ''}
+            ${r.rendement_cl ? `<span class="herbo-usage-tag">🧪 ${r.rendement_cl}cl</span>` : ''}
+            ${r.cout_estime ? `<span class="herbo-usage-tag">💶 ~${r.cout_estime}€</span>` : ''}
+            ${r.saison_ideale ? `<span class="herbo-usage-tag">📅 ${r.saison_ideale.substring(0, 20)}</span>` : ''}
+          </div>
+          ${r.avertissement ? `<div class="plante-fuir" style="margin-top:8px;font-size:0.75rem">${r.avertissement.substring(0, 60)}…</div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function ouvrirFicheGrimoire(id) {
+  const r = grimoireList.find(x => x.id === id);
+  if (!r) return;
+
+  const catLabels = {
+    'maceration': 'Macération', 'infusion': 'Infusion', 'liqueur': 'Liqueur',
+    'creme-de': 'Crème de...', 'sirop': 'Sirop', 'cordial': 'Cordial',
+    'shrub': 'Shrub', 'teinture': 'Teinture', 'oleosaccharum': 'Oléosaccharum',
+    'kefir-de-fruits': 'Kéfir de fruits', 'bitter-maison': 'Bitter maison'
+  };
+
+  document.querySelector('.grimoire-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">${r.avec_alcool ? '🍶' : '🌿'}</span>
+      <div>
+        <h2 class="fiche-titre">${r.nom}</h2>
+        <div class="herbo-latin">${catLabels[r.categorie] || r.categorie} · ${r.avec_alcool ? 'Avec alcool' : 'Sans alcool'}</div>
+      </div>
+    </div>
+
+    ${r.avertissement ? `
+    <div class="avertissement-danger" style="margin-bottom:16px">
+      ${r.avertissement}
+    </div>` : ''}
+
+    <div class="plante-section">
+      <h3>Description</h3>
+      <p>${r.description || '—'}</p>
+    </div>
+
+    <div class="plante-section">
+      <h3>Informations pratiques</h3>
+      <div class="plante-entretien-grid">
+        ${r.duree_jours ? `<div class="plante-entretien-item"><span class="plante-entretien-icon">⏱</span><div><div class="plante-entretien-label">Durée</div><div class="plante-entretien-val">${r.duree_jours} jours</div></div></div>` : ''}
+        ${r.rendement_cl ? `<div class="plante-entretien-item"><span class="plante-entretien-icon">🧪</span><div><div class="plante-entretien-label">Rendement</div><div class="plante-entretien-val">${r.rendement_cl}cl</div></div></div>` : ''}
+        ${r.cout_estime ? `<div class="plante-entretien-item"><span class="plante-entretien-icon">💶</span><div><div class="plante-entretien-label">Coût estimé</div><div class="plante-entretien-val">~${r.cout_estime}€</div></div></div>` : ''}
+        ${r.base_volume_cl ? `<div class="plante-entretien-item"><span class="plante-entretien-icon">🍾</span><div><div class="plante-entretien-label">Volume base</div><div class="plante-entretien-val">${r.base_volume_cl}cl</div></div></div>` : ''}
+      </div>
+    </div>
+
+    ${r.ratio_sucre ? `
+    <div class="plante-section">
+      <h3>Ratio sucre</h3>
+      <p>${r.ratio_sucre}</p>
+    </div>` : ''}
+
+    ${r.saison_ideale ? `
+    <div class="plante-section">
+      <h3>📅 Saison idéale</h3>
+      <p>${r.saison_ideale}</p>
+    </div>` : ''}
+
+    ${r.conservation_duree ? `
+    <div class="plante-section">
+      <h3>Conservation</h3>
+      <p><strong>${r.conservation_duree}</strong> — ${r.conservation_type || ''}</p>
+    </div>` : ''}
+
+    ${r.notes_bartender ? `
+    <div class="plante-section">
+      <h3>🍸 Notes bartender</h3>
+      <p class="plante-notes-bar">${r.notes_bartender}</p>
+    </div>` : ''}
+
+    <div class="plante-section" style="margin-top:20px">
+      <button class="btn-primary" style="width:100%" onclick="lancerConcoction('${r.id}')">
+        ⚗️ Lancer cette recette → Concoctions
+      </button>
+    </div>
+  `;
+
+  afficherModal('modal-fiche-grimoire');
+}
+
+function lancerConcoction(grimoireId) {
+  const r = grimoireList.find(x => x.id === grimoireId);
+  if (!r) return;
+  fermerModal('modal-fiche-grimoire');
+  switchSousOngletConc('en-cours', document.querySelector('.conc-sous-onglet'));
+  // Pré-remplir le modal ajout concoction
+  ouvrirModalAjoutConcoction(r);
+}
   const { data } = await db.from('connaissances_transversales')
     .select('*')
     .eq('type', 'lexique')
