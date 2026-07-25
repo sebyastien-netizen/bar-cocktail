@@ -2787,6 +2787,24 @@ function renderHerboristerie(plantes) {
   `;
   if (filtreHerboLexique) chargerLexique();
 }
+
+async function chargerLexique() {
+  const { data } = await db.from('connaissances_transversales')
+    .select('*')
+    .eq('type', 'lexique')
+    .order('titre');
+  
+  const container = document.getElementById('herbo-lexique-contenu');
+  if (!container || !data) return;
+
+  container.innerHTML = data.map(entry => `
+    <div class="lexique-carte">
+      <div class="lexique-titre">${entry.titre}</div>
+      <div class="lexique-contenu">${entry.contenu}</div>
+    </div>
+  `).join('');
+
+}
  
 // =============================================
 // CARTE PLANTE
