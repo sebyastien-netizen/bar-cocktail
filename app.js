@@ -2756,15 +2756,20 @@ async function chargerHerboristerie() {
 // =============================================
 // RENDU LISTE
 // =============================================
- 
-function renderHerboristerie(plantes) {
+let filtreHerboFamille = '';
+let filtreHerboUsage = '';
+let filtreHerboLexique = false;
+let plantesList = [];
+let plantesOuverte = null;
+
+function renderHerboristerie(plantes) { 
   const container = document.getElementById('herboristerie-container');
   if (!container) return;
  
   const familles = [...new Set(plantes.map(p => p.famille).filter(Boolean))];
   const usages   = [...new Set(plantes.flatMap(p => p.usages_bar || []))].sort();
  
-  let liste = plantes;
+let liste = plantes;
   if (filtreHerboFamille) liste = liste.filter(p => p.famille === filtreHerboFamille);
   if (filtreHerboUsage)   liste = liste.filter(p => p.usages_bar?.includes(filtreHerboUsage));
  
