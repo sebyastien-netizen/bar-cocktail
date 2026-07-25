@@ -2734,7 +2734,6 @@ async function rechargerConseil() {
 }
 let filtreHerboFamille = '';
 let filtreHerboUsage = '';
-let filtreHerboLexique = false;
 let plantesList = [];
 let plantesOuverte = null;
 
