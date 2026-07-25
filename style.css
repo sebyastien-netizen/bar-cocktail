@@ -2846,3 +2846,26 @@ main { overflow-x: hidden; }
   color: var(--text-secondary);
   line-height: 1.6;
 }
+.conc-sous-onglets {
+  display: flex;
+  gap: 8px;
+  padding: 0 1rem 1rem;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.conc-sous-onglet {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 0.5px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.conc-sous-onglet.active {
+  background: var(--bg-accent);
+  color: var(--text-accent);
+  border-color: var(--border-accent);
+}
