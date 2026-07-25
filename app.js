@@ -2732,10 +2732,13 @@ async function rechargerConseil() {
   }
   if (btn) btn.style.opacity = '1';
 }
-let plantesList = [];
-let filtreHerboLexique = false;
+let filtreHerboFamille = '';
 let filtreHerboUsage = '';
+let filtreHerboLexique = false;
+let plantesList = [];
 let plantesOuverte = null;
+
+function renderHerboristerie(plantes) {
  
 // =============================================
 // CHARGEMENT
@@ -2756,11 +2759,6 @@ async function chargerHerboristerie() {
 // =============================================
 // RENDU LISTE
 // =============================================
-let filtreHerboFamille = '';
-let filtreHerboUsage = '';
-let filtreHerboLexique = false;
-let plantesList = [];
-let plantesOuverte = null;
 
 function renderHerboristerie(plantes) { 
   const container = document.getElementById('herboristerie-container');
