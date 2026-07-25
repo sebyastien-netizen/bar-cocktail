@@ -2760,50 +2760,49 @@ function renderHerboristerie(plantes) {
   const usageLabel   = { decoration: 'Déco', infusion: 'Infusion', maceration: 'Macération', sirop: 'Sirop', muddle: 'Muddle', zeste: 'Zeste' };
   container.innerHTML = `
     <div class="herbo-filtres">
-      <button class="herbo-filtre-btn ${!filtreHerboFamille && !filtreHerboUsage && !filtreHerboLexique ? 'active' : ''}"
-        onclick="filtreHerboFamille=''; filtreHerboUsage=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">Plantes</button>
+      <button class="herbo-filtre-btn ${!filtreHerboFamille && !filtreHerboUsage ? 'active' : ''}"
+        onclick="filtreHerboFamille=''; filtreHerboUsage=''; renderHerboristerie(plantesList)">Toutes</button>
       ${familles.map(f => `
         <button class="herbo-filtre-btn ${filtreHerboFamille === f ? 'active' : ''}"
-          onclick="filtreHerboFamille='${f}'; filtreHerboUsage=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">
+          onclick="filtreHerboFamille='${f}'; filtreHerboUsage=''; renderHerboristerie(plantesList)">
           ${familleLabel[f] || f}
         </button>`).join('')}
       <span class="herbo-filtre-sep">|</span>
       ${usages.map(u => `
         <button class="herbo-filtre-btn herbo-filtre-usage ${filtreHerboUsage === u ? 'active' : ''}"
-          onclick="filtreHerboUsage='${u}'; filtreHerboFamille=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">
+          onclick="filtreHerboUsage='${u}'; filtreHerboFamille=''; renderHerboristerie(plantesList)">
           ${usageLabel[u] || u}
         </button>`).join('')}
-      <span class="herbo-filtre-sep">|</span>
-      <button class="herbo-filtre-btn ${filtreHerboLexique ? 'active' : ''}"
-        onclick="filtreHerboLexique=true; filtreHerboFamille=''; filtreHerboUsage=''; renderHerboristerie(plantesList)">
-        📖 Lexique
-      </button>
     </div>
-    ${filtreHerboLexique ? `<div id="herbo-lexique-contenu" class="herbo-lexique"></div>` : `
     <div class="herbo-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune plante trouvée.</div>' : ''}
       ${liste.map(p => renderCartePlante(p)).join('')}
-    </div>`}
+    </div>
   `;
-  if (filtreHerboLexique) chargerLexique();
 }
 
-async function chargerLexique() {
+function switchSousOngletConc(panel, btn) {
+  document.querySelectorAll('.conc-sous-onglet').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('conc-panel-en-cours').style.display = panel === 'en-cours' ? '' : 'none';
+  document.getElementById('conc-panel-grimoire').style.display = panel === 'grimoire' ? '' : 'none';
+  document.getElementById('conc-panel-lexique').style.display = panel === 'lexique' ? '' : 'none';
+  if (panel === 'lexique') chargerLexiqueConc();
+}
+
+async function chargerLexiqueConc() {
   const { data } = await db.from('connaissances_transversales')
     .select('*')
     .eq('type', 'lexique')
     .order('titre');
-  
-  const container = document.getElementById('herbo-lexique-contenu');
+  const container = document.getElementById('conc-lexique-contenu');
   if (!container || !data) return;
-
   container.innerHTML = data.map(entry => `
     <div class="lexique-carte">
       <div class="lexique-titre">${entry.titre}</div>
       <div class="lexique-contenu">${entry.contenu}</div>
     </div>
   `).join('');
-
 }
  
 // =============================================
