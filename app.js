@@ -2957,9 +2957,10 @@ function lancerConcoction(grimoireId) {
   if (!r) return;
   fermerModal('modal-fiche-grimoire');
   switchSousOngletConc('en-cours', document.querySelector('.conc-sous-onglet'));
-  // Pré-remplir le modal ajout concoction
   ouvrirModalAjoutConcoction(r);
 }
+
+async function chargerLexiqueConc() {
   const { data } = await db.from('connaissances_transversales')
     .select('*')
     .eq('type', 'lexique')
