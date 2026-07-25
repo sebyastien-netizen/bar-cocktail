@@ -88,33 +88,24 @@
 <section id="section-sessions" class="tab-section hidden">
   <div id="sessions-container"></div>
 </section>
-      <!-- CONCOCTIONS -->
-      <div id="section-concoctions" class="tab-section hidden">
-        <div class="cave-header"><h2>⚗️ Concoctions</h2></div>
-        <div id="concoctions-container"><div class="loading-state">Chargement…</div></div>
-      </div>
-
-      <!-- HERBORISTERIE -->
-      <div id="section-herboristerie" class="tab-section hidden">
-        <div class="cave-header"><h2>🌿 Herboristerie</h2></div>
-        <div id="herboristerie-container"><div class="loading-state">Chargement…</div></div>
-      </div>
-
-      <!-- ÉCOLE -->
-      <div id="section-ecole" class="tab-section hidden">
-        <div class="cave-header"><h2>🎓 École</h2></div>
-        <div id="ecole-container"><div class="loading-state">Chargement…</div></div>
-      </div>
-
-      <!-- À ACHETER -->
-      <div id="section-aacheter" class="tab-section hidden">
-        <div class="cave-header"><h2>🛒 À acheter</h2></div>
-        <div id="aacheter-container"><div class="loading-state">Chargement…</div></div>
-      </div>
-
-    </main>
+    <!-- CONCOCTIONS -->
+<div id="section-concoctions" class="tab-section hidden">
+  <div class="cave-header"><h2>⚗️ Concoctions</h2></div>
+  <div class="conc-sous-onglets">
+    <button class="conc-sous-onglet active" onclick="switchSousOngletConc('en-cours', this)">⏳ En cours</button>
+    <button class="conc-sous-onglet" onclick="switchSousOngletConc('grimoire', this)">📖 Grimoire</button>
+    <button class="conc-sous-onglet" onclick="switchSousOngletConc('lexique', this)">🔤 Lexique</button>
   </div>
-
+  <div id="conc-panel-en-cours">
+    <div id="concoctions-container"><div class="loading-state">Chargement…</div></div>
+  </div>
+  <div id="conc-panel-grimoire" style="display:none">
+    <div class="empty-state">Grimoire — à venir</div>
+  </div>
+  <div id="conc-panel-lexique" style="display:none">
+    <div id="conc-lexique-contenu"></div>
+  </div>
+</div>
   <!-- MODAL : FICHE RECETTE -->
   <div class="modal-overlay modal-large" id="modal-fiche-recette">
     <div class="modal modal-fiche">
