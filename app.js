@@ -2738,43 +2738,27 @@ let filtreHerboLexique = false;
 let plantesList = [];
 let plantesOuverte = null;
 
-function renderHerboristerie(plantes) {
- 
-// =============================================
-// CHARGEMENT
-// =============================================
- 
 async function chargerHerboristerie() {
   const container = document.getElementById('herboristerie-container');
   if (!container) return;
   container.innerHTML = '<div class="loading-state">Chargement…</div>';
- 
   const { data: plantes } = await db.from('plantes').select('*').order('nom');
   if (!plantes) return;
- 
   plantesList = plantes;
   renderHerboristerie(plantes);
 }
- 
-// =============================================
-// RENDU LISTE
-// =============================================
 
-function renderHerboristerie(plantes) { 
+function renderHerboristerie(plantes) {
   const container = document.getElementById('herboristerie-container');
   if (!container) return;
- 
   const familles = [...new Set(plantes.map(p => p.famille).filter(Boolean))];
   const usages   = [...new Set(plantes.flatMap(p => p.usages_bar || []))].sort();
- 
-let liste = plantes;
+  let liste = plantes;
   if (filtreHerboFamille) liste = liste.filter(p => p.famille === filtreHerboFamille);
   if (filtreHerboUsage)   liste = liste.filter(p => p.usages_bar?.includes(filtreHerboUsage));
- 
   const familleLabel = { aromatique: 'Aromatiques', fleur: 'Fleurs', epice: 'Épices', agrume: 'Agrumes', autre: 'Autres' };
   const usageLabel   = { decoration: 'Déco', infusion: 'Infusion', maceration: 'Macération', sirop: 'Sirop', muddle: 'Muddle', zeste: 'Zeste' };
- 
-container.innerHTML = `
+  container.innerHTML = `
     <div class="herbo-filtres">
       <button class="herbo-filtre-btn ${!filtreHerboFamille && !filtreHerboUsage && !filtreHerboLexique ? 'active' : ''}"
         onclick="filtreHerboFamille=''; filtreHerboUsage=''; filtreHerboLexique=false; renderHerboristerie(plantesList)">Plantes</button>
@@ -2795,14 +2779,12 @@ container.innerHTML = `
         📖 Lexique
       </button>
     </div>
-
     ${filtreHerboLexique ? `<div id="herbo-lexique-contenu" class="herbo-lexique"></div>` : `
     <div class="herbo-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune plante trouvée.</div>' : ''}
       ${liste.map(p => renderCartePlante(p)).join('')}
     </div>`}
   `;
-
   if (filtreHerboLexique) chargerLexique();
 }
  
