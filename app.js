@@ -2918,15 +2918,44 @@ function ouvrirFichePlante(id) {
       </div>
     </div>` : ''}
  
-    ${p.signes_problemes?.length ? `
+   ${p.signes_problemes?.length ? `
     <div class="plante-section">
       <h3>Signes de problème</h3>
       <ul class="plante-problemes">
         ${p.signes_problemes.map(s => `<li>${s}</li>`).join('')}
       </ul>
     </div>` : ''}
+
+    ${p.format_achat ? `
+    <div class="plante-section">
+      <h3>🛒 Format d'achat recommandé</h3>
+      <p>${p.format_achat}</p>
+      ${p.fourchette_prix ? `<div class="plante-prix">💶 ${p.fourchette_prix}</div>` : ''}
+      ${p.sites_recommandes?.length ? `
+      <div class="plante-sites">
+        <div class="plante-sites-titre">Où acheter :</div>
+        ${p.sites_recommandes.map(s => `<span class="plante-site-tag">${s}</span>`).join('')}
+      </div>` : ''}
+    </div>` : ''}
+
+    ${p.format_a_fuir ? `
+    <div class="plante-section">
+      <h3>⚠️ À éviter</h3>
+      <p class="plante-fuir">${p.format_a_fuir}</p>
+    </div>` : ''}
+
+   ${p.categories_preparation?.length ? `
+    <div class="plante-section">
+      <h3>🧪 Préparations possibles</h3>
+      <div class="plante-preparations">
+        ${p.categories_preparation.map(cat => `<span class="plante-prep-tag">${cat}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;font-size:0.82rem;color:var(--text-secondary);">
+        → Grimoire (à venir) : recettes détaillées pour chaque préparation
+      </div>
+    </div>` : ''}
   `;
- 
+
   afficherModal('modal-fiche-plante');
 }
 
