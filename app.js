@@ -3134,7 +3134,9 @@ function ouvrirFichePlante(id) {
         ${p.categories_preparation.map(cat => `<span class="plante-prep-tag">${cat}</span>`).join('')}
       </div>
 <div style="margin-top:12px;">
-        <button class="btn-primary" style="width:100%" onclick="onclick="voirPreparationsGrimoire(this)"  data-categories='${JSON.stringify(p.categories_preparation || [])}'(${JSON.stringify(p.categories_preparation)})">
+        <button class="btn-primary" style="width:100%" 
+          data-categories='${JSON.stringify(p.categories_preparation || [])}'
+          onclick="voirPreparationsGrimoire(this)">
           📖 Voir les recettes dans le Grimoire
         </button>
       </div>
@@ -3143,14 +3145,12 @@ function ouvrirFichePlante(id) {
 
   afficherModal('modal-fiche-plante');
 }
-function voirPreparationsGrimoire(categories) {
+function voirPreparationsGrimoire(btn) {
+  const categories = JSON.parse(btn.dataset.categories || '[]');
   fermerModal('modal-fiche-plante');
-  // Aller sur l'onglet Concoctions
   changerOnglet('concoctions');
-  // Activer le sous-onglet Grimoire
   const btnGrimoire = document.querySelectorAll('.conc-sous-onglet')[1];
   switchSousOngletConc('grimoire', btnGrimoire);
-  // Filtrer par première catégorie de la plante
   setTimeout(() => {
     if (categories && categories.length > 0) {
       filtreGrimoireCategorie = categories[0];
