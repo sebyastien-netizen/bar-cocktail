@@ -144,7 +144,15 @@ const container = document.getElementById('cave-container');
 // Sauvegarder la valeur de recherche avant de vider
 const searchVal = document.getElementById('search-input')?.value || filtreRecherche;
 container.innerHTML = '';
- 
+
+// Search bar créée en premier — avant tout autre rendu
+const searchBar = document.createElement('div');
+searchBar.className = 'search-bar';
+searchBar.innerHTML = `
+  <input type="text" id="search-input" placeholder="Rechercher un alcool ou ingrédient…" oninput="onSearch(this.value)" value="${searchVal}">
+  <button class="btn btn-outline" onclick="ouvrirModalAjout()">+ Ajouter</button>
+`;
+container.appendChild(searchBar); 
   renderConservations();
  
   const navCats = document.createElement('div');
