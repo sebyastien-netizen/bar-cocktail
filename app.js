@@ -3040,12 +3040,105 @@ function ouvrirFicheGrimoire(id) {
   afficherModal('modal-fiche-grimoire');
 }
 
+let configGrimoireCourant = null;
+let configVolume = 50;
+let configSucre = 'standard';
+
 function lancerConcoction(grimoireId) {
   const r = grimoireList.find(x => x.id === grimoireId);
   if (!r) return;
   fermerModal('modal-fiche-grimoire');
+  ouvrirConfigurateur(r);
+}
+
+function ouvrirConfigurateur(grimoire) {
+  configGrimoireCourant = grimoire;
+  configVolume = grimoire.base_volume_cl || 70;
+  configSucre = 'standard';
+
+  document.getElementById('config-grimoire-titre').textContent = grimoire.nom;
+  document.getElementById('config-alcool-base').value = '';
+  document.getElementById('config-date-debut').value = new Date().toISOString().split('T')[0];
+
+  // Sélectionner le bon bouton volume
+  document.querySelectorAll('#config-volume-btns .config-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.volume) === configVolume);
+  });
+
+  // Ajouter le volume de base si pas dans les options
+  const volumes = [50, 70, 100, 150];
+  if (!volumes.includes(configVolume)) {
+    const btn = document.createElement('button');
+    btn.className = 'config-btn active';
+    btn.dataset.volume = configVolume;
+    btn.textContent = configVolume + 'cl';
+    btn.onclick = function() { selectConfigVolume(this); };
+    document.getElementById('config-volume-btns').appendChild(btn);
+  }
+
+  mettreAJourRecap();
+  afficherModal('modal-configurateur-grimoire');
+}
+
+function selectConfigVolume(btn) {
+  document.querySelectorAll('#config-volume-btns .config-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  configVolume = parseInt(btn.dataset.volume);
+  mettreAJourRecap();
+}
+
+function selectConfigSucre(btn) {
+  document.querySelectorAll('#config-sucre-btns .config-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  configSucre = btn.dataset.sucre;
+  mettreAJourRecap();
+}
+
+function mettreAJourRecap() {
+  const r = configGrimoireCourant;
+  if (!r) return;
+
+  const ratioSucreLabel = { leger: '100g/L', standard: r.ratio_sucre || '200g/L', riche: '350g/L' };
+  const sucreTotal = Math.round(configVolume * parseFloat(ratioSucreLabel[configSucre]) / 100);
+
+  document.getElementById('config-recap').innerHTML = `
+    <strong>Récapitulatif</strong><br>
+    Volume : ${configVolume}cl<br>
+    ${r.avec_alcool ? `Alcool de base : ${document.getElementById('config-alcool-base').value || r.base_volume_cl ? configVolume + 'cl' : '—'}<br>` : ''}
+    ${r.ratio_sucre ? `Sucre estimé : ~${sucreTotal}g (${ratioSucreLabel[configSucre]})<br>` : ''}
+    Durée : ${r.duree_jours || '—'} jours<br>
+    Rendement estimé : ~${configVolume}cl
+  `;
+}
+
+async function validerConfigurateur() {
+  const r = configGrimoireCourant;
+  if (!r) return;
+
+  const alcoolBase = document.getElementById('config-alcool-base').value.trim();
+  const dateDebut = document.getElementById('config-date-debut').value;
+  const ratioSucreLabel = { leger: '100g/L', standard: r.ratio_sucre || '200g/L', riche: '350g/L' };
+
+  // Enrichir le grimoire avec la config
+  const grimoireConfig = {
+    ...r,
+    nom: r.nom,
+    description: r.description,
+    notes_bartender: [
+      r.notes_bartender || '',
+      alcoolBase ? `Alcool de base choisi : ${alcoolBase}` : '',
+      `Volume configuré : ${configVolume}cl`,
+      `Degré sucre : ${configSucre} (${ratioSucreLabel[configSucre]})`
+    ].filter(Boolean).join('\n'),
+    base_volume_cl: configVolume,
+    duree_jours: r.duree_jours
+  };
+
+  fermerModal('modal-configurateur-grimoire');
   switchSousOngletConc('en-cours', document.querySelector('.conc-sous-onglet'));
-  ouvrirModalAjoutConcoction(r);
+  
+  // Passer la date de début au modal ajout
+  await ouvrirModalAjoutConcoction(grimoireConfig, dateDebut);
 }
 
 async function chargerLexiqueConc() {
