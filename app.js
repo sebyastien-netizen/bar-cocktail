@@ -305,6 +305,12 @@ function onSearch(val) {
   filtreRecherche = val.toLowerCase();
   if (document.getElementById('modal-ajout').classList.contains('visible')) return;
   renderCave();
+  // Remettre le focus sur la search bar après le re-render
+  const input = document.getElementById('search-input');
+  if (input) {
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
 }
 function filtrerItems(items) {
   if (!filtreRecherche) return items;
