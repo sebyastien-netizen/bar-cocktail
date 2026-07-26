@@ -3134,7 +3134,7 @@ function ouvrirFichePlante(id) {
         ${p.categories_preparation.map(cat => `<span class="plante-prep-tag">${cat}</span>`).join('')}
       </div>
 <div style="margin-top:12px;">
-        <button class="btn-primary" style="width:100%" onclick="voirPreparationsGrimoire(${JSON.stringify(p.categories_preparation)})">
+        <button class="btn-primary" style="width:100%" onclick="onclick="voirPreparationsGrimoire(this)"  data-categories='${JSON.stringify(p.categories_preparation || [])}'(${JSON.stringify(p.categories_preparation)})">
           📖 Voir les recettes dans le Grimoire
         </button>
       </div>
