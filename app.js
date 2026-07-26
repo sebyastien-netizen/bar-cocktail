@@ -2311,8 +2311,8 @@ renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, 
 async function chargerSessions() {
   document.getElementById('sessions-container').innerHTML = '<p style="padding:1rem;color:var(--text-muted)">Chargement sessions...</p>';
 }
-function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil }) {
-  const container = document.getElementById('dashboard-container');
+function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations, plantesData, grimoireData }) {
+ const container = document.getElementById('dashboard-container');
   const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
   const categorieClass = { technique: 'badge-3', gestion: 'badge-ok', service: 'badge-1' };
  
@@ -2431,7 +2431,9 @@ const nbRefs = (cave?.categories || []).reduce((n, c) => n + c.items.filter(i =>
  
       </div>
     </div>
-  `;
+ ${renderDashboardSaison(plantesData || [], grimoireData || [])}
+    ${renderDashboardRealisations(realisations || [])}
+    `;
 }
 
 // =============================================
