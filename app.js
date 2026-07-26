@@ -174,6 +174,8 @@ function renderCave() {
   `;
   document.getElementById('cave-container').appendChild(prixBanner);
  
+// Ne recréer la search bar que si elle n'existe pas déjà
+if (!document.getElementById('search-input')) {
   const searchBar = document.createElement('div');
   searchBar.className = 'search-bar';
   searchBar.innerHTML = `
@@ -181,6 +183,10 @@ function renderCave() {
     <button class="btn btn-outline" onclick="ouvrirModalAjout()">+ Ajouter</button>
   `;
   container.appendChild(searchBar);
+} else {
+  // Juste mettre à jour la valeur sans recréer
+  document.getElementById('search-input').value = filtreRecherche;
+}
  
   cave.categories.forEach(cat => {
     if (cat.id.startsWith('a-acheter')) return;
