@@ -3133,13 +3133,31 @@ function ouvrirFichePlante(id) {
       <div class="plante-preparations">
         ${p.categories_preparation.map(cat => `<span class="plante-prep-tag">${cat}</span>`).join('')}
       </div>
-      <div style="margin-top:10px;font-size:0.82rem;color:var(--text-secondary);">
-        → Grimoire (à venir) : recettes détaillées pour chaque préparation
+<div style="margin-top:12px;">
+        <button class="btn-primary" style="width:100%" onclick="voirPreparationsGrimoire(${JSON.stringify(p.categories_preparation)})">
+          📖 Voir les recettes dans le Grimoire
+        </button>
       </div>
     </div>` : ''}
   `;
 
   afficherModal('modal-fiche-plante');
+}
+function voirPreparationsGrimoire(categories) {
+  fermerModal('modal-fiche-plante');
+  // Aller sur l'onglet Concoctions
+  changerOnglet('concoctions');
+  // Activer le sous-onglet Grimoire
+  const btnGrimoire = document.querySelectorAll('.conc-sous-onglet')[1];
+  switchSousOngletConc('grimoire', btnGrimoire);
+  // Filtrer par première catégorie de la plante
+  setTimeout(() => {
+    if (categories && categories.length > 0) {
+      filtreGrimoireCategorie = categories[0];
+      filtreGrimoireAlcool = null;
+      renderGrimoire(grimoireList);
+    }
+  }, 300);
 }
 
 let ecoleData = { alcools: [], techniques: [], materiels: [], lexique: [] };
