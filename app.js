@@ -634,7 +634,7 @@ function fermerPanneauJournal() {
   document.getElementById('panneau-journal-overlay').classList.remove('visible');
 }
 function renderJournalRecette(realisations) {
-  if (!) return `
+  if (!realisations || realisations.length === 0) return ` `
     <div class="journal-vide">Aucune réalisation enregistrée.</div>`;
   return realisations.map(r => {
     let noteObj = {};
