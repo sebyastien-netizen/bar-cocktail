@@ -2966,9 +2966,16 @@ function renderGrimoire(recettes) {
   `;
 }
 
-function ouvrirFicheGrimoire(id) {
+async function ouvrirFicheGrimoire(id) {
   const r = grimoireList.find(x => x.id === id);
   if (!r) return;
+
+  // Charger les ingrédients avec prix
+  const { data: ingredients } = await db
+    .from('grimoire_ingredients')
+    .select('*, ingredients_prix(prix_unitaire, unite)')
+    .eq('grimoire_id', id)
+    .order('ordre');
 
   const catLabels = {
     'maceration': 'Macération', 'infusion': 'Infusion', 'liqueur': 'Liqueur',
@@ -3030,6 +3037,41 @@ function ouvrirFicheGrimoire(id) {
       <p class="plante-notes-bar">${r.notes_bartender}</p>
     </div>` : ''}
 
+${ingredients && ingredients.length > 0 ? (() => {
+      const coutMaison = ingredients.reduce((total, ing) => {
+        const prix = ing.ingredients_prix?.prix_unitaire || 0;
+        return total + (prix * (ing.quantite || 0));
+      }, 0);
+      const coutCl = r.base_volume_cl ? (coutMaison / r.base_volume_cl).toFixed(2) : null;
+      const economie = r.prix_marche_ref ? r.prix_marche_ref - coutMaison : null;
+      return `
+        <div class="plante-section">
+          <h3>💶 Coût de revient</h3>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+            ${ingredients.map(ing => `
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                <span style="color:var(--text-secondary)">${ing.nom} (${ing.quantite} ${ing.unite})</span>
+                <span>${ing.ingredients_prix ? (ing.ingredients_prix.prix_unitaire * ing.quantite).toFixed(2) + '€' : '—'}</span>
+              </div>`).join('')}
+            <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between;font-weight:600;">
+              <span>Total maison (${r.base_volume_cl || '?'}cl)</span>
+              <span>${coutMaison.toFixed(2)}€</span>
+            </div>
+            ${coutCl ? `<div style="font-size:0.78rem;color:var(--text-secondary)">Soit ${coutCl}€/cl</div>` : ''}
+          </div>
+          ${r.prix_marche_ref ? `
+          <div style="background:var(--bg-success);border-radius:8px;padding:10px 12px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+              <span>Version achetée (${r.prix_marche_volume_cl || '?'}cl)</span>
+              <span>${r.prix_marche_ref.toFixed(2)}€</span>
+            </div>
+            ${economie !== null ? `
+            <div style="font-weight:700;color:var(--text-success);font-size:0.95rem;">
+              ${economie > 0 ? '✅ Économie : ' + economie.toFixed(2) + '€' : '⚠️ Revient plus cher de ' + Math.abs(economie).toFixed(2) + '€'}
+            </div>` : ''}
+          </div>` : ''}
+        </div>`;
+    })() : ''}
     <div class="plante-section" style="margin-top:20px">
       <button class="btn-primary" style="width:100%" onclick="lancerConcoction('${r.id}')">
         ⚗️ Lancer cette recette → Concoctions
