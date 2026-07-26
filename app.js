@@ -1781,15 +1781,17 @@ async function supprimerConcoction(concId) {
   renderConcoctions();
 }
  
-function ouvrirModalAjoutConcoction() {
+function ouvrirModalAjoutConcoction(grimoire) {
   const modal = document.getElementById('modal-ajout-concoction');
   if (!modal) return;
-  modal.querySelector('#input-conc-nom').value = '';
-  modal.querySelector('#input-conc-type').value = 'batch';
-  modal.querySelector('#input-conc-desc').value = '';
+
+  // Préremplir depuis le Grimoire si fourni
+  modal.querySelector('#input-conc-nom').value = grimoire ? grimoire.nom : '';
+  modal.querySelector('#input-conc-type').value = grimoire ? (grimoire.avec_alcool ? 'maceration' : 'infusion') : 'batch';
+  modal.querySelector('#input-conc-desc').value = grimoire ? (grimoire.description || '') : '';
   modal.querySelector('#input-conc-date').value = new Date().toISOString().split('T')[0];
-  modal.querySelector('#input-conc-notes').value = '';
- 
+  modal.querySelector('#input-conc-notes').value = grimoire ? (grimoire.notes_bartender || '') : '';
+
   modal.querySelector('#btn-sauver-concoction').onclick = async () => {
     const nom   = modal.querySelector('#input-conc-nom').value.trim();
     const type  = modal.querySelector('#input-conc-type').value;
@@ -1797,18 +1799,19 @@ function ouvrirModalAjoutConcoction() {
     const date  = modal.querySelector('#input-conc-date').value;
     const notes = modal.querySelector('#input-conc-notes').value.trim();
     if (!nom) return;
- 
+
     const id = 'custom-conc-' + Date.now();
     const { data } = await db.from('concoctions').insert({
       id, user_id: currentUser.id, nom, type, description: desc,
-      date_creation: date, statut: 'en_cours', notes
+      date_creation: date, statut: 'en_cours', notes,
+      grimoire_id: grimoire ? grimoire.id : null
     }).select().single();
- 
+
     if (data) concoctions.unshift({ ...data, etapes: [] });
     fermerModal('modal-ajout-concoction');
     renderConcoctions();
   };
- 
+
   afficherModal('modal-ajout-concoction');
 }
  
