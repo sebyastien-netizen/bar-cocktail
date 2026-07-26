@@ -3669,7 +3669,79 @@ function renderDashboardSaison(plantesData, grimoireData) {
       </div>
     </div>`;
 }
- 
+ async function ouvrirFicheSaisonniere(planteId) {
+  let plante = plantesList.find(p => p.id === planteId);
+  if (!plante) {
+    const { data } = await db.from('plantes').select('*').eq('id', planteId).single();
+    if (!data) return;
+    plante = data;
+  }
+
+  const recettesAssociees = grimoireList.filter(g =>
+    g.plante_ids?.includes(plante.id) ||
+    (plante.categories_preparation || []).some(cat => g.categorie === cat)
+  );
+
+  const catLabels = {
+    'maceration': 'Macération', 'infusion': 'Infusion', 'liqueur': 'Liqueur',
+    'creme-de': 'Crème de...', 'sirop': 'Sirop', 'cordial': 'Cordial',
+    'shrub': 'Shrub', 'teinture': 'Teinture', 'oleosaccharum': 'Oléosaccharum'
+  };
+
+  const moisNoms = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const moisActuel = new Date().getMonth() + 1;
+
+  document.querySelector('.grimoire-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">${plante.emoji}</span>
+      <div>
+        <h2 class="fiche-titre">${plante.nom}</h2>
+        <div class="herbo-latin">${plante.profil_aromatique || ''}</div>
+      </div>
+    </div>
+
+    <div class="plante-section">
+      <h3>📅 Disponibilité</h3>
+      <div class="plante-calendrier">
+        ${moisNoms.map((m, i) => {
+          const mois = i + 1;
+          const dispo = plante.disponibilite_mois?.includes(mois);
+          const actuel = mois === moisActuel;
+          return `<div class="plante-mois ${dispo ? 'plante-mois--dispo' : ''} ${actuel ? 'plante-mois--actuel' : ''}">${m}</div>`;
+        }).join('')}
+      </div>
+      ${plante.periode_recolte ? `<div style="font-size:0.82rem;color:var(--text-secondary);margin-top:8px">✂️ Récolter : ${plante.periode_recolte}</div>` : ''}
+    </div>
+
+    ${plante.format_achat ? `
+    <div class="plante-section">
+      <h3>🛒 Format d'achat</h3>
+      <p>${plante.format_achat}</p>
+      ${plante.fourchette_prix ? `<div class="plante-prix">💶 ${plante.fourchette_prix}</div>` : ''}
+    </div>` : ''}
+
+    ${recettesAssociees.length > 0 ? `
+    <div class="plante-section">
+      <h3>📖 Recettes du Grimoire</h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${recettesAssociees.map(r => `
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer"
+            onclick="fermerModal('modal-fiche-grimoire'); ouvrirFicheGrimoire('${r.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:600;font-size:0.9rem">${r.avec_alcool ? '🍶' : '🌿'} ${r.nom}</div>
+              <span style="font-size:0.72rem;color:var(--text-secondary)">${catLabels[r.categorie] || r.categorie}</span>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px">
+              ${r.duree_jours ? `⏱ ${r.duree_jours}j` : ''} ${r.rendement_cl ? `· 🧪 ${r.rendement_cl}cl` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '<div class="plante-section"><p style="color:var(--text-secondary);font-size:0.85rem">Aucune recette Grimoire associée pour le moment.</p></div>'}
+  `;
+
+  afficherModal('modal-fiche-grimoire');
+}
 // =============================================
 // MODAL HISTORIQUE COMPLET
 // =============================================
