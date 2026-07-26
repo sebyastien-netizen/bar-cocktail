@@ -1878,7 +1878,7 @@ function ouvrirModalAjoutConcoction(grimoire) {
     }
 
     fermerModal('modal-ajout-concoction');
-    renderConcoctions();
+await chargerConcoctions();
   };
 
   afficherModal('modal-ajout-concoction');
