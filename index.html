@@ -133,7 +133,50 @@
     <div class="grimoire-fiche-contenu"></div>
   </div>
 </div>
- 
+ <!-- MODAL : CONFIGURATEUR GRIMOIRE -->
+<div class="modal-overlay" id="modal-configurateur-grimoire">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="fermerModal('modal-configurateur-grimoire')">✕</button>
+    <h3 id="config-grimoire-titre">Configurer la recette</h3>
+    <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px">
+      
+      <div class="form-group">
+        <label>Volume à produire</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="config-volume-btns">
+          <button class="config-btn active" data-volume="50" onclick="selectConfigVolume(this)">50cl</button>
+          <button class="config-btn" data-volume="70" onclick="selectConfigVolume(this)">70cl</button>
+          <button class="config-btn" data-volume="100" onclick="selectConfigVolume(this)">1L</button>
+          <button class="config-btn" data-volume="150" onclick="selectConfigVolume(this)">1.5L</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Alcool de base <span class="label-hint">si applicable</span></label>
+        <input type="text" id="config-alcool-base" placeholder="ex: Vodka, Cognac, Rhum blanc…">
+      </div>
+
+      <div class="form-group">
+        <label>Degré de sucre</label>
+        <div style="display:flex;gap:8px" id="config-sucre-btns">
+          <button class="config-btn" data-sucre="leger" onclick="selectConfigSucre(this)">Léger</button>
+          <button class="config-btn active" data-sucre="standard" onclick="selectConfigSucre(this)">Standard</button>
+          <button class="config-btn" data-sucre="riche" onclick="selectConfigSucre(this)">Riche</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Date de début</label>
+        <input type="date" id="config-date-debut">
+      </div>
+
+      <div class="config-recap" id="config-recap"></div>
+
+      <button class="btn-primary" style="width:100%" onclick="validerConfigurateur()">
+        ⚗️ Lancer la concoction
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- MODAL : FICHE ÉCOLE -->
   <div class="modal-overlay modal-large" id="modal-ecole-fiche">
