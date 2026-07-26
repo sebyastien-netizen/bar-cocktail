@@ -634,7 +634,7 @@ function fermerPanneauJournal() {
   document.getElementById('panneau-journal-overlay').classList.remove('visible');
 }
 function renderJournalRecette(realisations) {
-  if (!realisations.length) return `
+  if (!) return `
     <div class="journal-vide">Aucune réalisation enregistrée.</div>`;
   return realisations.map(r => {
     let noteObj = {};
@@ -2294,13 +2294,15 @@ async function chargerDashboard() {
   const concEnCours = concoctions.filter(c => c.statut === 'en_cours');
  
   // Anecdote + conseil aléatoires
-  const [{ data: anecdote }, { data: conseil }, { data: realisations }] = await Promise.all([
+const [{ data: anecdote }, { data: conseil }, { data: realisations }, { data: plantesData }, { data: grimoireData }] = await Promise.all([
     db.from('anecdotes').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
     db.from('conseils').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
-    db.from('realisations').select('*').eq('user_id', currentUser.id).order('date', { ascending: false }).limit(5)
-  ]);
- 
- renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations });
+    db.from('realisations').select('*').eq('user_id', currentUser.id).order('date', { ascending: false }).limit(5),
+    db.from('plantes').select('id, nom, emoji, disponibilite_mois, periode_recolte, profil_aromatique, format_achat, fourchette_prix, categories_preparation'),
+    db.from('grimoire').select('id, nom, categorie, avec_alcool, duree_jours, rendement_cl, saison_ideale, description, plante_ids').order('nom')
+]);
+
+renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations, plantesData: plantesData || [], grimoireData: grimoireData || [] });
 }
  // =============================================
 // SESSIONS
@@ -3590,9 +3592,7 @@ function renderDashboardRealisations(realisations) {
         <div class="dash-empty">Aucune réalisation enregistrée. Utilisez le bouton "Réalisée" dans les fiches recettes.</div>
       </div>`;
   }
- 
-  const total = realisations.length;
- 
+const total = realisations.length;
   return `
     <div class="dash-card">
       <div class="dash-card-header">
@@ -3615,6 +3615,55 @@ function renderDashboardRealisations(realisations) {
               </div>
             </div>`;
         }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderDashboardSaison(plantesData, grimoireData) {
+  const moisActuel = new Date().getMonth() + 1;
+  const moisSuivant = moisActuel === 12 ? 1 : moisActuel + 1;
+  const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const plantesSaison = plantesData.filter(p =>
+    p.disponibilite_mois?.includes(moisActuel) || p.disponibilite_mois?.includes(moisSuivant)
+  );
+  if (plantesSaison.length === 0) return '';
+  const alertes = plantesSaison.map(plante => {
+    const enSaison = plante.disponibilite_mois?.includes(moisActuel);
+    const recettesAssociees = grimoireData.filter(g =>
+      g.plante_ids?.includes(plante.id) ||
+      (plante.categories_preparation || []).some(cat => g.categorie === cat)
+    ).slice(0, 3);
+    return { plante, enSaison, recettesAssociees };
+  }).slice(0, 4);
+  return `
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-titre">📅 En ce moment — ${moisNoms[moisActuel]}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        ${alertes.map(({ plante, enSaison, recettesAssociees }) => `
+          <div class="dash-saison-card" onclick="ouvrirFicheSaisonniere('${plante.id}')">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:1.8rem">${plante.emoji}</span>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.9rem">${plante.nom}</div>
+                <div style="font-size:0.78rem;color:var(--text-secondary)">${plante.profil_aromatique || ''}</div>
+              </div>
+              <span style="font-size:0.72rem;padding:3px 8px;border-radius:20px;
+                background:${enSaison ? 'var(--bg-success)' : 'var(--bg-warning)'};
+                color:${enSaison ? 'var(--text-success)' : 'var(--text-warning)'}">
+                ${enSaison ? '● En saison' : '◎ Bientôt'}
+              </span>
+            </div>
+            ${recettesAssociees.length > 0 ? `
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              ${recettesAssociees.map(r => `
+                <span style="font-size:0.72rem;padding:2px 8px;background:var(--bg-accent);color:var(--text-accent);border-radius:20px">
+                  ${r.avec_alcool ? '🍶' : '🌿'} ${r.nom}
+                </span>`).join('')}
+            </div>` : ''}
+          </div>
+        `).join('')}
       </div>
     </div>`;
 }
