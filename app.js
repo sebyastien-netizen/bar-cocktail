@@ -299,7 +299,11 @@ function toggleConservations(btn) {
   btn.classList.toggle('open');
   btn.nextElementSibling.classList.toggle('visible');
 }
-function onSearch(val) { filtreRecherche = val.toLowerCase(); renderCave(); }
+function onSearch(val) {
+  filtreRecherche = val.toLowerCase();
+  if (document.getElementById('modal-ajout').classList.contains('visible')) return;
+  renderCave();
+}
 function filtrerItems(items) {
   if (!filtreRecherche) return items;
   return items.filter(i =>
