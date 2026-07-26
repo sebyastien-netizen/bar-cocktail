@@ -140,8 +140,10 @@ async function chargerCave() {
 }
  
 function renderCave() {
-  const container = document.getElementById('cave-container');
-  container.innerHTML = '';
+const container = document.getElementById('cave-container');
+// Sauvegarder la valeur de recherche avant de vider
+const searchVal = document.getElementById('search-input')?.value || filtreRecherche;
+container.innerHTML = '';
  
   renderConservations();
  
@@ -173,20 +175,6 @@ function renderCave() {
     <span class="cave-prix-val">${prixTotal.toFixed(0)} €</span>
   `;
   document.getElementById('cave-container').appendChild(prixBanner);
- 
-// Ne recréer la search bar que si elle n'existe pas déjà
-if (!document.getElementById('search-input')) {
-  const searchBar = document.createElement('div');
-  searchBar.className = 'search-bar';
-  searchBar.innerHTML = `
-    <input type="text" id="search-input" placeholder="Rechercher un alcool ou ingrédient…" oninput="onSearch(this.value)" value="${filtreRecherche}">
-    <button class="btn btn-outline" onclick="ouvrirModalAjout()">+ Ajouter</button>
-  `;
-  container.appendChild(searchBar);
-} else {
-  // Juste mettre à jour la valeur sans recréer
-  document.getElementById('search-input').value = filtreRecherche;
-}
  
   cave.categories.forEach(cat => {
     if (cat.id.startsWith('a-acheter')) return;
