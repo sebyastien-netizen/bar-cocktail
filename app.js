@@ -3148,8 +3148,8 @@ function ouvrirFichePlante(id) {
 function voirPreparationsGrimoire(btn) {
   const categories = JSON.parse(btn.dataset.categories || '[]');
   fermerModal('modal-fiche-plante');
-  changerOnglet('concoctions');
-  const btnGrimoire = document.querySelectorAll('.conc-sous-onglet')[1];
+document.querySelector('nav button[data-tab="concoctions"]').click();
+ const btnGrimoire = document.querySelectorAll('.conc-sous-onglet')[1];
   switchSousOngletConc('grimoire', btnGrimoire);
   setTimeout(() => {
     if (categories && categories.length > 0) {
