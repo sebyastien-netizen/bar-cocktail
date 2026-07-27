@@ -2320,7 +2320,7 @@ function renderItemAAcheter(item, isTop) {
         ${item.recettesDetail.length > 4 ? `<span class="aacheter-chip-more">+${item.recettesDetail.length - 4}</span>` : ''}
       </div>
 
-<button class="btn-outline" style="width:100%;margin-top:10px" onclick="marquerAchete('${item.id}')">
+<button class="btn-outline" style="width:100%;margin-top:10px" onclick="marquerAchete('${item.id}', '${item.category_id}', '${item.nom.replace(/'/g, "\\'")}')">
 ✓ Marquer comme acheté
       </button>
     </div>
