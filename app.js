@@ -2918,7 +2918,8 @@ function renderInspirations() {
   const rejetees = inspirationsList.filter(i => i.statut === 'rejetee');
 
   container.innerHTML = `
-    <div style="padding:1rem;display:flex;justify-content:flex-end">
+<div style="padding:1rem;display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn-outline" onclick="captureRapideBartender()">📱 Dévoile ton cocktail</button>
       <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
     </div>
 
@@ -2954,7 +2955,28 @@ function renderInspirations() {
     </div>` : ''}
   `;
 }
+async function captureRapideBartender() {
+  const now = new Date();
+  const nom = `Cocktail du ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  const id = 'inspi-' + Date.now();
 
+  const { data, error } = await db.from('inspirations').insert({
+    id,
+    user_id: currentUser.id,
+    nom,
+    source: 'manuel',
+    source_detail: 'Capture rapide bar',
+    ingredients: [],
+    tags: [],
+    statut: 'en_attente'
+  }).select().single();
+
+  if (error || !data) { alert('Erreur : ' + (error?.message || 'inconnue')); return; }
+
+  inspirationsList.unshift(data);
+  renderInspirations();
+  ouvrirQRBartender(data.id);
+}
 function renderCarteInspiration(inspi) {
   const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
   const tags = inspi.tags || [];
