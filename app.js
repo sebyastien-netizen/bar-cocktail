@@ -3223,6 +3223,285 @@ async function rejeterInspiration(id) {
   fermerModal('modal-fiche-inspiration');
   renderInspirations();
 }
+let completerInspirationData = null;
+
+async function ouvrirModalCompleter(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+  completerInspirationData = { inspi, dosages: {}, profil: {}, gouteTaste: false, sliders: { intensite_alcool: 2, sucre: 2, acide: 2, amer: 1, petillant: 0, volume: 15 } };
+
+  document.getElementById('completer-inspiration-contenu').innerHTML = `
+    <h2 style="margin-bottom:4px">${inspi.nom}</h2>
+    <div class="herbo-latin" style="margin-bottom:16px">${inspi.source_detail || ''}</div>
+
+    <div class="plante-section">
+      <h3>Ingrédients détectés</h3>
+      ${(Array.isArray(inspi.ingredients) ? inspi.ingredients : []).map(ing => `
+        <div style="font-size:0.85rem;padding:4px 0;border-bottom:1px solid var(--border)">${typeof ing === 'string' ? ing : ing.nom}</div>
+      `).join('')}
+    </div>
+
+    <div class="plante-section">
+      <h3>🍸 J'ai goûté ce cocktail</h3>
+      <div style="display:flex;flex-direction:column;gap:12px" id="sliders-gout" style="display:none">
+        ${[
+          { key: 'intensite_alcool', label: 'Intensité alcool', options: ['Léger', 'Moyen', 'Fort'] },
+          { key: 'sucre', label: 'Sucré', options: ['Peu', 'Moyen', 'Beaucoup'] },
+          { key: 'acide', label: 'Acide / Frais', options: ['Peu', 'Moyen', 'Beaucoup'] },
+          { key: 'amer', label: 'Amer', options: ['Absent', 'Léger', 'Présent'] },
+          { key: 'petillant', label: 'Pétillant', options: ['Non', 'Léger', 'Oui'] },
+          { key: 'volume', label: 'Volume estimé', options: ['~10cl', '~15cl', '~20cl'] }
+        ].map(s => `
+          <div>
+            <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">${s.label}</div>
+            <div style="display:flex;gap:6px">
+              ${s.options.map((opt, i) => `
+                <button class="config-btn ${i === 1 ? 'active' : ''}" 
+                  data-key="${s.key}" data-val="${i}"
+                  onclick="selectGoutSlider(this, '${s.key}', ${i})">
+                  ${opt}
+                </button>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn-outline" style="width:100%;margin-top:8px" id="btn-gout-toggle" onclick="toggleGoutSliders()">
+        🍷 J'ai goûté — ajouter mes impressions
+      </button>
+    </div>
+
+    <div class="plante-section">
+      <button class="btn-primary" style="width:100%" onclick="analyserEtCompleter('${inspi.id}')">
+        ✨ Analyser et proposer la recette
+      </button>
+    </div>
+
+    <div id="completer-resultat" style="display:none">
+    </div>
+  `;
+
+  afficherModal('modal-completer-inspiration');
+}
+
+function toggleGoutSliders() {
+  const sliders = document.getElementById('sliders-gout');
+  const btn = document.getElementById('btn-gout-toggle');
+  const visible = sliders.style.display !== 'none';
+  sliders.style.display = visible ? 'none' : 'flex';
+  sliders.style.flexDirection = 'column';
+  sliders.style.gap = '12px';
+  btn.textContent = visible ? '🍷 J\'ai goûté — ajouter mes impressions' : '✕ Masquer les impressions';
+  completerInspirationData.gouteTaste = !visible;
+}
+
+function selectGoutSlider(btn, key, val) {
+  document.querySelectorAll(`[data-key="${key}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  completerInspirationData.sliders[key] = val;
+}
+
+async function analyserEtCompleter(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+
+  const btn = document.querySelector('#modal-completer-inspiration .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyse en cours…'; }
+
+  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients.map(i => typeof i === 'string' ? i : i.nom) : [];
+  const s = completerInspirationData.sliders;
+  const intensiteLabel = ['léger', 'moyen', 'fort'];
+  const sucreLabel = ['peu sucré', 'moyennement sucré', 'très sucré'];
+  const acideLabel = ['peu acide', 'moyennement acide', 'très acide/frais'];
+  const amerLabel = ['sans amertume', 'légèrement amer', 'amer'];
+  const petillantLabel = ['non pétillant', 'légèrement pétillant', 'très pétillant'];
+  const volumeLabel = ['~10cl', '~15cl', '~20cl'];
+
+  const goutContext = completerInspirationData.gouteTaste ? `
+Impressions gustatives du dégustateur :
+- Intensité alcool : ${intensiteLabel[s.intensite_alcool]}
+- Sucré : ${sucreLabel[s.sucre]}
+- Acide/Frais : ${acideLabel[s.acide]}
+- Amer : ${amerLabel[s.amer]}
+- Pétillant : ${petillantLabel[s.petillant]}
+- Volume estimé : ${volumeLabel[s.volume]}` : '';
+
+  try {
+    const response = await fetch('/api/analyser', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `Tu es un expert bartending. Propose une recette complète pour ce cocktail.
+
+Nom : "${inspi.nom}"
+Ingrédients observés : ${ings.join(', ')}
+${goutContext}
+
+Recettes existantes pour comparaison :
+${recettes.slice(0, 50).map(r => r.nom).join(', ')}
+
+Réponds en JSON uniquement :
+{
+  "famille": "famille bartending (Spritz, Sour, Fizz...)",
+  "base_alcool": "spiritueux principal",
+  "verre": "type de verre recommandé",
+  "difficulte": "facile ou moyen ou avance",
+  "recette_similaire": "nom de la recette la plus proche ou null",
+  "type": "nouvelle ou variante",
+  "dosages": [
+    {"nom": "nom ingrédient", "quantite": 50, "unite": "ml"},
+    {"nom": "nom ingrédient", "quantite": 90, "unite": "ml"}
+  ],
+  "profil": {
+    "gout_sucre": 2,
+    "gout_amer": 1,
+    "gout_acide": 3,
+    "gout_fruite": 2,
+    "gout_fume": 0,
+    "gout_floral": 1,
+    "gout_epice": 0,
+    "gout_cremeux": 0
+  },
+  "explication": "courte explication en français"
+}`
+      })
+    });
+
+    const raw = await response.json();
+    let result;
+    try {
+      result = typeof raw === 'string' ? JSON.parse(raw.replace(/```json|```/g, '').trim()) : raw;
+      if (result.content) result = JSON.parse(result.content[0].text.replace(/```json|```/g, '').trim());
+    } catch(e) { result = raw; }
+
+    completerInspirationData.dosages = result.dosages || [];
+    completerInspirationData.profil = result.profil || {};
+    completerInspirationData.result = result;
+
+    // Afficher le résultat
+    const profilLabels = { gout_sucre: 'Sucré', gout_amer: 'Amer', gout_acide: 'Acide', gout_fruite: 'Fruité', gout_fume: 'Fumé', gout_floral: 'Floral', gout_epice: 'Épicé', gout_cremeux: 'Crémeux' };
+
+    document.getElementById('completer-resultat').style.display = 'block';
+    document.getElementById('completer-resultat').innerHTML = `
+      <div class="plante-section">
+        <h3>✨ Proposition Claude</h3>
+        <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px">${result.explication || ''}</div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          ${result.famille ? `<span class="herbo-usage-tag">📂 ${result.famille}</span>` : ''}
+          ${result.base_alcool ? `<span class="herbo-usage-tag">🍶 ${result.base_alcool}</span>` : ''}
+          ${result.verre ? `<span class="herbo-usage-tag">🥃 ${result.verre}</span>` : ''}
+          ${result.type === 'variante' && result.recette_similaire ? `<span class="herbo-usage-tag" style="background:var(--bg-warning);color:var(--text-warning)">🔄 Proche de ${result.recette_similaire}</span>` : ''}
+        </div>
+
+        <h4 style="font-size:0.85rem;margin-bottom:8px">Dosages proposés</h4>
+        ${(result.dosages || []).map(d => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:0.85rem">${d.nom}</span>
+            <input type="number" value="${d.quantite}" min="0" max="200" step="5"
+              style="width:70px;text-align:right;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text-primary)"
+              onchange="completerInspirationData.dosages.find(x=>x.nom==='${d.nom}').quantite=parseInt(this.value)">
+            <span style="font-size:0.82rem;color:var(--text-secondary);width:30px">${d.unite}</span>
+          </div>`).join('')}
+
+        <h4 style="font-size:0.85rem;margin:12px 0 8px">Profil gustatif estimé</h4>
+        ${Object.entries(result.profil || {}).filter(([k,v]) => v > 0).map(([k,v]) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:0.78rem;width:60px;color:var(--text-secondary)">${profilLabels[k] || k}</span>
+            <div style="flex:1;height:6px;background:var(--border);border-radius:3px">
+              <div style="width:${v*20}%;height:100%;background:var(--accent);border-radius:3px"></div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--text-secondary)">${v}/5</span>
+          </div>`).join('')}
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+          <button class="btn-primary" onclick="validerAvecDosages('${id}')">
+            ✅ Valider et créer la recette
+          </button>
+          ${result.type === 'variante' && result.recette_similaire ? `
+          <button class="btn-outline" onclick="lierRecetteExistante('${id}', '${result.recette_similaire}')">
+            🔄 Lier à "${result.recette_similaire}" comme variante
+          </button>` : ''}
+        </div>
+      </div>
+    `;
+
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Analyser et proposer la recette'; }
+
+  } catch(e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Analyser et proposer la recette'; }
+  }
+}
+
+async function validerAvecDosages(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+  const result = completerInspirationData.result;
+  const dosages = completerInspirationData.dosages;
+
+  const recetteId = 'inspi-' + Date.now();
+
+  const { data: recette } = await db.from('recettes').insert({
+    id: recetteId,
+    user_id: currentUser.id,
+    type: 'cocktail',
+    nom: inspi.nom,
+    difficulte: result.difficulte || 'moyen',
+    base_alcool: result.base_alcool || null,
+    verre_type: result.verre || null,
+    description_courte: inspi.notes || null,
+    photo_url: inspi.photo_url || null,
+    ...completerInspirationData.profil
+  }).select().single();
+
+  if (recette && dosages.length > 0) {
+    await db.from('recette_ingredients').insert(
+      dosages.map((d, i) => ({
+        recette_id: recetteId,
+        user_id: currentUser.id,
+        nom: d.nom,
+        quantite: d.quantite,
+        unite: d.unite,
+        ordre: i + 1
+      }))
+    );
+  }
+
+  await db.from('inspirations').update({
+    statut: 'validee',
+    recette_liee_id: recetteId,
+    analyse_result: result
+  }).eq('id', id);
+
+  const idx = inspirationsList.findIndex(x => x.id === id);
+  if (idx !== -1) {
+    inspirationsList[idx].statut = 'validee';
+    inspirationsList[idx].recette_liee_id = recetteId;
+  }
+
+  fermerModal('modal-completer-inspiration');
+  fermerModal('modal-fiche-inspiration');
+  renderInspirations();
+  await chargerRecettes();
+  alert(`✅ "${inspi.nom}" créée avec dosages dans vos recettes !`);
+}
+
+async function lierRecetteExistante(id, nomRecette) {
+  const recette = recettes.find(r => r.nom.toLowerCase() === nomRecette.toLowerCase());
+  await db.from('inspirations').update({
+    statut: 'validee',
+    recette_liee_id: recette?.id || null,
+    analyse_result: completerInspirationData.result
+  }).eq('id', id);
+
+  const idx = inspirationsList.findIndex(x => x.id === id);
+  if (idx !== -1) inspirationsList[idx].statut = 'validee';
+
+  fermerModal('modal-completer-inspiration');
+  fermerModal('modal-fiche-inspiration');
+  renderInspirations();
+  alert(`🔄 Inspiration liée à "${nomRecette}".`);
+}
 let grimoireList = [];
 let filtreGrimoireAlcool = null;
 let filtreGrimoireCategorie = '';
