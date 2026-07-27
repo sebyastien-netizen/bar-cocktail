@@ -151,6 +151,8 @@
     <div class="titre-page">🔓 Tes dosages</div>
     <div class="sous-titre">Aussi précis ou vague que tu veux.</div>
 
+    <div id="precis-verre-famille"></div>
+
     <label>Ingrédients en texte libre (optionnel)</label>
     <textarea id="precis-ingredients" placeholder="Ex : gin, jus de citron vert, sirop de gingembre maison..."></textarea>
 
@@ -276,6 +278,7 @@ init();
 function choisirMode(m) {
   if (m === 'precis') {
     if (dosagesPrecis.length === 0) ajouterLigneDosage();
+    document.getElementById('precis-verre-famille').innerHTML = blocVerreEtFamille();
     showScreen('ecran-precis');
   } else {
     renderSliders();
@@ -333,6 +336,8 @@ async function envoyerPrecis() {
     mode: 'precis',
     ingredients_bartender: ingr || null,
     dosages_precis: dosagesValides,
+    famille_percue: secretFamille || null,
+    verre_percu: secretVerre || null,
     statut: 'validee'
   });
 
@@ -348,24 +353,8 @@ async function envoyerPrecis() {
 
 // ---------- MODE SECRET ----------
 
-function renderSliders() {
-  document.getElementById('secret-sliders').innerHTML = SLIDERS_DEF.map(s => `
-    <div class="slider-groupe">
-      <div class="slider-label">${s.label}</div>
-      <div class="slider-options">
-        ${s.options.map((opt, i) => `
-          <button class="config-btn ${i === sliders[s.key] ? 'active' : ''}"
-            data-key="${s.key}" onclick="selectSlider(this, '${s.key}', ${i})">${opt}</button>
-        `).join('')}
-      </div>
-    </div>
-  `).join('') + `
-    <div class="slider-groupe">
-      <div class="slider-label">Famille du cocktail (si tu la reconnais)</div>
-      <select id="secret-famille" onchange="secretFamille = this.value">
-        ${FAMILLES.map(f => `<option value="${f}">${f || '— Choisir —'}</option>`).join('')}
-      </select>
-    </div>
+function blocVerreEtFamille() {
+  return `
     <div class="slider-groupe">
       <div class="slider-label">Type de verre servi</div>
       <div class="verre-grille">
@@ -377,13 +366,33 @@ function renderSliders() {
         `).join('')}
       </div>
     </div>
+    <div class="slider-groupe">
+      <div class="slider-label">Famille du cocktail (si tu la reconnais)</div>
+      <select onchange="secretFamille = this.value">
+        ${FAMILLES.map(f => `<option value="${f}" ${f === secretFamille ? 'selected' : ''}>${f || '— Choisir —'}</option>`).join('')}
+      </select>
+    </div>
   `;
 }
 
 function selectVerre(btn, value) {
   document.querySelectorAll('.verre-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll(`.verre-btn[data-verre="${value}"]`).forEach(b => b.classList.add('active'));
   secretVerre = value;
+}
+
+function renderSliders() {
+  document.getElementById('secret-sliders').innerHTML = blocVerreEtFamille() + SLIDERS_DEF.map(s => `
+    <div class="slider-groupe">
+      <div class="slider-label">${s.label}</div>
+      <div class="slider-options">
+        ${s.options.map((opt, i) => `
+          <button class="config-btn ${i === sliders[s.key] ? 'active' : ''}"
+            data-key="${s.key}" onclick="selectSlider(this, '${s.key}', ${i})">${opt}</button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 function selectSlider(btn, key, val) {
