@@ -2237,7 +2237,7 @@ ${data.cocktails_possibles?.length ? `
 
         <div class="analyser-verdict ${verdictClass}">${data.verdict_raison}</div>
 
-        ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="ajouterAListe('${itemMatch.id}')">+ Ajouter à ma liste d'achats</button>` : ''}
+        ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}')">✓ Marquer comme acheté</button>` : ''}
       </div>
     `;
 
@@ -2249,10 +2249,6 @@ ${data.cocktails_possibles?.length ? `
   btn.textContent = '🔍 Analyser';
 }
 
-async function ajouterAListe(itemId) {
-  // Marquer l'item comme "à acheter" — reste detenu:false mais on le met en evidence
-  alert('Fonctionnalité à venir — pour l\'instant ajoute-le depuis Ma Cave.');
-}
 function simulerGain(itemId) {
   const result = document.getElementById('simulateur-result');
   if (!itemId) { result.innerHTML = ''; return; }
@@ -2314,7 +2310,7 @@ function renderItemAAcheter(item, isTop) {
         ${coutParRecette ? `<span class="aacheter-indic">⚡ ${coutParRecette}€/recette</span>` : ''}
       </div>
 
-      <div class="aacheter-recettes-chips">
+<div class="aacheter-recettes-chips">
         ${item.recettesDetail.slice(0, 4).map(r => `
           <span class="aacheter-chip">
             ${r.nom}
@@ -2323,8 +2319,17 @@ function renderItemAAcheter(item, isTop) {
         `).join('')}
         ${item.recettesDetail.length > 4 ? `<span class="aacheter-chip-more">+${item.recettesDetail.length - 4}</span>` : ''}
       </div>
+
+      <button class="btn-outline" style="width:100%;margin-top:10px" onclick="marquerAchete('${item.id}', '${item.category_id}')">
+        ✓ Marquer comme acheté
+      </button>
     </div>
   `;
+}
+
+async function marquerAchete(itemId, catId) {
+  await toggleDetenu(itemId, catId);
+  chargerAAcheter();
 }
 
 async function chargerApportGustatif() {
