@@ -77,6 +77,13 @@
   .verre-btn svg { width: 26px; height: 26px; }
   .verre-btn .verre-label { font-size: 0.65rem; line-height: 1.15; text-align: center; }
   .verre-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--accent); }
+  .famille-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+  .famille-btn {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
+    border-radius: 20px; padding: 9px 12px; font-size: 0.78rem; cursor: pointer; min-height: 38px;
+    display: flex; align-items: center;
+  }
+  .famille-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--accent); }
   .progress-bar { display: flex; gap: 6px; margin-bottom: 22px; }
   .progress-seg { flex: 1; height: 5px; border-radius: 3px; background: var(--border); transition: background 0.25s; }
   .progress-seg.filled { background: var(--warning); }
@@ -289,7 +296,7 @@ function choisirMode(m) {
 // ---------- MODE PRÉCIS ----------
 
 function ajouterLigneDosage() {
-  dosagesPrecis.push({ nom: '', quantite: '', unite: 'ml' });
+  dosagesPrecis.push({ nom: '', quantite: '', unite: 'cl' });
   renderDosages();
 }
 
@@ -308,8 +315,8 @@ function renderDosages() {
       <input type="text" placeholder="Ingrédient" value="${d.nom}" oninput="majDosage(${i},'nom',this.value)">
       <input type="number" placeholder="Qté" value="${d.quantite}" oninput="majDosage(${i},'quantite',this.value)">
       <select onchange="majDosage(${i},'unite',this.value)">
-        <option value="ml" ${d.unite === 'ml' ? 'selected' : ''}>ml</option>
         <option value="cl" ${d.unite === 'cl' ? 'selected' : ''}>cl</option>
+        <option value="ml" ${d.unite === 'ml' ? 'selected' : ''}>ml</option>
         <option value="trait" ${d.unite === 'trait' ? 'selected' : ''}>trait</option>
         <option value="pièce" ${d.unite === 'pièce' ? 'selected' : ''}>pièce</option>
       </select>
@@ -368,11 +375,19 @@ function blocVerreEtFamille() {
     </div>
     <div class="slider-groupe">
       <div class="slider-label">Famille du cocktail (si tu la reconnais)</div>
-      <select onchange="secretFamille = this.value">
-        ${FAMILLES.map(f => `<option value="${f}" ${f === secretFamille ? 'selected' : ''}>${f || '— Choisir —'}</option>`).join('')}
-      </select>
+      <div class="famille-liste">
+        ${FAMILLES.filter(f => f).map(f => `
+          <div class="famille-btn ${secretFamille === f ? 'active' : ''}" data-famille="${f}" onclick="selectFamille(this, '${f}')">${f}</div>
+        `).join('')}
+      </div>
     </div>
   `;
+}
+
+function selectFamille(btn, value) {
+  document.querySelectorAll('.famille-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll(`.famille-btn[data-famille="${value}"]`).forEach(b => b.classList.add('active'));
+  secretFamille = value;
 }
 
 function selectVerre(btn, value) {
