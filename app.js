@@ -3097,12 +3097,12 @@ async function ouvrirFicheInspiration(id) {
       </div>
     </div>` : ''}
 
-    <div class="plante-section" style="display:flex;flex-direction:column;gap:10px">
+<div class="plante-section" style="display:flex;flex-direction:column;gap:10px">
       <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
         ✨ Analyser avec Claude
       </button>
       ${inspi.statut === 'en_attente' ? `
-      <button class="btn-outline" onclick="validerInspiration('${inspi.id}')">✅ Valider → Recettes</button>
+      <button class="btn-outline" onclick="fermerModal('modal-fiche-inspiration'); ouvrirModalCompleter('${inspi.id}')">✨ Compléter et valider</button>
       <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
       ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
     </div>
