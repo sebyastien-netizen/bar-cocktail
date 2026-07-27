@@ -3228,8 +3228,7 @@ let completerInspirationData = null;
 async function ouvrirModalCompleter(id) {
   const inspi = inspirationsList.find(x => x.id === id);
   if (!inspi) return;
-  completerInspirationData = { inspi, dosages: {}, profil: {}, gouteTaste: false, sliders: { intensite_alcool: 2, sucre: 2, acide: 2, amer: 1, petillant: 0, volume: 15 } };
-
+completerInspirationData = { inspi, dosages: {}, profil: {}, gouteTaste: false, sliders: { intensite_alcool: 1, sucre: 1, acide: 1, amer: 1, petillant: 0, volume: 1 } };
   document.getElementById('completer-inspiration-contenu').innerHTML = `
     <h2 style="margin-bottom:4px">${inspi.nom}</h2>
     <div class="herbo-latin" style="margin-bottom:16px">${inspi.source_detail || ''}</div>
@@ -3256,8 +3255,8 @@ ${[
             <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">${s.label}</div>
             <div style="display:flex;gap:6px">
               ${s.options.map((opt, i) => `
-                <button class="config-btn ${i === 1 ? 'active' : ''}" 
-                  data-key="${s.key}" data-val="${i}"
+<button class="config-btn ${i === completerInspirationData.sliders[s.key] ? 'active' : ''}"
+data-key="${s.key}" data-val="${i}"
                   onclick="selectGoutSlider(this, '${s.key}', ${i})">
                   ${opt}
                 </button>`).join('')}
