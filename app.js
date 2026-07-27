@@ -2984,7 +2984,7 @@ function renderCarteInspiration(inspi) {
       </div>
       ${inspi.analyse_result ? `
       <div style="margin-top:8px;font-size:0.75rem;padding:4px 8px;border-radius:6px;background:var(--bg-accent);color:var(--text-accent)">
-        ${inspi.analyse_result.type === 'nouvelle' ? '🆕 Nouvelle recette' : `🔄 Variante de ${inspi.analyse_result.recette_similaire}`}
+       ${inspi.analyse_result.type === 'nouvelle' ? '🆕 Nouvelle recette' : inspi.analyse_result.recette_similaire ? `🔄 Variante de ${inspi.analyse_result.recette_similaire}` : '🔄 Recette similaire existante'}
       </div>` : ''}
     </div>
   `;
@@ -3166,6 +3166,11 @@ async function validerInspiration(id) {
   if (!inspi) return;
 
   // Créer la recette dans la table recettes
+ // Vérifier si une recette liée existe déjà
+if (inspi.recette_liee_id) {
+  alert('Cette inspiration a déjà été validée — recette existante dans l\'onglet Recettes.');
+  return;
+}
   const recetteId = 'inspi-' + Date.now();
   const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
 
