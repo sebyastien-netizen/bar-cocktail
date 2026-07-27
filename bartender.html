@@ -456,16 +456,22 @@ async function doAnalyse(motifCorrection = null) {
     const response = await fetch('/api/inspiration', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
+      body: JSON.stringify({
         nom: inspiData.nom,
         ingredients: secretIngredientsSaisis,
         gout_context: goutContext,
         recettes_existantes: recettesExistantes,
-        proposition_precedente: motifCorrection ? propositionResult : null
+        proposition_precedente: motifCorrection ? propositionResult : null,
+        inspiration_id: inspirationId
       })
     });
     const result = await response.json();
-clearInterval(waitInterval);
+    clearInterval(waitInterval);
+    if (!response.ok) {
+      alert(result.error || 'Une erreur est survenue.');
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Voir la proposition'; }
+      return;
+    }
     propositionResult = result;
     afficherProposition(result);
   } catch (e) {
