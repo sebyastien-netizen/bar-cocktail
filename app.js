@@ -1059,10 +1059,17 @@ ${(r.ingredients || []).filter(i => i.quantite && (i.unite === 'cl' || i.unite =
       </div>
       <div id="journal-corps"></div>
     </div>
-    <!-- ACTION RÉALISÉE -->
+<!-- ACTION RÉALISÉE -->
     <div class="fiche-action">
      <button class="btn btn-realiser" onclick="ouvrirModalRealisation(${portions})">
         ✓ Réalisée${portions > 1 ? ` (${portions} verres)` : ''} — décrémenter la cave
+      </button>
+    </div>
+
+    <!-- ACTION SUPPRIMER -->
+    <div class="fiche-action" style="margin-top:10px">
+      <button class="btn-danger" style="width:100%" onclick="supprimerRecette('${r.id}')">
+        🗑️ Supprimer cette recette
       </button>
     </div>
   `;
@@ -1073,6 +1080,28 @@ function changerPortions(n) {
   renderFiche(n);
 }
 
+async function supprimerRecette(id) {
+  const r = recettes.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`Supprimer définitivement "${r.nom}" ? Cette action est irréversible.`)) return;
+
+  await db.from('recette_ingredients').delete().eq('recette_id', id);
+  await db.from('recette_etapes').delete().eq('recette_id', id);
+
+  const { error } = await db.from('recettes').delete().eq('id', id);
+  if (error) {
+    if (error.code === '23503') {
+      alert('Impossible de supprimer : cette recette est liée à une ou plusieurs réalisations enregistrées. Supprime d\'abord ces réalisations dans le journal, ou demande le nettoyage SQL correspondant.');
+    } else {
+      alert('Erreur suppression : ' + error.message);
+    }
+    return;
+  }
+
+  recettes = recettes.filter(x => x.id !== id);
+  fermerModal('modal-fiche-recette');
+  renderRecettes();
+}
  
 function hasProfil(r) {
   return r.gout_sucre || r.gout_amer || r.gout_acide || r.gout_fruite ||
@@ -1425,8 +1454,31 @@ function trouverItem(itemId, catId) {
   return cat?.items.find(i => i.id === itemId);
 }
  
-function afficherModal(id) { document.getElementById(id).classList.add('visible'); }
-function fermerModal(id)   { document.getElementById(id).classList.remove('visible'); }
+let modalHistoryOuvert = false;
+
+function afficherModal(id) {
+  document.getElementById(id).classList.add('visible');
+  if (!modalHistoryOuvert) {
+    modalHistoryOuvert = true;
+    history.pushState({ modalOuvert: true }, '', location.href);
+  }
+}
+
+function fermerModal(id) {
+  document.getElementById(id).classList.remove('visible');
+  const encoreUnModalOuvert = document.querySelector('.modal-overlay.visible');
+  if (modalHistoryOuvert && !encoreUnModalOuvert) {
+    modalHistoryOuvert = false;
+    history.back();
+  }
+}
+
+window.addEventListener('popstate', () => {
+  if (modalHistoryOuvert) {
+    modalHistoryOuvert = false;
+    document.querySelectorAll('.modal-overlay.visible').forEach(m => m.classList.remove('visible'));
+  }
+});
  
 document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('visible');
@@ -2540,7 +2592,10 @@ function renderSessions(sessions) {
   container.innerHTML = `
     <div class="cave-header">
       <h2>🎉 Sessions cocktail</h2>
-      <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
+      <div style="display:flex;gap:8px">
+        ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
+        <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
+      </div>
     </div>
 
     ${actives.length > 0 ? `
@@ -2566,9 +2621,11 @@ function renderCarteSession(s, passee = false) {
   const heuresRestantes = Math.max(0, Math.ceil((expires - new Date()) / 3600000));
 
   return `
-    <div class="dash-stat" style="margin-bottom:0.75rem;padding:1rem 1.25rem;cursor:${passee ? 'default' : 'pointer'}"
+    <div class="dash-stat" style="margin-bottom:0.75rem;padding:1rem 1.25rem;cursor:${passee ? 'default' : 'pointer'};position:relative"
          ${!passee ? `onclick="ouvrirSession('${s.id}')"` : ''}>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+      <button style="position:absolute;top:0.75rem;right:0.75rem;width:28px;height:28px;border-radius:8px;background:var(--bg-danger);color:var(--text-danger);border:1px solid var(--border-danger);font-size:0.75rem;cursor:pointer"
+        onclick="event.stopPropagation(); supprimerSession('${s.id}', '${s.nom_session}')">✕</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;padding-right:32px">
         <span style="font-weight:600;font-size:1rem">${s.nom_session || 'Session sans nom'}</span>
         ${!passee
           ? `<span class="badge badge-ok">${heuresRestantes}h restantes</span>`
@@ -2581,6 +2638,33 @@ function renderCarteSession(s, passee = false) {
       </div>
     </div>
   `;
+}
+
+async function supprimerSession(id, nomSession) {
+  if (!confirm(`Supprimer la session "${nomSession || 'sans nom'}" et tous ses invités ? Cette action est irréversible.`)) return;
+
+  const { error } = await db.from('sessions_invites').delete().eq('nom_session', nomSession);
+  if (error) { alert('Erreur suppression : ' + error.message); return; }
+
+  chargerSessions();
+}
+
+async function supprimerSessionsPassees() {
+  if (!confirm('Supprimer toutes les sessions passées (et leurs invités) ? Cette action est irréversible.')) return;
+
+  const { data: sessions } = await db.from('sessions_invites')
+    .select('nom_session')
+    .eq('user_id', currentUser.id)
+    .eq('is_master', true)
+    .lte('expires_at', new Date().toISOString());
+
+  const nomsAsupprimer = [...new Set((sessions || []).map(s => s.nom_session))];
+  if (nomsAsupprimer.length === 0) { chargerSessions(); return; }
+
+  const { error } = await db.from('sessions_invites').delete().in('nom_session', nomsAsupprimer);
+  if (error) { alert('Erreur suppression : ' + error.message); return; }
+
+  chargerSessions();
 }
 let modeSessionActif = 'libre';
 
