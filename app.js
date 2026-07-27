@@ -3078,6 +3078,8 @@ async function ouvrirFicheInspiration(id) {
   const dateStr = new Date(inspi.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   const sourceLabel = { manuel: 'Saisie manuelle', photo: 'Photo', url: 'URL' };
 
+  const { data: reponsesBartender } = await db.from('bartender_reponses').select('*').eq('inspiration_id', id).order('created_at', { ascending: false });
+
   document.getElementById('inspiration-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2rem">💡</span>
@@ -3088,6 +3090,12 @@ async function ouvrirFicheInspiration(id) {
     </div>
 
     ${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
+
+    ${(reponsesBartender && reponsesBartender.length > 0) ? `
+    <div class="plante-section">
+      <h3>📱 Réponses bartender (${reponsesBartender.length})</h3>
+      ${reponsesBartender.map(r => renderReponseBartender(r)).join('')}
+    </div>` : ''}
 
     ${ings.length > 0 ? `
     <div class="plante-section">
@@ -3123,7 +3131,7 @@ async function ouvrirFicheInspiration(id) {
       <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
         ✨ Analyser avec Claude
       </button>
-${inspi.statut === 'en_attente' ? `
+      ${inspi.statut === 'en_attente' ? `
       <button class="btn-outline" onclick="fermerModal('modal-fiche-inspiration'); ouvrirModalCompleter('${inspi.id}')">✨ Compléter et valider</button>
       <button class="btn-outline" onclick="fermerModal('modal-fiche-inspiration'); ouvrirQRBartender('${inspi.id}')">📱 Dévoile ton cocktail</button>
       <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
@@ -3132,6 +3140,62 @@ ${inspi.statut === 'en_attente' ? `
   `;
 
   afficherModal('modal-fiche-inspiration');
+}
+
+function renderReponseBartender(r) {
+  const dateStr = new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const statutBadge = r.statut === 'validee'
+    ? `<span style="font-size:0.75rem;padding:3px 8px;border-radius:20px;background:var(--bg-success);color:var(--text-success)">✅ Validée</span>`
+    : `<span style="font-size:0.75rem;padding:3px 8px;border-radius:20px;background:var(--bg-danger);color:var(--text-danger)">❌ Invalidée</span>`;
+
+  const MOTIF_LABELS = {
+    trop_sucre_amer: 'Trop sucré/amer',
+    mauvaise_base: 'Mauvaise base alcool',
+    dosages_a_revoir: 'Dosages à revoir',
+    mauvaise_piste: 'Mauvaise piste'
+  };
+
+  let detailHtml = '';
+  if (r.mode === 'precis') {
+    const dosages = Array.isArray(r.dosages_precis) ? r.dosages_precis : [];
+    detailHtml = dosages.map(d => `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.85rem">
+        <span>${d.nom}</span><span style="color:var(--text-secondary)">${d.quantite} ${d.unite}</span>
+      </div>`).join('');
+  } else {
+    const INTENSITE_LABEL = ['Léger', 'Moyen', 'Fort'];
+    const SUCRE_LABEL = ['Peu', 'Moyen', 'Beaucoup'];
+    const ACIDE_LABEL = ['Peu', 'Moyen', 'Beaucoup'];
+    const AMER_LABEL = ['Absent', 'Léger', 'Présent'];
+    const PETILLANT_LABEL = ['Non', 'Léger', 'Oui'];
+    const VOLUME_LABEL = ['~10cl', '~15cl', '~20cl'];
+    detailHtml = `
+      <div style="font-size:0.82rem;color:var(--text-secondary);display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div>Alcool : ${INTENSITE_LABEL[r.intensite_alcool] ?? '—'}</div>
+        <div>Sucré : ${SUCRE_LABEL[r.sucre] ?? '—'}</div>
+        <div>Acide : ${ACIDE_LABEL[r.acide] ?? '—'}</div>
+        <div>Amer : ${AMER_LABEL[r.amer] ?? '—'}</div>
+        <div>Pétillant : ${PETILLANT_LABEL[r.petillant] ?? '—'}</div>
+        <div>Volume : ${VOLUME_LABEL[r.volume] ?? '—'}</div>
+      </div>`;
+  }
+
+  return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:0.8rem;color:var(--text-secondary)">${r.mode === 'precis' ? '🔓 Dosages précis' : '🔒 Impressions'} · ${dateStr}</span>
+        ${statutBadge}
+      </div>
+      ${(r.famille_percue || r.verre_percu) ? `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${r.famille_percue ? `<span class="herbo-usage-tag">📂 ${r.famille_percue}</span>` : ''}
+        ${r.verre_percu ? `<span class="herbo-usage-tag">🥃 ${r.verre_percu}</span>` : ''}
+      </div>` : ''}
+      ${r.ingredients_bartender ? `<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">${r.ingredients_bartender}</div>` : ''}
+      ${detailHtml}
+      ${r.motif_invalidation ? `<div style="font-size:0.78rem;color:var(--text-danger);margin-top:8px">Motif : ${MOTIF_LABELS[r.motif_invalidation] || r.motif_invalidation}</div>` : ''}
+    </div>
+  `;
 }
 function ouvrirQRBartender(id) {
   const inspi = inspirationsList.find(x => x.id === id);
