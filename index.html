@@ -573,7 +573,62 @@ onclick="document.getElementById('modal-session-active').classList.remove('visib
   </div>
 
 </div>
+<!-- MODAL : AJOUT INSPIRATION -->
+<div class="modal-overlay" id="modal-ajout-inspiration">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="fermerModal('modal-ajout-inspiration')">✕</button>
+    <h3>💡 Nouvelle inspiration</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+      <div class="form-group">
+        <label>Nom du cocktail</label>
+        <input type="text" id="inspi-nom" placeholder="ex: Mezcal Negroni, Spritz Rhubarbe…">
+      </div>
+      <div class="form-group">
+        <label>Source</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="inspi-source-btns">
+          <button class="config-btn active" data-source="manuel" onclick="selectInspiSource(this)">✍️ Manuel</button>
+          <button class="config-btn" data-source="photo" onclick="selectInspiSource(this)">📷 Photo</button>
+          <button class="config-btn" data-source="url" onclick="selectInspiSource(this)">🔗 URL</button>
+        </div>
+      </div>
+      <div class="form-group" id="inspi-source-detail-group">
+        <label>Lieu / Source <span class="label-hint">bar, ami, site…</span></label>
+        <input type="text" id="inspi-source-detail" placeholder="ex: Bar Le Botaniste, Bordeaux">
+      </div>
+      <div class="form-group" id="inspi-url-group" style="display:none">
+        <label>URL</label>
+        <input type="url" id="inspi-url" placeholder="https://…">
+      </div>
+      <div class="form-group" id="inspi-photo-group" style="display:none">
+        <label>Photo</label>
+        <input type="file" id="inspi-photo-input" accept="image/*">
+      </div>
+      <div class="form-group">
+        <label>Ingrédients <span class="label-hint">un par ligne, doses optionnelles</span></label>
+        <textarea id="inspi-ingredients" rows="4" placeholder="Mezcal&#10;Campari&#10;Vermouth rouge&#10;Zeste orange"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Tags <span class="label-hint">séparés par virgule</span></label>
+        <input type="text" id="inspi-tags" placeholder="ex: Bordeaux, Bar à vins, Instagram">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="inspi-notes" rows="2" placeholder="Impressions, contexte, idées…"></textarea>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="sauverInspiration()">
+        💾 Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
 
+<!-- MODAL : FICHE INSPIRATION -->
+<div class="modal-overlay modal-large" id="modal-fiche-inspiration">
+  <div class="modal modal-fiche">
+    <button class="modal-close" onclick="fermerModal('modal-fiche-inspiration')">✕</button>
+    <div id="inspiration-fiche-contenu"></div>
+  </div>
+</div>
 </body>
 </html>
 
