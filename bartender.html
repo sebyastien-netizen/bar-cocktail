@@ -169,6 +169,7 @@
 
     <div style="height:10px"></div>
     <button class="btn-primary" id="btn-envoyer-precis" onclick="envoyerPrecis()">Envoyer</button>
+    <div id="precis-erreur-msg" style="font-size:0.8rem;color:var(--text-danger);text-align:center;margin-top:8px"></div>
   </div>
 
   <div class="ecran" id="ecran-secret">
@@ -182,12 +183,14 @@
 
     <div style="height:10px"></div>
     <button class="btn-primary" id="btn-analyser-secret" onclick="analyserSecret()">✨ Voir la proposition</button>
+    <div id="secret-erreur-msg" style="font-size:0.8rem;color:var(--text-danger);text-align:center;margin-top:8px"></div>
   </div>
 
   <div class="ecran" id="ecran-proposition">
     <div class="titre-page">✨ Notre proposition</div>
     <div class="sous-titre">Dis-nous si on est dans le vrai.</div>
     <div id="proposition-contenu"></div>
+    <div id="proposition-erreur-msg" style="font-size:0.8rem;color:var(--text-danger);text-align:center;margin-top:8px"></div>
   </div>
 
   <div class="ecran centre" id="ecran-merci" style="padding-top: 60px;">
@@ -328,9 +331,11 @@ function renderDosages() {
 async function envoyerPrecis() {
   const ingr = document.getElementById('precis-ingredients').value.trim();
   const dosagesValides = dosagesPrecis.filter(d => d.nom.trim() && d.quantite !== '');
+  const msgEl = document.getElementById('precis-erreur-msg');
+  msgEl.textContent = '';
 
   if (dosagesValides.length === 0 && !ingr) {
-    alert('Ajoute au moins un ingrédient ou un dosage.');
+    msgEl.textContent = 'Ajoute au moins un ingrédient ou un dosage.';
     return;
   }
 
@@ -349,7 +354,7 @@ async function envoyerPrecis() {
   });
 
   if (error) {
-    alert('Erreur envoi : ' + error.message);
+    msgEl.textContent = 'Erreur envoi, réessaie.';
     btn.disabled = false;
     btn.textContent = 'Envoyer';
     return;
@@ -482,16 +487,25 @@ async function doAnalyse(motifCorrection = null) {
     });
     const result = await response.json();
     clearInterval(waitInterval);
+    const msgEl = document.getElementById('secret-erreur-msg');
+    const msgElProp = document.getElementById('proposition-erreur-msg');
     if (!response.ok) {
-      alert(result.error || 'Une erreur est survenue.');
+      const texte = result.error || 'Une erreur est survenue, réessaie.';
+      if (msgEl) msgEl.textContent = texte;
+      if (msgElProp) msgElProp.textContent = texte;
       if (btn) { btn.disabled = false; btn.textContent = '✨ Voir la proposition'; }
       return;
     }
+    if (msgEl) msgEl.textContent = '';
+    if (msgElProp) msgElProp.textContent = '';
     propositionResult = result;
     afficherProposition(result);
   } catch (e) {
     clearInterval(waitInterval);
-    alert('Erreur : ' + e.message);
+    const msgEl = document.getElementById('secret-erreur-msg');
+    const msgElProp = document.getElementById('proposition-erreur-msg');
+    if (msgEl) msgEl.textContent = 'Erreur réseau, réessaie.';
+    if (msgElProp) msgElProp.textContent = 'Erreur réseau, réessaie.';
     if (btn) { btn.disabled = false; btn.textContent = '✨ Voir la proposition'; }
   }
 }
@@ -571,7 +585,8 @@ async function enregistrerReponseSecret(statut, motif, satisfait) {
   });
 
   if (error) {
-    alert('Erreur : ' + error.message);
+    const msgElProp = document.getElementById('proposition-erreur-msg');
+    if (msgElProp) msgElProp.textContent = 'Erreur d\'enregistrement, réessaie.';
     return;
   }
 
