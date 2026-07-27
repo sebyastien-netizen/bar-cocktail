@@ -3337,13 +3337,7 @@ const response = await fetch('/api/inspiration', {
       })
     });
 
-    const raw = await response.json();
-   console.log('RAW RESPONSE:', JSON.stringify(raw));
-    let result;
-    try {
-      result = typeof raw === 'string' ? JSON.parse(raw.replace(/```json|```/g, '').trim()) : raw;
-      if (result.content) result = JSON.parse(result.content[0].text.replace(/```json|```/g, '').trim());
-    } catch(e) { result = raw; }
+const result = await response.json();
 
     completerInspirationData.dosages = result.dosages || [];
     completerInspirationData.profil = result.profil || {};
