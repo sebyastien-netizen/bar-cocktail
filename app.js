@@ -2390,9 +2390,6 @@ renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, 
 // SESSIONS
 // =============================================
 
-async function chargerSessions() {
-  document.getElementById('sessions-container').innerHTML = '<p style="padding:1rem;color:var(--text-muted)">Chargement sessions...</p>';
-}
 function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations, plantesData, grimoireData }) {
  const container = document.getElementById('dashboard-container');
   const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
@@ -2879,20 +2876,9 @@ function switchSousOngletConc(panel, btn) {
   if (panel === 'grimoire') chargerGrimoire();
 }
 
-async function chargerLexiqueConc() {
-  const { data } = await db.from('connaissances_transversales')
-    .select('*')
-    .eq('type', 'lexique')
-    .order('titre');
-  const container = document.getElementById('conc-lexique-contenu');
-  if (!container || !data) return;
-  container.innerHTML = data.map(entry => `
-    <div class="lexique-carte">
-      <div class="lexique-titre">${entry.titre}</div>
-      <div class="lexique-contenu">${entry.contenu}</div>
-    </div>
-  `).join('');
-}
+// =============================================
+// CARTE PLANTE
+// =============================================
 // =============================================
 // INSPIRATIONS
 // =============================================
