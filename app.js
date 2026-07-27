@@ -3427,8 +3427,9 @@ Réponds en JSON uniquement :
 
     if (btn) { btn.disabled = false; btn.textContent = '✨ Analyser et proposer la recette'; }
 
-  } catch(e) {
-    console.error(e);
+} catch(e) {
+    console.error('ERREUR analyserEtCompleter:', e);
+    alert('Erreur : ' + e.message);
     if (btn) { btn.disabled = false; btn.textContent = '✨ Analyser et proposer la recette'; }
   }
 }
