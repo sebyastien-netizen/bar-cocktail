@@ -2893,3 +2893,54 @@ main { overflow-x: hidden; }
   color: var(--text-secondary);
   line-height: 1.6;
 }
+/* --- Fix débordement chips recettes À acheter (mobile) --- */
+.aacheter-item {
+  overflow: hidden;
+}
+
+.aacheter-recettes-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.aacheter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.aacheter-item-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.aacheter-nom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aacheter-indicateurs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 480px) {
+  .aacheter-recettes-chips { gap: 4px; }
+  .aacheter-chip { font-size: 0.72rem; padding: 3px 7px; }
+}
