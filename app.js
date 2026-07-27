@@ -3243,8 +3243,8 @@ async function ouvrirModalCompleter(id) {
 
     <div class="plante-section">
       <h3>🍸 J'ai goûté ce cocktail</h3>
-      <div style="display:flex;flex-direction:column;gap:12px" id="sliders-gout" style="display:none">
-        ${[
+<div style="display:none;flex-direction:column;gap:12px" id="sliders-gout">
+${[
           { key: 'intensite_alcool', label: 'Intensité alcool', options: ['Léger', 'Moyen', 'Fort'] },
           { key: 'sucre', label: 'Sucré', options: ['Peu', 'Moyen', 'Beaucoup'] },
           { key: 'acide', label: 'Acide / Frais', options: ['Peu', 'Moyen', 'Beaucoup'] },
