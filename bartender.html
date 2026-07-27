@@ -87,6 +87,7 @@
   .profil-barre .fond { flex: 1; height: 6px; background: var(--border); border-radius: 3px; }
   .profil-barre .remplissage { height: 100%; background: var(--accent); border-radius: 3px; }
   .motif-btn {
+    .tag-badge { font-size: 0.78rem; padding: 4px 10px; background: var(--bg-accent); color: var(--text-accent); border-radius: 20px; display: inline-block; }
     background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
     border-radius: 8px; padding: 12px 10px; font-size: 0.8rem; cursor: pointer; width: 100%;
     margin-bottom: 8px; text-align: left; min-height: 44px;
@@ -201,18 +202,27 @@ const PETILLANT_LABEL = ['non pétillant', 'légèrement pétillant', 'très pé
 const VOLUME_LABEL = ['~10cl', '~15cl', '~20cl'];
 const PROFIL_LABELS = { gout_sucre: 'Sucré', gout_amer: 'Amer', gout_acide: 'Acide', gout_fruite: 'Fruité', gout_fume: 'Fumé', gout_floral: 'Floral', gout_epice: 'Épicé', gout_cremeux: 'Crémeux' };
 
-function showScreen(id) {
+function showScreen(id, pushHistory = true) {
   document.querySelectorAll('.ecran').forEach(e => e.style.display = 'none');
   document.getElementById(id).style.display = 'block';
+  if (pushHistory) {
+    history.pushState({ ecran: id }, '', location.pathname + location.search);
+  }
 }
 
+window.addEventListener('popstate', (e) => {
+  const ecran = e.state && e.state.ecran ? e.state.ecran : 'ecran-accueil';
+  showScreen(ecran, false);
+});
+
 async function init() {
-  if (!inspirationId) { showScreen('ecran-erreur'); return; }
+  if (!inspirationId) { showScreen('ecran-erreur', false); return; }
   const { data, error } = await db.from('inspirations').select('id,nom,ingredients').eq('id', inspirationId).single();
-  if (error || !data) { showScreen('ecran-erreur'); return; }
+  if (error || !data) { showScreen('ecran-erreur', false); return; }
   inspiData = data;
   document.getElementById('accueil-nom-cocktail').textContent = data.nom;
-  showScreen('ecran-accueil');
+  history.replaceState({ ecran: 'ecran-accueil' }, '', location.pathname + location.search);
+  showScreen('ecran-accueil', false);
 }
 init();
 
@@ -355,15 +365,22 @@ async function analyserSecret() {
 function afficherProposition(result) {
   document.getElementById('proposition-contenu').innerHTML = `
     <div class="carte">
-      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px">${result.explication || ''}</div>
+      ${(result.famille || result.base_alcool || result.verre) ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        ${result.famille ? `<span class="tag-badge">📂 ${result.famille}</span>` : ''}
+        ${result.base_alcool ? `<span class="tag-badge">🍶 ${result.base_alcool}</span>` : ''}
+        ${result.verre ? `<span class="tag-badge">🥃 ${result.verre}</span>` : ''}
+      </div>` : ''}
 
-      <div style="font-weight:600;font-size:0.85rem;margin-bottom:8px">Dosages proposés</div>
+      <div style="font-size:0.95rem;color:var(--text-primary);margin-bottom:16px;line-height:1.5">${result.explication || ''}</div>
+
+      <div style="font-weight:700;font-size:1rem;margin-bottom:10px">🥃 Dosages proposés</div>
       ${(result.dosages || []).map(d => `
-        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem">
-          <span>${d.nom}</span><span style="color:var(--text-secondary)">${d.quantite} ${d.unite}</span>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:1rem">
+          <span style="font-weight:600">${d.nom}</span><span style="color:var(--text-accent);font-weight:600">${d.quantite} ${d.unite}</span>
         </div>`).join('')}
 
-      <div style="font-weight:600;font-size:0.85rem;margin:14px 0 8px">Profil gustatif estimé</div>
+      <div style="font-weight:700;font-size:1rem;margin:18px 0 10px">Profil gustatif estimé</div>
       ${Object.entries(result.profil || {}).filter(([k, v]) => v > 0).map(([k, v]) => `
         <div class="profil-barre">
           <span class="label">${PROFIL_LABELS[k] || k}</span>
@@ -384,7 +401,6 @@ function afficherProposition(result) {
   `;
   showScreen('ecran-proposition');
 }
-
 async function validerProposition() {
   await enregistrerReponseSecret('validee', null);
 }
