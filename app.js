@@ -2237,7 +2237,7 @@ ${data.cocktails_possibles?.length ? `
 
         <div class="analyser-verdict ${verdictClass}">${data.verdict_raison}</div>
 
-${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}')">✓ Marquer comme acheté</button>` : ''}
+${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}', '${itemMatch.nom.replace(/'/g, "\\'")}')">✓ Marquer comme acheté</button>` : ''}` : ''}
       </div>
     `;
 
