@@ -2178,7 +2178,7 @@ async function analyserBouteille() {
           <div class="analyser-section">
             <div class="analyser-label">🍹 Recettes débloquées (+${debloquees.length})</div>
             ${debloquees.map(r => `
-              <div class="simulateur-recette" onclick="ouvrirFiche('${r.id}')">
+              <div class="simulateur-recette" onclick="onclick="ouvrirFicheRecette('${r.id}')">
                 <span class="simulateur-recette-nom">${r.nom}</span>
                 <span class="simulateur-recette-gouts">${(r.gouts || []).join(', ')}</span>
               </div>`).join('')}
@@ -2275,7 +2275,7 @@ function simulerGain(itemId) {
     <div class="simulateur-gain">
       <div class="simulateur-gain-titre">+${debloquees.length} recette${debloquees.length > 1 ? 's' : ''} débloquée${debloquees.length > 1 ? 's' : ''}</div>
       ${debloquees.map(r => `
-        <div class="simulateur-recette" onclick="ouvrirFiche('${r.id}')">
+        <div class="simulateur-recette" onclick="onclick="ouvrirFicheRecette('${r.id}')">
           <span class="simulateur-recette-nom">${r.nom}</span>
           <span class="simulateur-recette-gouts">${(r.gouts || []).join(', ')}</span>
         </div>
