@@ -3085,13 +3085,15 @@ async function ouvrirFicheInspiration(id) {
       <div class="herbo-usages">${tags.map(t => `<span class="herbo-usage-tag">${t}</span>`).join('')}</div>
     </div>` : ''}
 
-    ${inspi.analyse_result ? `
+   ${inspi.analyse_result ? `
     <div class="plante-section">
-      <h3>Analyse Claude</h3>
-      <div style="background:var(--bg-accent);border-radius:10px;padding:12px">
-        <div style="font-weight:600;margin-bottom:6px">${inspi.analyse_result.type === 'nouvelle' ? '🆕 Nouvelle recette' : `🔄 Variante de ${inspi.analyse_result.recette_similaire}`}</div>
-        <div style="font-size:0.85rem;color:var(--text-secondary)">${inspi.analyse_result.explication || ''}</div>
-        ${inspi.analyse_result.score ? `<div style="font-size:0.78rem;margin-top:4px">Score similarité : ${inspi.analyse_result.score}%</div>` : ''}
+      <h3>✨ Analyse Claude</h3>
+      <div style="background:var(--bg-accent);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-weight:600">${inspi.analyse_result.type === 'nouvelle' ? '🆕 Nouvelle recette' : `🔄 Variante de ${inspi.analyse_result.recette_similaire}`}</div>
+        ${inspi.analyse_result.famille ? `<div style="font-size:0.85rem">Famille : <strong>${inspi.analyse_result.famille}</strong></div>` : ''}
+        ${inspi.analyse_result.cocktails_proches?.length ? `<div style="font-size:0.85rem">Proches de : ${inspi.analyse_result.cocktails_proches.join(', ')}</div>` : ''}
+        ${inspi.analyse_result.score ? `<div style="font-size:0.78rem;color:var(--text-secondary)">Similarité : ${inspi.analyse_result.score}%</div>` : ''}
+        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5">${inspi.analyse_result.explication || ''}</div>
       </div>
     </div>` : ''}
 
@@ -3124,20 +3126,22 @@ async function analyserInspiration(id) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: `Tu es un expert bartending. Analyse cette inspiration de cocktail et compare-la avec la liste de recettes existantes.
+prompt: `Tu es un expert bartending. Analyse cette inspiration de cocktail.
 
 Inspiration : "${inspi.nom}"
 Ingrédients : ${ings || 'non précisés'}
 
-Recettes existantes :
+Recettes existantes dans la cave :
 ${recettesNoms}
 
 Réponds en JSON uniquement :
 {
   "type": "nouvelle" ou "variante",
-  "recette_similaire": "nom de la recette similaire si variante, null si nouvelle",
+  "recette_similaire": "nom de la recette la plus proche si variante, null si vraiment nouvelle",
   "score": pourcentage de similarité (0-100),
-  "explication": "explication courte en français"
+  "famille": "famille bartending (Sour, Spritz, Fizz, Tiki, Spirit forward...)",
+  "cocktails_proches": ["nom1", "nom2"],
+  "explication": "analyse courte en français : famille, profil gustatif estimé, similitudes et différences avec les recettes existantes"
 }`
       })
     });
@@ -3158,11 +3162,53 @@ Réponds en JSON uniquement :
 }
 
 async function validerInspiration(id) {
-  await db.from('inspirations').update({ statut: 'validee' }).eq('id', id);
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+
+  // Créer la recette dans la table recettes
+  const recetteId = 'inspi-' + Date.now();
+  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
+
+  const { data: recette } = await db.from('recettes').insert({
+    id: recetteId,
+    user_id: currentUser.id,
+    type: 'cocktail',
+    nom: inspi.nom,
+    difficulte: 'moyen',
+    description_courte: inspi.notes || null,
+    photo_url: inspi.photo_url || null
+  }).select().single();
+
+  if (recette && ings.length > 0) {
+    // Insérer les ingrédients
+    const ingredientsAInserer = ings.map((ing, i) => ({
+      recette_id: recetteId,
+      user_id: currentUser.id,
+      nom: typeof ing === 'string' ? ing : ing.nom,
+      quantite: ing.quantite || null,
+      unite: ing.unite || null,
+      ordre: i + 1
+    }));
+    await db.from('recette_ingredients').insert(ingredientsAInserer);
+  }
+
+  // Mettre à jour l'inspiration
+  await db.from('inspirations').update({
+    statut: 'validee',
+    recette_liee_id: recetteId
+  }).eq('id', id);
+
   const idx = inspirationsList.findIndex(x => x.id === id);
-  if (idx !== -1) inspirationsList[idx].statut = 'validee';
+  if (idx !== -1) {
+    inspirationsList[idx].statut = 'validee';
+    inspirationsList[idx].recette_liee_id = recetteId;
+  }
+
   fermerModal('modal-fiche-inspiration');
   renderInspirations();
+  // Recharger les recettes pour inclure la nouvelle
+  await chargerRecettes();
+  alert(`✅ "${inspi.nom}" ajoutée aux recettes. Complétez les détails depuis l'onglet Recettes.`);
 }
 
 async function rejeterInspiration(id) {
