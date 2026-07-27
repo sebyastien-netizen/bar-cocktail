@@ -3326,43 +3326,14 @@ Impressions gustatives du dégustateur :
 - Volume estimé : ${volumeLabel[s.volume]}` : '';
 
   try {
-    const response = await fetch('/api/analyser', {
+const response = await fetch('/api/inspiration', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: `Tu es un expert bartending. Propose une recette complète pour ce cocktail.
-
-Nom : "${inspi.nom}"
-Ingrédients observés : ${ings.join(', ')}
-${goutContext}
-
-Recettes existantes pour comparaison :
-${recettes.slice(0, 50).map(r => r.nom).join(', ')}
-
-Réponds en JSON uniquement :
-{
-  "famille": "famille bartending (Spritz, Sour, Fizz...)",
-  "base_alcool": "spiritueux principal",
-  "verre": "type de verre recommandé",
-  "difficulte": "facile ou moyen ou avance",
-  "recette_similaire": "nom de la recette la plus proche ou null",
-  "type": "nouvelle ou variante",
-  "dosages": [
-    {"nom": "nom ingrédient", "quantite": 50, "unite": "ml"},
-    {"nom": "nom ingrédient", "quantite": 90, "unite": "ml"}
-  ],
-  "profil": {
-    "gout_sucre": 2,
-    "gout_amer": 1,
-    "gout_acide": 3,
-    "gout_fruite": 2,
-    "gout_fume": 0,
-    "gout_floral": 1,
-    "gout_epice": 0,
-    "gout_cremeux": 0
-  },
-  "explication": "courte explication en français"
-}`
+        nom: inspi.nom,
+        ingredients: ings.join(', '),
+        gout_context: completerInspirationData.gouteTaste ? goutContext : '',
+        recettes_existantes: recettes.slice(0, 50).map(r => r.nom).join(', ')
       })
     });
 
