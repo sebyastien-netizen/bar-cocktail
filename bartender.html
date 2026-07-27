@@ -456,11 +456,12 @@ async function doAnalyse(motifCorrection = null) {
     const response = await fetch('/api/inspiration', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+body: JSON.stringify({
         nom: inspiData.nom,
         ingredients: secretIngredientsSaisis,
         gout_context: goutContext,
-        recettes_existantes: recettesExistantes
+        recettes_existantes: recettesExistantes,
+        proposition_precedente: motifCorrection ? propositionResult : null
       })
     });
     const result = await response.json();
