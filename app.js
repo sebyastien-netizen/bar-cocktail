@@ -3367,6 +3367,7 @@ Réponds en JSON uniquement :
     });
 
     const raw = await response.json();
+   console.log('RAW RESPONSE:', JSON.stringify(raw));
     let result;
     try {
       result = typeof raw === 'string' ? JSON.parse(raw.replace(/```json|```/g, '').trim()) : raw;
