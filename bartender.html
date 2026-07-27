@@ -63,10 +63,23 @@
   .btn-choix .choix-titre { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
   .btn-choix .choix-desc { font-size: 0.8rem; color: var(--text-secondary); }
   label { display: block; font-size: 0.78rem; color: var(--text-secondary); margin: 14px 0 6px; }
-  input, textarea {
+  input, textarea, select {
     width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
     padding: 10px 12px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit;
   }
+  .tag-badge { font-size: 0.78rem; padding: 4px 10px; background: var(--bg-accent); color: var(--text-accent); border-radius: 20px; display: inline-block; }
+  .verre-grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .verre-btn {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px; cursor: pointer; color: var(--text-secondary); min-height: 68px;
+  }
+  .verre-btn svg { width: 26px; height: 26px; }
+  .verre-btn .verre-label { font-size: 0.65rem; line-height: 1.15; text-align: center; }
+  .verre-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--accent); }
+  .progress-bar { display: flex; gap: 6px; margin-bottom: 22px; }
+  .progress-seg { flex: 1; height: 5px; border-radius: 3px; background: var(--border); transition: background 0.25s; }
+  .progress-seg.filled { background: var(--warning); }
   textarea { min-height: 70px; resize: vertical; }
   .ligne-dosage { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
   .ligne-dosage input:nth-child(1) { flex: 2; }
@@ -87,7 +100,6 @@
   .profil-barre .fond { flex: 1; height: 6px; background: var(--border); border-radius: 3px; }
   .profil-barre .remplissage { height: 100%; background: var(--accent); border-radius: 3px; }
   .motif-btn {
-    .tag-badge { font-size: 0.78rem; padding: 4px 10px; background: var(--bg-accent); color: var(--text-accent); border-radius: 20px; display: inline-block; }
     background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
     border-radius: 8px; padding: 12px 10px; font-size: 0.8rem; cursor: pointer; width: 100%;
     margin-bottom: 8px; text-align: left; min-height: 44px;
@@ -99,6 +111,12 @@
 </head>
 <body>
 <div id="app">
+
+  <div class="progress-bar" id="progress-bar" style="display:none">
+    <div class="progress-seg" data-step="1"></div>
+    <div class="progress-seg" data-step="2"></div>
+    <div class="progress-seg" data-step="3"></div>
+  </div>
 
   <div class="ecran centre" id="ecran-loading" style="display:block; padding-top: 80px;">
     <div style="font-size:0.9rem; color: var(--text-secondary);">Chargement…</div>
@@ -166,7 +184,7 @@
   <div class="ecran centre" id="ecran-merci" style="padding-top: 60px;">
     <div class="emoji-grand">🙌</div>
     <div class="titre-page">Merci !</div>
-    <div class="sous-titre">C'est envoyé. Seb passera capter ça dans son Grimoire.</div>
+    <div class="sous-titre" id="merci-texte">C'est envoyé. Seb passera capter ça dans son Grimoire.</div>
   </div>
 
 </div>
@@ -185,6 +203,22 @@ let dosagesPrecis = [];
 let sliders = { intensite_alcool: 1, sucre: 1, acide: 1, amer: 1, petillant: 0, volume: 1 };
 let propositionResult = null;
 let secretIngredientsSaisis = '';
+let secretFamille = '';
+let secretVerre = '';
+let tentative = 1;
+let motifTentative1 = null;
+
+const FAMILLES = ['', 'Sour', 'Daisy', 'Spirit forward', 'Ladder', 'Martini', 'Collins', 'Fizz', 'Tiki', 'Julep', 'Smash', 'Ancestrale', 'Frozen', 'Mule / Buck', 'Champagne cocktail', 'Je ne sais pas'];
+const VERRES = [
+  { value: 'Verre bas (Old Fashioned)', label: 'Bas', svg: '<path d="M6 9 L7 20 A1 1 0 0 0 8 21 H16 A1 1 0 0 0 17 20 L18 9 Z"/><line x1="5" y1="9" x2="19" y2="9"/>' },
+  { value: 'Verre haut (Highball)', label: 'Haut', svg: '<path d="M8 4 L8.5 20 A1 1 0 0 0 9.5 21 H14.5 A1 1 0 0 0 15.5 20 L16 4 Z"/><line x1="7.5" y1="4" x2="16.5" y2="4"/>' },
+  { value: 'Coupe / Nick & Nora', label: 'Coupe', svg: '<path d="M5 4 C5 9 9 11 12 11 C15 11 19 9 19 4 Z"/><line x1="12" y1="11" x2="12" y2="19"/><line x1="8" y1="20" x2="16" y2="20"/>' },
+  { value: 'Verre à pied (Martini)', label: 'Martini', svg: '<path d="M5 4 L12 12 L19 4 Z"/><line x1="12" y1="12" x2="12" y2="19"/><line x1="8" y1="20" x2="16" y2="20"/>' },
+  { value: 'Flûte', label: 'Flûte', svg: '<path d="M10 3 L10.7 14 C10.8 15 11.2 15.5 12 15.5 C12.8 15.5 13.2 15 13.3 14 L14 3 Z"/><line x1="12" y1="15.5" x2="12" y2="19"/><line x1="8.5" y1="20" x2="15.5" y2="20"/>' },
+  { value: 'Mug Tiki', label: 'Tiki', svg: '<path d="M6 6 L7 19 A1 1 0 0 0 8 20 H15 A1 1 0 0 0 16 19 L17 6 Z"/><path d="M16 9 C19 9 19 14 16 14"/>' },
+  { value: 'Julep cup', label: 'Julep', svg: '<path d="M7 5 L8 19 A1 1 0 0 0 9 20 H15 A1 1 0 0 0 16 19 L17 5 Z"/><line x1="6.5" y1="5" x2="17.5" y2="5"/>' },
+  { value: 'Je ne sais pas', label: '?', svg: '<circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="11" stroke="none" fill="currentColor">?</text>' }
+];
 
 const SLIDERS_DEF = [
   { key: 'intensite_alcool', label: 'Intensité alcool', options: ['Léger', 'Moyen', 'Fort'] },
@@ -202,9 +236,22 @@ const PETILLANT_LABEL = ['non pétillant', 'légèrement pétillant', 'très pé
 const VOLUME_LABEL = ['~10cl', '~15cl', '~20cl'];
 const PROFIL_LABELS = { gout_sucre: 'Sucré', gout_amer: 'Amer', gout_acide: 'Acide', gout_fruite: 'Fruité', gout_fume: 'Fumé', gout_floral: 'Floral', gout_epice: 'Épicé', gout_cremeux: 'Crémeux' };
 
+const STEP_MAP = { 'ecran-accueil': 1, 'ecran-precis': 2, 'ecran-secret': 2, 'ecran-proposition': 3, 'ecran-merci': 3 };
+
+function updateProgressBar(id) {
+  const bar = document.getElementById('progress-bar');
+  if (id === 'ecran-loading' || id === 'ecran-erreur') { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const step = STEP_MAP[id] || 1;
+  document.querySelectorAll('.progress-seg').forEach(seg => {
+    seg.classList.toggle('filled', parseInt(seg.dataset.step) <= step);
+  });
+}
+
 function showScreen(id, pushHistory = true) {
   document.querySelectorAll('.ecran').forEach(e => e.style.display = 'none');
   document.getElementById(id).style.display = 'block';
+  updateProgressBar(id);
   if (pushHistory) {
     history.pushState({ ecran: id }, '', location.pathname + location.search);
   }
@@ -312,7 +359,31 @@ function renderSliders() {
         `).join('')}
       </div>
     </div>
-  `).join('');
+  `).join('') + `
+    <div class="slider-groupe">
+      <div class="slider-label">Famille du cocktail (si tu la reconnais)</div>
+      <select id="secret-famille" onchange="secretFamille = this.value">
+        ${FAMILLES.map(f => `<option value="${f}">${f || '— Choisir —'}</option>`).join('')}
+      </select>
+    </div>
+    <div class="slider-groupe">
+      <div class="slider-label">Type de verre servi</div>
+      <div class="verre-grille">
+        ${VERRES.map(v => `
+          <div class="verre-btn ${secretVerre === v.value ? 'active' : ''}" data-verre="${v.value}" onclick="selectVerre(this, '${v.value}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${v.svg}</svg>
+            <div class="verre-label">${v.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function selectVerre(btn, value) {
+  document.querySelectorAll('.verre-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  secretVerre = value;
 }
 
 function selectSlider(btn, key, val) {
@@ -323,17 +394,33 @@ function selectSlider(btn, key, val) {
 
 async function analyserSecret() {
   secretIngredientsSaisis = document.getElementById('secret-ingredients').value.trim();
-  const btn = document.getElementById('btn-analyser-secret');
-  btn.disabled = true;
-  btn.textContent = '⏳ Analyse en cours…';
+  tentative = 1;
+  motifTentative1 = null;
+  await doAnalyse();
+}
 
-  const goutContext = `Impressions gustatives du bartender :
+const MOTIF_LABELS = {
+  trop_sucre_amer: 'trop sucré ou trop amer',
+  mauvaise_base: 'mauvaise base alcool perçue',
+  dosages_a_revoir: 'bon esprit général mais dosages à revoir',
+  mauvaise_piste: 'pas la bonne piste du tout'
+};
+
+async function doAnalyse(motifCorrection = null) {
+  const btn = document.getElementById('btn-analyser-secret');
+  if (btn) { btn.disabled = true; btn.textContent = motifCorrection ? '⏳ Nouvelle proposition…' : '⏳ Analyse en cours…'; }
+
+  let goutContext = `Impressions gustatives du bartender :
 - Intensité alcool : ${INTENSITE_LABEL[sliders.intensite_alcool]}
 - Sucré : ${SUCRE_LABEL[sliders.sucre]}
 - Acide/Frais : ${ACIDE_LABEL[sliders.acide]}
 - Amer : ${AMER_LABEL[sliders.amer]}
 - Pétillant : ${PETILLANT_LABEL[sliders.petillant]}
 - Volume estimé : ${VOLUME_LABEL[sliders.volume]}`;
+
+  if (secretFamille) goutContext += `\n- Famille perçue : ${secretFamille}`;
+  if (secretVerre) goutContext += `\n- Verre servi : ${secretVerre}`;
+  if (motifCorrection) goutContext += `\n\nLe bartender a jugé la proposition précédente : ${MOTIF_LABELS[motifCorrection] || motifCorrection}. Corrige les dosages en conséquence.`;
 
   let recettesExistantes = '';
   try {
@@ -357,8 +444,7 @@ async function analyserSecret() {
     afficherProposition(result);
   } catch (e) {
     alert('Erreur : ' + e.message);
-    btn.disabled = false;
-    btn.textContent = '✨ Voir la proposition';
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Voir la proposition'; }
   }
 }
 
@@ -391,25 +477,34 @@ function afficherProposition(result) {
 
     <button class="btn-primary" onclick="validerProposition()">✅ Oui, c'est ça !</button>
 
-    <div style="margin-top:20px;font-size:0.8rem;color:var(--text-secondary);text-align:center">Pas tout à fait ?</div>
+    <div style="margin-top:20px;font-size:0.8rem;color:var(--text-secondary);text-align:center">
+      ${tentative === 1 ? 'Pas tout à fait ?' : 'Toujours pas ? On note et Seb regardera ça.'}
+    </div>
     <div style="margin-top:10px">
-      <button class="motif-btn" onclick="invaliderProposition('trop_sucre_amer')">Trop sucré / trop amer</button>
-      <button class="motif-btn" onclick="invaliderProposition('mauvaise_base')">Mauvaise base alcool</button>
-      <button class="motif-btn" onclick="invaliderProposition('dosages_a_revoir')">Bon esprit, dosages à revoir</button>
-      <button class="motif-btn" onclick="invaliderProposition('mauvaise_piste')">Pas la bonne piste</button>
+      <button class="motif-btn" onclick="onMotifClick('trop_sucre_amer')">Trop sucré / trop amer</button>
+      <button class="motif-btn" onclick="onMotifClick('mauvaise_base')">Mauvaise base alcool</button>
+      <button class="motif-btn" onclick="onMotifClick('dosages_a_revoir')">Bon esprit, dosages à revoir</button>
+      <button class="motif-btn" onclick="onMotifClick('mauvaise_piste')">Pas la bonne piste</button>
     </div>
   `;
   showScreen('ecran-proposition');
 }
+
+async function onMotifClick(motif) {
+  if (tentative === 1) {
+    motifTentative1 = motif;
+    tentative = 2;
+    await doAnalyse(motif);
+  } else {
+    await enregistrerReponseSecret('invalidee', motif, false);
+  }
+}
+
 async function validerProposition() {
-  await enregistrerReponseSecret('validee', null);
+  await enregistrerReponseSecret('validee', motifTentative1, true);
 }
 
-async function invaliderProposition(motif) {
-  await enregistrerReponseSecret('invalidee', motif);
-}
-
-async function enregistrerReponseSecret(statut, motif) {
+async function enregistrerReponseSecret(statut, motif, satisfait) {
   const { error } = await db.from('bartender_reponses').insert({
     inspiration_id: inspirationId,
     mode: 'secret',
@@ -420,6 +515,8 @@ async function enregistrerReponseSecret(statut, motif) {
     amer: sliders.amer,
     petillant: sliders.petillant,
     volume: sliders.volume,
+    famille_percue: secretFamille || null,
+    verre_percu: secretVerre || null,
     statut: statut,
     motif_invalidation: motif,
     analyse_result: propositionResult
@@ -430,6 +527,9 @@ async function enregistrerReponseSecret(statut, motif) {
     return;
   }
 
+  document.getElementById('merci-texte').textContent = satisfait
+    ? "C'est envoyé. Seb passera capter ça dans son Grimoire."
+    : "C'est noté. Seb regardera ça de son côté — merci d'avoir essayé !";
   showScreen('ecran-merci');
 }
 </script>
