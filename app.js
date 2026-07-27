@@ -3180,6 +3180,10 @@ function renderReponseBartender(r) {
       </div>`;
   }
 
+  const boutonReprendre = r.mode === 'precis'
+    ? `<button class="btn-outline" style="margin-top:8px;padding:8px 10px;font-size:0.78rem" onclick="reprendreDosagesPrecis('${r.id}','${r.inspiration_id}')">↩️ Reprendre ces dosages dans "Compléter"</button>`
+    : `<button class="btn-outline" style="margin-top:8px;padding:8px 10px;font-size:0.78rem" onclick="reprendreImpressionsSecret('${r.id}','${r.inspiration_id}')">↩️ Reprendre ces impressions dans "Compléter"</button>`;
+
   return `
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -3194,8 +3198,48 @@ function renderReponseBartender(r) {
       ${r.ingredients_bartender ? `<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">${r.ingredients_bartender}</div>` : ''}
       ${detailHtml}
       ${r.motif_invalidation ? `<div style="font-size:0.78rem;color:var(--text-danger);margin-top:8px">Motif : ${MOTIF_LABELS[r.motif_invalidation] || r.motif_invalidation}</div>` : ''}
+      ${boutonReprendre}
     </div>
   `;
+}
+
+async function reprendreDosagesPrecis(reponseId, inspirationId) {
+  const { data: reponse } = await db.from('bartender_reponses').select('*').eq('id', reponseId).single();
+  if (!reponse) return;
+  const dosages = Array.isArray(reponse.dosages_precis) ? reponse.dosages_precis : [];
+  const ingredientsFormates = dosages.map(d => `${d.nom} (${d.quantite} ${d.unite})`);
+
+  await db.from('inspirations').update({ ingredients: ingredientsFormates }).eq('id', inspirationId);
+  const idx = inspirationsList.findIndex(x => x.id === inspirationId);
+  if (idx !== -1) inspirationsList[idx].ingredients = ingredientsFormates;
+
+  fermerModal('modal-fiche-inspiration');
+  ouvrirModalCompleter(inspirationId);
+}
+
+async function reprendreImpressionsSecret(reponseId, inspirationId) {
+  const { data: reponse } = await db.from('bartender_reponses').select('*').eq('id', reponseId).single();
+  if (!reponse) return;
+
+  fermerModal('modal-fiche-inspiration');
+  ouvrirModalCompleter(inspirationId);
+
+  setTimeout(() => {
+    completerInspirationData.sliders = {
+      intensite_alcool: reponse.intensite_alcool ?? 1,
+      sucre: reponse.sucre ?? 1,
+      acide: reponse.acide ?? 1,
+      amer: reponse.amer ?? 1,
+      petillant: reponse.petillant ?? 0,
+      volume: reponse.volume ?? 1
+    };
+    toggleGoutSliders();
+    document.querySelectorAll('#sliders-gout [data-key]').forEach(btn => {
+      const key = btn.dataset.key;
+      const val = parseInt(btn.dataset.val);
+      btn.classList.toggle('active', val === completerInspirationData.sliders[key]);
+    });
+  }, 50);
 }
 function ouvrirQRBartender(id) {
   const inspi = inspirationsList.find(x => x.id === id);
