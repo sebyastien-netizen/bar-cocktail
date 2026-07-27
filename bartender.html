@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dévoile ton cocktail</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #14141c;
+    --bg-card: #1e1e29;
+    --bg-card-hover: #262632;
+    --text-primary: #f0e6d3;
+    --text-secondary: #a8a4b0;
+    --text-muted: #6b6875;
+    --accent: #e8b64c;
+    --accent-hover: #f2c669;
+    --border: #2c2c3a;
+    --border-strong: #3d3d4d;
+    --success: #4caf82;
+    --warning: #e8a33d;
+    --danger: #e05a5a;
+    --bg-success: rgba(76,175,130,0.12);
+    --bg-warning: rgba(232,163,61,0.12);
+    --bg-danger: rgba(224,90,90,0.12);
+    --bg-accent: rgba(232,182,76,0.12);
+    --text-success: #4caf82;
+    --text-warning: #e8a33d;
+    --text-danger: #e05a5a;
+    --text-accent: #e8b64c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  #app { max-width: 480px; margin: 0 auto; }
+  .ecran { display: none; }
+  .titre-page { font-size: 1.4rem; font-weight: 700; text-align: center; margin: 12px 0 4px; }
+  .sous-titre { font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin-bottom: 28px; line-height: 1.5; }
+  .nom-cocktail { font-size: 0.95rem; color: var(--text-accent); text-align: center; font-weight: 600; margin-bottom: 4px; }
+  .carte { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 16px; margin-bottom: 16px; }
+  .btn-primary {
+    background: var(--accent); color: #000; border: none; border-radius: 10px;
+    padding: 14px 16px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    width: 100%; min-height: 48px;
+  }
+  .btn-outline {
+    background: transparent; color: var(--text-primary); border: 1px solid var(--border-strong);
+    border-radius: 10px; padding: 12px 16px; font-size: 0.9rem; cursor: pointer;
+    width: 100%; min-height: 48px;
+  }
+  .btn-choix {
+    display: block; width: 100%; text-align: left; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px 16px;
+    margin-bottom: 14px; cursor: pointer; color: var(--text-primary);
+  }
+  .btn-choix:active { background: var(--bg-card-hover); }
+  .btn-choix .choix-titre { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+  .btn-choix .choix-desc { font-size: 0.8rem; color: var(--text-secondary); }
+  label { display: block; font-size: 0.78rem; color: var(--text-secondary); margin: 14px 0 6px; }
+  input, textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .ligne-dosage { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .ligne-dosage input:nth-child(1) { flex: 2; }
+  .ligne-dosage input:nth-child(2) { flex: 1; }
+  .ligne-dosage select { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); padding: 10px; font-size: 0.85rem; }
+  .btn-retirer { background: var(--bg-danger); color: var(--text-danger); border: none; border-radius: 8px; width: 36px; height: 36px; flex-shrink: 0; cursor: pointer; font-size: 0.9rem; }
+  .slider-groupe { margin-bottom: 16px; }
+  .slider-label { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 6px; }
+  .slider-options { display: flex; gap: 6px; }
+  .config-btn {
+    flex: 1; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
+    border-radius: 8px; padding: 10px 4px; font-size: 0.78rem; cursor: pointer; min-height: 44px;
+  }
+  .config-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--accent); }
+  .lien-ajouter { color: var(--text-accent); font-size: 0.85rem; text-align: center; padding: 8px; cursor: pointer; }
+  .profil-barre { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .profil-barre .label { font-size: 0.78rem; width: 60px; color: var(--text-secondary); }
+  .profil-barre .fond { flex: 1; height: 6px; background: var(--border); border-radius: 3px; }
+  .profil-barre .remplissage { height: 100%; background: var(--accent); border-radius: 3px; }
+  .motif-btn {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
+    border-radius: 8px; padding: 12px 10px; font-size: 0.8rem; cursor: pointer; width: 100%;
+    margin-bottom: 8px; text-align: left; min-height: 44px;
+  }
+  .centre { text-align: center; }
+  .emoji-grand { font-size: 2.5rem; margin-bottom: 12px; }
+  .footer-marque { text-align: center; font-size: 0.7rem; color: var(--text-muted); margin-top: 30px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="ecran centre" id="ecran-loading" style="display:block; padding-top: 80px;">
+    <div style="font-size:0.9rem; color: var(--text-secondary);">Chargement…</div>
+  </div>
+
+  <div class="ecran centre" id="ecran-erreur" style="padding-top: 80px;">
+    <div class="emoji-grand">🥃</div>
+    <div class="titre-page">Lien invalide</div>
+    <div class="sous-titre">Ce QR code ne correspond à aucune inspiration en cours. Redemande un nouveau QR code.</div>
+  </div>
+
+  <div class="ecran" id="ecran-accueil">
+    <div class="titre-page">Dévoile ton cocktail</div>
+    <div class="sous-titre">Dosages précis ou secret bien gardé — à toi de voir.</div>
+    <div class="nom-cocktail" id="accueil-nom-cocktail"></div>
+    <div style="height:20px"></div>
+
+    <div class="btn-choix" onclick="choisirMode('precis')">
+      <div class="choix-titre">🔓 Je donne mes dosages</div>
+      <div class="choix-desc">Tu partages ta recette précise, ingrédient par ingrédient.</div>
+    </div>
+
+    <div class="btn-choix" onclick="choisirMode('secret')">
+      <div class="choix-titre">🔒 Je garde le secret</div>
+      <div class="choix-desc">Tu réponds juste à quelques questions de goût — pas de dosages révélés.</div>
+    </div>
+
+    <div class="footer-marque">Bar à Cocktail · Seb</div>
+  </div>
+
+  <div class="ecran" id="ecran-precis">
+    <div class="titre-page">🔓 Tes dosages</div>
+    <div class="sous-titre">Aussi précis ou vague que tu veux.</div>
+
+    <label>Ingrédients en texte libre (optionnel)</label>
+    <textarea id="precis-ingredients" placeholder="Ex : gin, jus de citron vert, sirop de gingembre maison..."></textarea>
+
+    <label>Dosages</label>
+    <div id="precis-dosages-liste"></div>
+    <div class="lien-ajouter" onclick="ajouterLigneDosage()">+ Ajouter un ingrédient</div>
+
+    <div style="height:10px"></div>
+    <button class="btn-primary" id="btn-envoyer-precis" onclick="envoyerPrecis()">Envoyer</button>
+  </div>
+
+  <div class="ecran" id="ecran-secret">
+    <div class="titre-page">🔒 Quelques impressions</div>
+    <div class="sous-titre">Pas de dosages demandés — juste ton ressenti.</div>
+
+    <label>Ingrédients aperçus (optionnel, tu peux laisser vide)</label>
+    <textarea id="secret-ingredients" placeholder="Ex : un spiritueux brun, des agrumes..."></textarea>
+
+    <div id="secret-sliders" style="margin-top:16px"></div>
+
+    <div style="height:10px"></div>
+    <button class="btn-primary" id="btn-analyser-secret" onclick="analyserSecret()">✨ Voir la proposition</button>
+  </div>
+
+  <div class="ecran" id="ecran-proposition">
+    <div class="titre-page">✨ Notre proposition</div>
+    <div class="sous-titre">Dis-nous si on est dans le vrai.</div>
+    <div id="proposition-contenu"></div>
+  </div>
+
+  <div class="ecran centre" id="ecran-merci" style="padding-top: 60px;">
+    <div class="emoji-grand">🙌</div>
+    <div class="titre-page">Merci !</div>
+    <div class="sous-titre">C'est envoyé. Seb passera capter ça dans son Grimoire.</div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wqsprjlocuhandhvpytx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_g4pDtkemUi-6VUG6qgVJWw_PAy5YibN';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const inspirationId = params.get('inspiration');
+
+let inspiData = null;
+let dosagesPrecis = [];
+let sliders = { intensite_alcool: 1, sucre: 1, acide: 1, amer: 1, petillant: 0, volume: 1 };
+let propositionResult = null;
+let secretIngredientsSaisis = '';
+
+const SLIDERS_DEF = [
+  { key: 'intensite_alcool', label: 'Intensité alcool', options: ['Léger', 'Moyen', 'Fort'] },
+  { key: 'sucre', label: 'Sucré', options: ['Peu', 'Moyen', 'Beaucoup'] },
+  { key: 'acide', label: 'Acide / Frais', options: ['Peu', 'Moyen', 'Beaucoup'] },
+  { key: 'amer', label: 'Amer', options: ['Absent', 'Léger', 'Présent'] },
+  { key: 'petillant', label: 'Pétillant', options: ['Non', 'Léger', 'Oui'] },
+  { key: 'volume', label: 'Volume estimé', options: ['~10cl', '~15cl', '~20cl'] }
+];
+const INTENSITE_LABEL = ['léger', 'moyen', 'fort'];
+const SUCRE_LABEL = ['peu sucré', 'moyennement sucré', 'très sucré'];
+const ACIDE_LABEL = ['peu acide', 'moyennement acide', 'très acide/frais'];
+const AMER_LABEL = ['sans amertume', 'légèrement amer', 'amer'];
+const PETILLANT_LABEL = ['non pétillant', 'légèrement pétillant', 'très pétillant'];
+const VOLUME_LABEL = ['~10cl', '~15cl', '~20cl'];
+const PROFIL_LABELS = { gout_sucre: 'Sucré', gout_amer: 'Amer', gout_acide: 'Acide', gout_fruite: 'Fruité', gout_fume: 'Fumé', gout_floral: 'Floral', gout_epice: 'Épicé', gout_cremeux: 'Crémeux' };
+
+function showScreen(id) {
+  document.querySelectorAll('.ecran').forEach(e => e.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+async function init() {
+  if (!inspirationId) { showScreen('ecran-erreur'); return; }
+  const { data, error } = await db.from('inspirations').select('id,nom,ingredients').eq('id', inspirationId).single();
+  if (error || !data) { showScreen('ecran-erreur'); return; }
+  inspiData = data;
+  document.getElementById('accueil-nom-cocktail').textContent = data.nom;
+  showScreen('ecran-accueil');
+}
+init();
+
+function choisirMode(m) {
+  if (m === 'precis') {
+    if (dosagesPrecis.length === 0) ajouterLigneDosage();
+    showScreen('ecran-precis');
+  } else {
+    renderSliders();
+    showScreen('ecran-secret');
+  }
+}
+
+// ---------- MODE PRÉCIS ----------
+
+function ajouterLigneDosage() {
+  dosagesPrecis.push({ nom: '', quantite: '', unite: 'ml' });
+  renderDosages();
+}
+
+function retirerLigneDosage(i) {
+  dosagesPrecis.splice(i, 1);
+  renderDosages();
+}
+
+function majDosage(i, champ, val) {
+  dosagesPrecis[i][champ] = val;
+}
+
+function renderDosages() {
+  document.getElementById('precis-dosages-liste').innerHTML = dosagesPrecis.map((d, i) => `
+    <div class="ligne-dosage">
+      <input type="text" placeholder="Ingrédient" value="${d.nom}" oninput="majDosage(${i},'nom',this.value)">
+      <input type="number" placeholder="Qté" value="${d.quantite}" oninput="majDosage(${i},'quantite',this.value)">
+      <select onchange="majDosage(${i},'unite',this.value)">
+        <option value="ml" ${d.unite === 'ml' ? 'selected' : ''}>ml</option>
+        <option value="cl" ${d.unite === 'cl' ? 'selected' : ''}>cl</option>
+        <option value="trait" ${d.unite === 'trait' ? 'selected' : ''}>trait</option>
+        <option value="pièce" ${d.unite === 'pièce' ? 'selected' : ''}>pièce</option>
+      </select>
+      <button class="btn-retirer" onclick="retirerLigneDosage(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function envoyerPrecis() {
+  const ingr = document.getElementById('precis-ingredients').value.trim();
+  const dosagesValides = dosagesPrecis.filter(d => d.nom.trim() && d.quantite !== '');
+
+  if (dosagesValides.length === 0 && !ingr) {
+    alert('Ajoute au moins un ingrédient ou un dosage.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-envoyer-precis');
+  btn.disabled = true;
+  btn.textContent = '⏳ Envoi…';
+
+  const { error } = await db.from('bartender_reponses').insert({
+    inspiration_id: inspirationId,
+    mode: 'precis',
+    ingredients_bartender: ingr || null,
+    dosages_precis: dosagesValides,
+    statut: 'validee'
+  });
+
+  if (error) {
+    alert('Erreur envoi : ' + error.message);
+    btn.disabled = false;
+    btn.textContent = 'Envoyer';
+    return;
+  }
+
+  showScreen('ecran-merci');
+}
+
+// ---------- MODE SECRET ----------
+
+function renderSliders() {
+  document.getElementById('secret-sliders').innerHTML = SLIDERS_DEF.map(s => `
+    <div class="slider-groupe">
+      <div class="slider-label">${s.label}</div>
+      <div class="slider-options">
+        ${s.options.map((opt, i) => `
+          <button class="config-btn ${i === sliders[s.key] ? 'active' : ''}"
+            data-key="${s.key}" onclick="selectSlider(this, '${s.key}', ${i})">${opt}</button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectSlider(btn, key, val) {
+  document.querySelectorAll(`[data-key="${key}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  sliders[key] = val;
+}
+
+async function analyserSecret() {
+  secretIngredientsSaisis = document.getElementById('secret-ingredients').value.trim();
+  const btn = document.getElementById('btn-analyser-secret');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyse en cours…';
+
+  const goutContext = `Impressions gustatives du bartender :
+- Intensité alcool : ${INTENSITE_LABEL[sliders.intensite_alcool]}
+- Sucré : ${SUCRE_LABEL[sliders.sucre]}
+- Acide/Frais : ${ACIDE_LABEL[sliders.acide]}
+- Amer : ${AMER_LABEL[sliders.amer]}
+- Pétillant : ${PETILLANT_LABEL[sliders.petillant]}
+- Volume estimé : ${VOLUME_LABEL[sliders.volume]}`;
+
+  let recettesExistantes = '';
+  try {
+    const { data: recs } = await db.from('recettes').select('nom').limit(50);
+    recettesExistantes = (recs || []).map(r => r.nom).join(', ');
+  } catch (e) { /* pas bloquant si ça échoue */ }
+
+  try {
+    const response = await fetch('/api/inspiration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nom: inspiData.nom,
+        ingredients: secretIngredientsSaisis,
+        gout_context: goutContext,
+        recettes_existantes: recettesExistantes
+      })
+    });
+    const result = await response.json();
+    propositionResult = result;
+    afficherProposition(result);
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '✨ Voir la proposition';
+  }
+}
+
+function afficherProposition(result) {
+  document.getElementById('proposition-contenu').innerHTML = `
+    <div class="carte">
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px">${result.explication || ''}</div>
+
+      <div style="font-weight:600;font-size:0.85rem;margin-bottom:8px">Dosages proposés</div>
+      ${(result.dosages || []).map(d => `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem">
+          <span>${d.nom}</span><span style="color:var(--text-secondary)">${d.quantite} ${d.unite}</span>
+        </div>`).join('')}
+
+      <div style="font-weight:600;font-size:0.85rem;margin:14px 0 8px">Profil gustatif estimé</div>
+      ${Object.entries(result.profil || {}).filter(([k, v]) => v > 0).map(([k, v]) => `
+        <div class="profil-barre">
+          <span class="label">${PROFIL_LABELS[k] || k}</span>
+          <div class="fond"><div class="remplissage" style="width:${v * 20}%"></div></div>
+          <span style="font-size:0.78rem;color:var(--text-secondary)">${v}/5</span>
+        </div>`).join('')}
+    </div>
+
+    <button class="btn-primary" onclick="validerProposition()">✅ Oui, c'est ça !</button>
+
+    <div style="margin-top:20px;font-size:0.8rem;color:var(--text-secondary);text-align:center">Pas tout à fait ?</div>
+    <div style="margin-top:10px">
+      <button class="motif-btn" onclick="invaliderProposition('trop_sucre_amer')">Trop sucré / trop amer</button>
+      <button class="motif-btn" onclick="invaliderProposition('mauvaise_base')">Mauvaise base alcool</button>
+      <button class="motif-btn" onclick="invaliderProposition('dosages_a_revoir')">Bon esprit, dosages à revoir</button>
+      <button class="motif-btn" onclick="invaliderProposition('mauvaise_piste')">Pas la bonne piste</button>
+    </div>
+  `;
+  showScreen('ecran-proposition');
+}
+
+async function validerProposition() {
+  await enregistrerReponseSecret('validee', null);
+}
+
+async function invaliderProposition(motif) {
+  await enregistrerReponseSecret('invalidee', motif);
+}
+
+async function enregistrerReponseSecret(statut, motif) {
+  const { error } = await db.from('bartender_reponses').insert({
+    inspiration_id: inspirationId,
+    mode: 'secret',
+    ingredients_bartender: secretIngredientsSaisis || null,
+    intensite_alcool: sliders.intensite_alcool,
+    sucre: sliders.sucre,
+    acide: sliders.acide,
+    amer: sliders.amer,
+    petillant: sliders.petillant,
+    volume: sliders.volume,
+    statut: statut,
+    motif_invalidation: motif,
+    analyse_result: propositionResult
+  });
+
+  if (error) {
+    alert('Erreur : ' + error.message);
+    return;
+  }
+
+  showScreen('ecran-merci');
+}
+</script>
+</body>
+</html>
