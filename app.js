@@ -114,6 +114,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(btn => {
     document.getElementById('section-' + tab)?.classList.remove('hidden');
     ongletActif = tab;
     if (tab === 'sessions') chargerSessions();
+   if (tab === 'inspirations') chargerInspirations();
   });
 });
  
@@ -2892,7 +2893,285 @@ async function chargerLexiqueConc() {
     </div>
   `).join('');
 }
+// =============================================
+// INSPIRATIONS
+// =============================================
 
+let inspirationsList = [];
+let inspiSourceActive = 'manuel';
+
+async function chargerInspirations() {
+  const container = document.getElementById('inspirations-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-state">Chargement…</div>';
+  const { data } = await db.from('inspirations').select('*').order('created_at', { ascending: false });
+  inspirationsList = data || [];
+  renderInspirations();
+}
+
+function renderInspirations() {
+  const container = document.getElementById('inspirations-container');
+  if (!container) return;
+
+  const enAttente = inspirationsList.filter(i => i.statut === 'en_attente');
+  const validees = inspirationsList.filter(i => i.statut === 'validee');
+  const rejetees = inspirationsList.filter(i => i.statut === 'rejetee');
+
+  container.innerHTML = `
+    <div style="padding:1rem;display:flex;justify-content:flex-end">
+      <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
+    </div>
+
+    ${enAttente.length > 0 ? `
+    <div class="conc-section">
+      <h3 class="conc-section-titre">⏳ En attente (${enAttente.length})</h3>
+      <div class="herbo-grille">
+        ${enAttente.map(i => renderCarteInspiration(i)).join('')}
+      </div>
+    </div>` : ''}
+
+    ${validees.length > 0 ? `
+    <div class="conc-section">
+      <h3 class="conc-section-titre">✅ Validées (${validees.length})</h3>
+      <div class="herbo-grille">
+        ${validees.map(i => renderCarteInspiration(i)).join('')}
+      </div>
+    </div>` : ''}
+
+    ${rejetees.length > 0 ? `
+    <div class="conc-section">
+      <h3 class="conc-section-titre">❌ Rejetées (${rejetees.length})</h3>
+      <div class="herbo-grille">
+        ${rejetees.map(i => renderCarteInspiration(i)).join('')}
+      </div>
+    </div>` : ''}
+
+    ${inspirationsList.length === 0 ? `
+    <div class="empty-state">
+      <div class="empty-state-icon">💡</div>
+      <div>Aucune inspiration enregistrée.</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:6px">Ajoutez des recettes croisées en déplacement.</div>
+    </div>` : ''}
+  `;
+}
+
+function renderCarteInspiration(inspi) {
+  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
+  const tags = inspi.tags || [];
+  const dateStr = new Date(inspi.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  const sourceIcon = { manuel: '✍️', photo: '📷', url: '🔗' };
+
+  return `
+    <div class="herbo-carte" onclick="ouvrirFicheInspiration('${inspi.id}')">
+      ${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px">` : ''}
+      <div class="herbo-carte-top">
+        <span class="herbo-emoji">${sourceIcon[inspi.source] || '💡'}</span>
+        <div class="herbo-carte-info">
+          <div class="herbo-nom">${inspi.nom}</div>
+          ${inspi.source_detail ? `<div class="herbo-latin">${inspi.source_detail}</div>` : ''}
+        </div>
+        <span class="herbo-saison ${inspi.statut === 'en_attente' ? 'herbo-saison--off' : inspi.statut === 'validee' ? 'herbo-saison--ok' : ''}">
+          ${inspi.statut === 'en_attente' ? '⏳' : inspi.statut === 'validee' ? '✅' : '❌'}
+        </span>
+      </div>
+      ${ings.length > 0 ? `
+      <div class="herbo-profil" style="margin-top:6px">
+        ${ings.slice(0, 3).map(ing => typeof ing === 'string' ? ing : ing.nom).join(' · ')}${ings.length > 3 ? ` +${ings.length - 3}` : ''}
+      </div>` : ''}
+      <div class="herbo-usages" style="margin-top:6px">
+        ${tags.map(t => `<span class="herbo-usage-tag">${t}</span>`).join('')}
+        <span class="herbo-usage-tag" style="opacity:0.5">${dateStr}</span>
+      </div>
+      ${inspi.analyse_result ? `
+      <div style="margin-top:8px;font-size:0.75rem;padding:4px 8px;border-radius:6px;background:var(--bg-accent);color:var(--text-accent)">
+        ${inspi.analyse_result.type === 'nouvelle' ? '🆕 Nouvelle recette' : `🔄 Variante de ${inspi.analyse_result.recette_similaire}`}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function selectInspiSource(btn) {
+  document.querySelectorAll('#inspi-source-btns .config-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  inspiSourceActive = btn.dataset.source;
+  document.getElementById('inspi-photo-group').style.display = inspiSourceActive === 'photo' ? '' : 'none';
+  document.getElementById('inspi-url-group').style.display = inspiSourceActive === 'url' ? '' : 'none';
+}
+
+async function sauverInspiration() {
+  const nom = document.getElementById('inspi-nom').value.trim();
+  if (!nom) return;
+
+  const ingsRaw = document.getElementById('inspi-ingredients').value.trim();
+  const ingredients = ingsRaw ? ingsRaw.split('\n').filter(Boolean).map(l => ({ nom: l.trim() })) : [];
+  const tagsRaw = document.getElementById('inspi-tags').value.trim();
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  let photo_url = null;
+  const photoInput = document.getElementById('inspi-photo-input');
+  if (inspiSourceActive === 'photo' && photoInput.files[0]) {
+    const file = photoInput.files[0];
+    const ext = file.name.split('.').pop();
+    const path = `inspirations/${currentUser.id}/${Date.now()}.${ext}`;
+    const { error } = await db.storage.from('photos-inspirations').upload(path, file, { upsert: true });
+    if (!error) {
+      const { data } = db.storage.from('photos-inspirations').getPublicUrl(path);
+      photo_url = data.publicUrl;
+    }
+  }
+
+  const id = 'inspi-' + Date.now();
+  const { data } = await db.from('inspirations').insert({
+    id,
+    user_id: currentUser.id,
+    nom,
+    source: inspiSourceActive,
+    source_detail: document.getElementById('inspi-source-detail').value.trim() || null,
+    ingredients,
+    tags,
+    notes: document.getElementById('inspi-notes').value.trim() || null,
+    photo_url,
+    statut: 'en_attente'
+  }).select().single();
+
+  if (data) {
+    inspirationsList.unshift(data);
+    fermerModal('modal-ajout-inspiration');
+    // Reset form
+    document.getElementById('inspi-nom').value = '';
+    document.getElementById('inspi-ingredients').value = '';
+    document.getElementById('inspi-tags').value = '';
+    document.getElementById('inspi-notes').value = '';
+    document.getElementById('inspi-source-detail').value = '';
+    renderInspirations();
+  }
+}
+
+async function ouvrirFicheInspiration(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+
+  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
+  const tags = inspi.tags || [];
+  const dateStr = new Date(inspi.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const sourceLabel = { manuel: 'Saisie manuelle', photo: 'Photo', url: 'URL' };
+
+  document.getElementById('inspiration-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2rem">💡</span>
+      <div>
+        <h2 class="fiche-titre">${inspi.nom}</h2>
+        <div class="herbo-latin">${sourceLabel[inspi.source] || ''} ${inspi.source_detail ? '· ' + inspi.source_detail : ''} · ${dateStr}</div>
+      </div>
+    </div>
+
+    ${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
+
+    ${ings.length > 0 ? `
+    <div class="plante-section">
+      <h3>Ingrédients</h3>
+      ${ings.map(ing => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.9rem">${typeof ing === 'string' ? ing : ing.nom}</div>`).join('')}
+    </div>` : ''}
+
+    ${inspi.notes ? `
+    <div class="plante-section">
+      <h3>Notes</h3>
+      <p>${inspi.notes}</p>
+    </div>` : ''}
+
+    ${tags.length > 0 ? `
+    <div class="plante-section">
+      <h3>Tags</h3>
+      <div class="herbo-usages">${tags.map(t => `<span class="herbo-usage-tag">${t}</span>`).join('')}</div>
+    </div>` : ''}
+
+    ${inspi.analyse_result ? `
+    <div class="plante-section">
+      <h3>Analyse Claude</h3>
+      <div style="background:var(--bg-accent);border-radius:10px;padding:12px">
+        <div style="font-weight:600;margin-bottom:6px">${inspi.analyse_result.type === 'nouvelle' ? '🆕 Nouvelle recette' : `🔄 Variante de ${inspi.analyse_result.recette_similaire}`}</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary)">${inspi.analyse_result.explication || ''}</div>
+        ${inspi.analyse_result.score ? `<div style="font-size:0.78rem;margin-top:4px">Score similarité : ${inspi.analyse_result.score}%</div>` : ''}
+      </div>
+    </div>` : ''}
+
+    <div class="plante-section" style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
+        ✨ Analyser avec Claude
+      </button>
+      ${inspi.statut === 'en_attente' ? `
+      <button class="btn-outline" onclick="validerInspiration('${inspi.id}')">✅ Valider → Recettes</button>
+      <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
+      ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
+    </div>
+  `;
+
+  afficherModal('modal-fiche-inspiration');
+}
+
+async function analyserInspiration(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+
+  const btn = document.querySelector('#modal-fiche-inspiration .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyse en cours…'; }
+
+  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients.map(i => typeof i === 'string' ? i : i.nom).join(', ') : '';
+  const recettesNoms = recettes.slice(0, 80).map(r => `${r.nom} (${(r.recette_ingredients || []).map(i => i.nom).join(', ')})`).join('\n');
+
+  try {
+    const response = await fetch('/api/analyser', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `Tu es un expert bartending. Analyse cette inspiration de cocktail et compare-la avec la liste de recettes existantes.
+
+Inspiration : "${inspi.nom}"
+Ingrédients : ${ings || 'non précisés'}
+
+Recettes existantes :
+${recettesNoms}
+
+Réponds en JSON uniquement :
+{
+  "type": "nouvelle" ou "variante",
+  "recette_similaire": "nom de la recette similaire si variante, null si nouvelle",
+  "score": pourcentage de similarité (0-100),
+  "explication": "explication courte en français"
+}`
+      })
+    });
+
+    const result = await response.json();
+    let analyse;
+    try { analyse = typeof result === 'string' ? JSON.parse(result) : result; }
+    catch(e) { analyse = { type: 'nouvelle', explication: 'Analyse non concluante', score: 0 }; }
+
+    await db.from('inspirations').update({ analyse_result: analyse }).eq('id', id);
+    const idx = inspirationsList.findIndex(x => x.id === id);
+    if (idx !== -1) inspirationsList[idx].analyse_result = analyse;
+
+    ouvrirFicheInspiration(id);
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Analyser avec Claude'; }
+  }
+}
+
+async function validerInspiration(id) {
+  await db.from('inspirations').update({ statut: 'validee' }).eq('id', id);
+  const idx = inspirationsList.findIndex(x => x.id === id);
+  if (idx !== -1) inspirationsList[idx].statut = 'validee';
+  fermerModal('modal-fiche-inspiration');
+  renderInspirations();
+}
+
+async function rejeterInspiration(id) {
+  await db.from('inspirations').update({ statut: 'rejetee' }).eq('id', id);
+  const idx = inspirationsList.findIndex(x => x.id === id);
+  if (idx !== -1) inspirationsList[idx].statut = 'rejetee';
+  fermerModal('modal-fiche-inspiration');
+  renderInspirations();
+}
 let grimoireList = [];
 let filtreGrimoireAlcool = null;
 let filtreGrimoireCategorie = '';
