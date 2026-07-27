@@ -3101,8 +3101,9 @@ async function ouvrirFicheInspiration(id) {
       <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
         ✨ Analyser avec Claude
       </button>
-      ${inspi.statut === 'en_attente' ? `
+${inspi.statut === 'en_attente' ? `
       <button class="btn-outline" onclick="fermerModal('modal-fiche-inspiration'); ouvrirModalCompleter('${inspi.id}')">✨ Compléter et valider</button>
+      <button class="btn-outline" onclick="fermerModal('modal-fiche-inspiration'); ouvrirQRBartender('${inspi.id}')">📱 Dévoile ton cocktail</button>
       <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
       ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
     </div>
@@ -3110,7 +3111,22 @@ async function ouvrirFicheInspiration(id) {
 
   afficherModal('modal-fiche-inspiration');
 }
-
+function ouvrirQRBartender(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+  const qrUrl = `https://bar-cocktail-smoky.vercel.app/bartender.html?inspiration=${id}`;
+  document.getElementById('qr-bartender-contenu').innerHTML = `
+    <div style="text-align:center">
+      <div style="font-size:1rem;font-weight:600;margin-bottom:4px">📱 Dévoile ton cocktail</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:16px">${inspi.nom}</div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUrl)}" width="180" height="180" style="border-radius:8px" />
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:8px;word-break:break-all">${qrUrl}</div>
+      </div>
+    </div>
+  `;
+  afficherModal('modal-qr-bartender');
+}
 async function analyserInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
   if (!inspi) return;
