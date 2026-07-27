@@ -2327,8 +2327,43 @@ function renderItemAAcheter(item, isTop) {
   `;
 }
 
-async function marquerAchete(itemId) {
+const REASSIGNATION_CATEGORIES = {
+  'a-acheter-spirits':  ['gin', 'vodka', 'whisky', 'mezcal-tequila', 'rhum', 'eaux-de-vie'],
+  'a-acheter-liqueurs': ['liqueurs', 'triples-secs', 'vermouth'],
+  'a-acheter-vins':     ['bulles'],
+  'a-acheter-bitters':  ['bitters'],
+  'a-acheter-sirops':   ['sirops', 'ingredients-frais']
+};
+
+async function marquerAchete(itemId, catId, nom) {
+  if (catId && catId.startsWith('a-acheter-')) {
+    ouvrirModalReassignerCategorie(itemId, catId, nom);
+    return;
+  }
   const { error } = await db.from('items').update({ detenu: true }).eq('id', itemId).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+  await chargerCave();
+  chargerAAcheter();
+}
+
+function ouvrirModalReassignerCategorie(itemId, catId, nom) {
+  const cibles = REASSIGNATION_CATEGORIES[catId] || [];
+  const optionsHtml = cibles.map(id => {
+    const cat = cave.categories.find(c => c.id === id);
+    return `<button class="btn-outline" style="width:100%;margin-bottom:8px;text-align:left" onclick="confirmerReassignation('${itemId}','${id}')">${cat?.icon || ''} ${cat?.label || id}</button>`;
+  }).join('');
+
+  document.getElementById('reassign-modal-contenu').innerHTML = `
+    <h3 style="margin-bottom:4px">Dans quelle catégorie ranger « ${nom} » ?</h3>
+    <div class="herbo-latin" style="margin-bottom:16px">Cet item vient de la liste À acheter — indique sa vraie catégorie pour qu'il apparaisse dans Ma Cave.</div>
+    ${optionsHtml}
+  `;
+  afficherModal('modal-reassigner-categorie');
+}
+
+async function confirmerReassignation(itemId, nouvelleCategorieId) {
+  const { error } = await db.from('items').update({ detenu: true, category_id: nouvelleCategorieId }).eq('id', itemId).eq('user_id', currentUser.id);
+  fermerModal('modal-reassigner-categorie');
   if (error) { alert('Erreur : ' + error.message); return; }
   await chargerCave();
   chargerAAcheter();
