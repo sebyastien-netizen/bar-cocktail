@@ -3247,15 +3247,28 @@ function ouvrirQRBartender(id) {
   const qrUrl = `https://bar-cocktail-smoky.vercel.app/bartender.html?inspiration=${id}`;
   document.getElementById('qr-bartender-contenu').innerHTML = `
     <div style="text-align:center">
-      <div style="font-size:1rem;font-weight:600;margin-bottom:4px">📱 Dévoile ton cocktail</div>
-      <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:16px">${inspi.nom}</div>
+      <div style="font-size:1.2rem;font-weight:700;margin-bottom:6px">📱 Dévoile ton cocktail</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px;line-height:1.4">Dosages précis ou secret bien gardé — à toi de voir.</div>
+      <div style="font-size:0.78rem;color:var(--text-accent);margin-bottom:16px">${inspi.nom}</div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUrl)}" width="180" height="180" style="border-radius:8px" />
         <div style="font-size:0.7rem;color:var(--text-muted);margin-top:8px;word-break:break-all">${qrUrl}</div>
       </div>
+      <button class="btn-outline" style="margin-top:12px" onclick="copierLienBartender('${qrUrl}')">🔗 Copier le lien</button>
+      <div id="qr-bartender-copie-msg" style="font-size:0.78rem;color:var(--text-success);margin-top:6px;min-height:18px"></div>
     </div>
   `;
   afficherModal('modal-qr-bartender');
+}
+
+function copierLienBartender(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const el = document.getElementById('qr-bartender-copie-msg');
+    if (el) {
+      el.textContent = '✅ Lien copié !';
+      setTimeout(() => { el.textContent = ''; }, 2000);
+    }
+  });
 }
 async function analyserInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
