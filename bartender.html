@@ -415,9 +415,24 @@ const MOTIF_LABELS = {
   mauvaise_piste: 'pas la bonne piste du tout'
 };
 
+const WAIT_MESSAGES = [
+  '🍸 On shake ta proposition… (jusqu\'à 30s)',
+  '🥃 Ça infuse encore un peu… (jusqu\'à 30s)',
+  '🍹 On dose ça derrière le comptoir… (jusqu\'à 30s)'
+];
+let waitInterval = null;
+
 async function doAnalyse(motifCorrection = null) {
   const btn = document.getElementById('btn-analyser-secret');
-  if (btn) { btn.disabled = true; btn.textContent = motifCorrection ? '⏳ Nouvelle proposition…' : '⏳ Analyse en cours…'; }
+  let msgIndex = 0;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = WAIT_MESSAGES[0];
+    waitInterval = setInterval(() => {
+      msgIndex = (msgIndex + 1) % WAIT_MESSAGES.length;
+      btn.textContent = WAIT_MESSAGES[msgIndex];
+    }, 10000);
+  }
 
   let goutContext = `Impressions gustatives du bartender :
 - Intensité alcool : ${INTENSITE_LABEL[sliders.intensite_alcool]}
@@ -449,9 +464,11 @@ async function doAnalyse(motifCorrection = null) {
       })
     });
     const result = await response.json();
+clearInterval(waitInterval);
     propositionResult = result;
     afficherProposition(result);
   } catch (e) {
+    clearInterval(waitInterval);
     alert('Erreur : ' + e.message);
     if (btn) { btn.disabled = false; btn.textContent = '✨ Voir la proposition'; }
   }
