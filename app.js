@@ -2237,7 +2237,7 @@ ${data.cocktails_possibles?.length ? `
 
         <div class="analyser-verdict ${verdictClass}">${data.verdict_raison}</div>
 
-        ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}')">✓ Marquer comme acheté</button>` : ''}
+${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}')">✓ Marquer comme acheté</button>` : ''}
       </div>
     `;
 
@@ -2320,15 +2320,17 @@ function renderItemAAcheter(item, isTop) {
         ${item.recettesDetail.length > 4 ? `<span class="aacheter-chip-more">+${item.recettesDetail.length - 4}</span>` : ''}
       </div>
 
-      <button class="btn-outline" style="width:100%;margin-top:10px" onclick="marquerAchete('${item.id}', '${item.category_id}')">
-        ✓ Marquer comme acheté
+<button class="btn-outline" style="width:100%;margin-top:10px" onclick="marquerAchete('${item.id}')">
+✓ Marquer comme acheté
       </button>
     </div>
   `;
 }
 
-async function marquerAchete(itemId, catId) {
-  await toggleDetenu(itemId, catId);
+async function marquerAchete(itemId) {
+  const { error } = await db.from('items').update({ detenu: true }).eq('id', itemId).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+  await chargerCave();
   chargerAAcheter();
 }
 
