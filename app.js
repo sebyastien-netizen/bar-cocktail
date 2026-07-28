@@ -1950,10 +1950,7 @@ function ouvrirModalAjoutConcoction(grimoire, dateDebut) {
       }));
 
       const { data: etapesData } = await db.from('concoction_etapes').insert(etapesAInserer).select();
-      concoctions[0].etapes = etapesData || [];
-    } else if (data) {
-      concoctions[0].etapes = [];
-    }
+}
 
     fermerModal('modal-ajout-concoction');
 await chargerConcoctions();
