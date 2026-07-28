@@ -1989,7 +1989,6 @@ function calculerScoreItem(item) {
 async function chargerAAcheter() {
   const container = document.getElementById('aacheter-container');
   if (!container) return;
-  simulateurSelection = new Set();
   container.innerHTML = '<div class="loading-state">Calcul en cours…</div>';
 
   // IDs des items détenus en cave
@@ -2113,21 +2112,37 @@ async function chargerAAcheter() {
         </div>
       `;
     }).join('')}
-<!-- SIMULATEUR -->
-    <div class="aacheter-groupe">
-      <div class="aacheter-groupe-titre">🔮 Simulateur — et si j'avais…</div>
-      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:10px">Sélectionne une ou plusieurs bouteilles pour voir ce qu'elles débloquent ensemble.</div>
-      <div id="simulateur-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-        ${allScored.map(i => `
-          <span class="simulateur-chip" data-id="${i.id}" onclick="toggleSimulateurItem(this, '${i.id}')"
-            style="cursor:pointer;padding:6px 12px;border-radius:20px;font-size:0.8rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary)">
-            ${i.nom}${i.prix ? ' · ' + i.prix + '€' : ''}
-          </span>
-        `).join('')}
-      </div>
-      <div id="simulateur-result"></div>
-    </div>
-   
+<!-- PRESQUE PRÊTES -->
+    ${(() => {
+      const a1 = [], a2 = [];
+      recettes.forEach(r => {
+        const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
+        if (manquants.length === 1) a1.push({ recette: r, manquants });
+        else if (manquants.length === 2) a2.push({ recette: r, manquants });
+      });
+      if (a1.length === 0 && a2.length === 0) return '';
+      return `
+      <div class="aacheter-groupe">
+        <div class="aacheter-groupe-titre">🎯 Presque prêtes</div>
+        ${a1.length > 0 ? `
+        <div style="font-size:0.8rem;font-weight:600;color:var(--text-accent);margin:8px 0 6px">À 1 achat de la victoire (${a1.length})</div>
+        ${a1.map(({ recette, manquants }) => `
+          <div class="simulateur-recette" onclick="ouvrirFicheRecette('${recette.id}')">
+            <span class="simulateur-recette-nom">${recette.nom}</span>
+            <span class="simulateur-recette-gouts">Il manque : ${manquants.map(m => m.nom).join(', ')}</span>
+          </div>
+        `).join('')}` : ''}
+        ${a2.length > 0 ? `
+        <div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin:14px 0 6px">À 2 achats de la victoire (${a2.length})</div>
+        ${a2.map(({ recette, manquants }) => `
+          <div class="simulateur-recette" onclick="ouvrirFicheRecette('${recette.id}')">
+            <span class="simulateur-recette-nom">${recette.nom}</span>
+            <span class="simulateur-recette-gouts">Il manque : ${manquants.map(m => m.nom).join(', ')}</span>
+          </div>
+        `).join('')}` : ''}
+      </div>`;
+    })()}
+
     <!-- APPORT GUSTATIF -->
     <div class="aacheter-groupe">
       <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
@@ -2260,65 +2275,7 @@ ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%
   btn.textContent = '🔍 Analyser';
 }
 
-let simulateurSelection = new Set();
 
-function toggleSimulateurItem(el, itemId) {
-  if (simulateurSelection.has(itemId)) {
-    simulateurSelection.delete(itemId);
-    el.style.background = 'var(--bg-card)';
-    el.style.color = 'var(--text-secondary)';
-    el.style.borderColor = 'var(--border)';
-  } else {
-    simulateurSelection.add(itemId);
-    el.style.background = 'var(--bg-accent)';
-    el.style.color = 'var(--text-accent)';
-    el.style.borderColor = 'var(--accent)';
-  }
-  simulerGainCombine();
-}
-
-function simulerGainCombine() {
-  const result = document.getElementById('simulateur-result');
-  if (simulateurSelection.size === 0) { result.innerHTML = ''; return; }
-
-  const caveIds = getItemsCave();
-  const selectionArr = [...simulateurSelection];
-  const simulCave = new Set([...caveIds, ...selectionArr]);
-
-  const estDebloqueeAvec = (r, ensembleCave) => {
-    const manquants = (r.ingredients || []).filter(i =>
-      i.item_cave_id && !ensembleCave.has(i.item_cave_id) && !i.optionnel
-    ).length;
-    return manquants === 0;
-  };
-
-  const debloquees = recettes.filter(r => !estDebloqueeAvec(r, caveIds) && estDebloqueeAvec(r, simulCave));
-
-  if (!debloquees.length) {
-    result.innerHTML = '<div class="simulateur-vide">Aucune recette débloquée avec cette combinaison.</div>';
-    return;
-  }
-
-  const soloDebloquees = new Set();
-  selectionArr.forEach(id => {
-    const caveAvecUnSeul = new Set([...caveIds, id]);
-    recettes.forEach(r => { if (estDebloqueeAvec(r, caveAvecUnSeul)) soloDebloquees.add(r.id); });
-  });
-  const combosSeules = debloquees.filter(r => !soloDebloquees.has(r.id));
-
-  result.innerHTML = `
-    <div class="simulateur-gain">
-      <div class="simulateur-gain-titre">+${debloquees.length} recette${debloquees.length > 1 ? 's' : ''} débloquée${debloquees.length > 1 ? 's' : ''}</div>
-      ${combosSeules.length > 0 && selectionArr.length > 1 ? `<div style="font-size:0.78rem;color:var(--text-accent);margin:6px 0 10px">✨ dont ${combosSeules.length} grâce à la combinaison — invisibles en achetant un seul de ces items</div>` : ''}
-      ${debloquees.map(r => `
-        <div class="simulateur-recette" onclick="ouvrirFicheRecette('${r.id}')">
-          <span class="simulateur-recette-nom">${r.nom}${combosSeules.some(c => c.id === r.id) ? ' ✨' : ''}</span>
-          <span class="simulateur-recette-gouts">${(r.gouts || []).join(', ')}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
 function renderItemAAcheter(item, isTop) {
   const nbRecettes      = item.recettesDetail.length;
   const prix            = parseFloat(item.prix) || null;
