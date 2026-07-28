@@ -1769,9 +1769,12 @@ ${phases.map((p, i) => `<div style="flex:${p.duree};background:${p.faite ? coule
 
       ${c.notes ? `<div class="conc-notes">💡 ${c.notes}</div>` : ''}
 
-      <div class="conc-actions">
+<div class="conc-actions">
         ${c.statut === 'en_cours' ? `<button class="btn btn-outline btn-sm" onclick="marquerPret('${c.id}')">✅ Marquer prêt</button>` : ''}
-        ${c.statut === 'pret' ? `<button class="btn btn-outline btn-sm" onclick="marquerEnCours('${c.id}')">↩ Remettre en cours</button>` : ''}
+        ${c.statut === 'pret' ? `
+          <button class="btn btn-outline btn-sm" onclick="marquerEnCours('${c.id}')">↩ Remettre en cours</button>
+          <button class="btn-primary btn-sm" onclick="ouvrirModalArchiver('${c.id}')">🏁 Archiver</button>
+        ` : ''}
         <button class="btn-icon btn-supprimer" onclick="supprimerConcoction('${c.id}')" title="Supprimer définitivement">🗑</button>
       </div>
     </div>
