@@ -2063,7 +2063,7 @@ const stockBas = (allItems || []).filter(i =>
   ),
   gouts: []
 }));
-
+chargerAAcheter
   // Calcul score par item MANQUANT (non détenu)
   const scoreMap = {};
   recettes.forEach(r => {
