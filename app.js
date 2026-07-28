@@ -2042,6 +2042,26 @@ async function chargerAAcheter() {
   const caveIds = getItemsCave();
 
   const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu, category_id').eq('user_id', currentUser.id);
+ // Items à stock bas (détenu mais ≤ 10% restant)
+const categoriesExclues = ['garde-manger', 'ingredients-frais', 'ponctuels'];
+const stockBas = (allItems || []).filter(i => 
+  i.detenu === true &&
+  i.cl_total > 0 &&
+  i.cl_restants !== null &&
+  (i.cl_restants / i.cl_total) <= 0.10 &&
+  !categoriesExclues.includes(i.category_id)
+).map(i => ({
+  id: i.id,
+  nom: i.nom,
+  prix: i.prix_estime,
+  category_id: i.category_id,
+  stockBas: true,
+  pctRestant: Math.round((i.cl_restants / i.cl_total) * 100),
+  recettesDetail: recettes.filter(r => 
+    (r.ingredients || []).some(ing => ing.item_cave_id === i.id)
+  ),
+  gouts: []
+}));
 
   // Calcul score par item MANQUANT (non détenu)
   const scoreMap = {};
