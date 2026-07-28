@@ -2041,7 +2041,7 @@ async function chargerAAcheter() {
   // IDs des items détenus en cave
   const caveIds = getItemsCave();
 
-  const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu, category_id').eq('user_id', currentUser.id);
+const { data: allItems } = await db.from('items').select('id, nom, prix_estime, detenu, category_id, cl_total, cl_restants').eq('user_id', currentUser.id);
  // Items à stock bas (détenu mais ≤ 10% restant)
 const categoriesExclues = ['garde-manger', 'ingredients-frais', 'ponctuels'];
 const stockBas = (allItems || []).filter(i => 
