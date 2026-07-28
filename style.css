@@ -93,10 +93,10 @@ header .subtitle { font-size: 0.75rem; color: var(--text-muted); margin-left: au
 /* NAV */
 nav {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
   padding: 12px 24px 0;
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
   position: sticky;
   top: 69px;
   z-index: 90;
