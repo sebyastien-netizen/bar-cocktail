@@ -2169,11 +2169,17 @@ const stockBas = (allItems || []).filter(i =>
   <div class="aacheter-groupe-titre">⚠️ Stock bas — à racheter bientôt</div>
   ${stockBas.map(item => renderItemAAcheter(item, false)).join('')}
 </div>` : ''}
-    <!-- MEILLEUR ACHAT -->
+  <!-- MEILLEUR ACHAT -->
     ${filtreActif === 'tout' ? `
     <div class="aacheter-top-card">
       <div class="aacheter-top-label">🥇 Meilleur achat — impact maximal</div>
       ${renderItemAAcheter(meilleur, true)}
+    </div>` : ''}
+
+    ${stockBas.length > 0 ? `
+    <div class="aacheter-groupe">
+      <div class="aacheter-groupe-titre">⚠️ Stock bas — à racheter bientôt</div>
+      ${stockBas.map(item => renderItemAAcheter(item, false)).join('')}
     </div>` : ''}
 
     <!-- PAR CATÉGORIE -->
@@ -2188,7 +2194,6 @@ const stockBas = (allItems || []).filter(i =>
         </div>
       `;
     }).join('')}
-
 
     <!-- APPORT GUSTATIF -->
     <div class="aacheter-groupe">
