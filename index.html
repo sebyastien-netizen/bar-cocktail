@@ -669,6 +669,28 @@ onclick="document.getElementById('modal-session-active').classList.remove('visib
   </div>
 </div>
       <input type="file" id="analyser-photo-input" accept="image/*" style="display:none" onchange="analyserBouteillePhoto(event)">
+      <!-- MODAL : ARCHIVER CONCOCTION -->
+<div class="modal-overlay" id="modal-archiver-concoction">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="fermerModal('modal-archiver-concoction')">✕</button>
+    <h3>🏁 Archiver la concoction</h3>
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">La concoction sera archivée et ne sera plus suivie dans "En cours".</p>
+    <div class="form-group">
+      <label>Notes de dégustation (optionnel)</label>
+      <textarea id="input-archiver-notes" rows="4" placeholder="Arômes, équilibre, impressions, accords..." style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text-primary);font-size:0.9rem;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:16px 0;padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border);">
+      <input type="checkbox" id="input-archiver-cave" checked style="width:18px;height:18px;cursor:pointer;">
+      <label for="input-archiver-cave" style="cursor:pointer;font-size:0.9rem;">
+        ⚗️ Ajouter à Ma Cave <span style="color:var(--text-muted);font-size:0.8rem;">(Concoctions maison)</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fermerModal('modal-archiver-concoction')">Annuler</button>
+      <button class="btn-primary" id="btn-confirmer-archiver">🏁 Archiver</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
