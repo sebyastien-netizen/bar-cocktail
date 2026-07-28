@@ -2475,21 +2475,19 @@ async function chargerDashboard() {
   const concEnCours = concoctions.filter(c => c.statut === 'en_cours');
  
   // Anecdote + conseil aléatoires
-const [{ data: anecdote }, { data: conseil }, { data: realisations }, { data: plantesData }, { data: grimoireData }] = await Promise.all([
+const [{ data: anecdote }, { data: conseil }, { data: realisations }] = await Promise.all([
     db.from('anecdotes').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
     db.from('conseils').select('*').limit(50).then(r => ({ data: r.data?.[Math.floor(Math.random() * r.data.length)] })),
-    db.from('realisations').select('*').eq('user_id', currentUser.id).order('date', { ascending: false }).limit(5),
-    db.from('plantes').select('id, nom, emoji, disponibilite_mois, periode_recolte, profil_aromatique, format_achat, fourchette_prix, categories_preparation'),
-    db.from('grimoire').select('id, nom, categorie, avec_alcool, duree_jours, rendement_cl, saison_ideale, description, plante_ids').order('nom')
+    db.from('realisations').select('*').eq('user_id', currentUser.id).order('date', { ascending: false }).limit(5)
 ]);
 
-renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations, plantesData: plantesData || [], grimoireData: grimoireData || [] });
+renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations });
 }
  // =============================================
 // SESSIONS
 // =============================================
 
-function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations, plantesData, grimoireData }) {
+function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations }) {
  const container = document.getElementById('dashboard-container');
   const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
   const categorieClass = { technique: 'badge-3', gestion: 'badge-ok', service: 'badge-1' };
@@ -2607,9 +2605,8 @@ const nbRefs = (cave?.categories || []).reduce((n, c) => n + c.items.filter(i =>
           <p class="dash-conseil-texte" id="dash-conseil-texte">${conseil?.texte || 'Chargement…'}</p>
         </div>
  
-      </div>
+</div>
     </div>
- ${renderDashboardSaison(plantesData || [], grimoireData || [])}
     ${renderDashboardRealisations(realisations || [])}
     `;
 }
