@@ -1850,7 +1850,45 @@ async function marquerEnCours(concId) {
   if (conc) conc.statut = 'en_cours';
   renderConcoctions();
 }
- 
+let concoctionAArchiver = null;
+
+function ouvrirModalArchiver(concId) {
+  concoctionAArchiver = concId;
+  document.getElementById('input-archiver-notes').value = '';
+  document.getElementById('input-archiver-cave').checked = true;
+  document.getElementById('btn-confirmer-archiver').onclick = () => confirmerArchiver();
+  afficherModal('modal-archiver-concoction');
+}
+
+async function confirmerArchiver() {
+  const concId = concoctionAArchiver;
+  if (!concId) return;
+  const notes = document.getElementById('input-archiver-notes').value.trim();
+  const ajouterCave = document.getElementById('input-archiver-cave').checked;
+
+  // Mettre à jour le statut
+  await db.from('concoctions').update({
+    statut: 'termine',
+    notes_degustation: notes || null
+  }).eq('id', concId).eq('user_id', currentUser.id);
+
+  // Ajouter à Ma Cave si coché
+  if (ajouterCave) {
+    const conc = concoctions.find(c => c.id === concId);
+    if (conc) {
+      await db.from('items').insert({
+        user_id: currentUser.id,
+        nom: conc.nom,
+        category_id: 'concoctions',
+        detenu: true,
+        info_description: notes || `Concoction maison archivée le ${new Date().toLocaleDateString('fr-FR')}.`
+      });
+    }
+  }
+
+  fermerModal('modal-archiver-concoction');
+  await chargerConcoctions();
+} 
 async function supprimerConcoction(concId) {
   const conc = concoctions.find(c => c.id === concId);
   if (!confirm(`Supprimer définitivement "${conc?.nom}" ? Cette action est irréversible.`)) return;
