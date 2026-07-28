@@ -2032,7 +2032,55 @@ function calculerScoreItem(item) {
   const coutParRecette = prix > 0 ? prix / recettes : 0;
   return Math.round((recettes * 10) + (gouts * 3) - coutParRecette);
 }
-
+function partagerListeAAcheter() {
+  const caveIds = getItemsCave();
+  const categoriesExclues = ['garde-manger', 'ingredients-frais', 'ponctuels'];
+  const scoreMap = {};
+  recettes.forEach(r => {
+    const manquants = (r.ingredients || []).filter(i =>
+      i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel
+    );
+    manquants.forEach(ing => {
+      if (!scoreMap[ing.item_cave_id]) {
+        scoreMap[ing.item_cave_id] = { nom: ing.nom, prix: null, recettes: 0 };
+      }
+      scoreMap[ing.item_cave_id].recettes++;
+    });
+  });
+  (cave?.items || []).forEach(i => {
+    if (scoreMap[i.id]) scoreMap[i.id].prix = i.prix_estime;
+  });
+  const liste = Object.values(scoreMap)
+    .filter(i => i.recettes > 0)
+    .sort((a, b) => b.recettes - a.recettes);
+  const stockBas = (cave?.items || []).filter(i =>
+    i.detenu === true &&
+    i.cl_total > 0 &&
+    i.cl_restants !== null &&
+    (i.cl_restants / i.cl_total) <= 0.10 &&
+    !categoriesExclues.includes(i.category_id) &&
+    !i.ne_pas_reapprovisionner
+  );
+  const total = liste.reduce((s, i) => s + (parseFloat(i.prix) || 0), 0);
+  let texte = '🛒 Liste À acheter — Bar à Cocktail\n\n';
+  liste.forEach((item, idx) => {
+    const prix = item.prix ? ` (~${item.prix}€)` : '';
+    const nb = item.recettes === 1 ? '1 recette' : `${item.recettes} recettes`;
+    texte += `${idx + 1}. ${item.nom}${prix} — débloque ${nb}\n`;
+  });
+  if (stockBas.length > 0) {
+    texte += '\n⚠️ Stock bas\n';
+    stockBas.forEach(i => { texte += `• ${i.nom} — à racheter\n`; });
+  }
+  if (total > 0) texte += `\n💶 Total estimé : ~${Math.round(total)}€`;
+  if (navigator.share) {
+    navigator.share({ title: 'Liste À acheter — Bar à Cocktail', text: texte }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(texte).then(() => {
+      alert('✅ Liste copiée dans le presse-papier !');
+    });
+  }
+}
 async function chargerAAcheter() {
   const container = document.getElementById('aacheter-container');
   if (!container) return;
