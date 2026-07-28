@@ -51,10 +51,17 @@ function afficherApp() {
   chargerEquipements();
   chargerConcoctions();
   chargerDashboard();
-document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
-document.getElementById('section-dashboard')?.classList.remove('hidden');
-document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-document.querySelector('nav button[data-tab="dashboard"]')?.classList.add('active');
+
+  const ongletRestaure = sessionStorage.getItem('ongletActif') || 'dashboard';
+  const btnRestaure = document.querySelector(`nav button[data-tab="${ongletRestaure}"]`);
+  if (btnRestaure && ongletRestaure !== 'dashboard') {
+    btnRestaure.click();
+  } else {
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('section-dashboard')?.classList.remove('hidden');
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelector('nav button[data-tab="dashboard"]')?.classList.add('active');
+  }
 }
  
 // --- Login ---
@@ -113,6 +120,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(btn => {
     document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
     document.getElementById('section-' + tab)?.classList.remove('hidden');
     ongletActif = tab;
+    sessionStorage.setItem('ongletActif', tab);
     if (tab === 'sessions') chargerSessions();
    if (tab === 'inspirations') chargerInspirations();
   });
