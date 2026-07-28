@@ -826,6 +826,7 @@ function renderFiche(portions) {
             <span class="carte-diff diff-${r.difficulte}">${diffLabel}</span>
             ${badgeDisponibilite(nbManquants)}
             ${r.kit_portable ? '<span class="tag-kit">✓ KIT</span>' : ''}
+            ${r.source_marque ? `<span style="background:var(--bg-accent);color:var(--text-accent);border:1px solid var(--border-accent);border-radius:20px;font-size:0.72rem;padding:3px 8px;">🏷️ ${r.source_marque}</span>` : ''}
           </div>
         </div>
         ${r.base_alcool ? `<div class="fiche-base">🥃 ${r.base_alcool}</div>` : ''}
