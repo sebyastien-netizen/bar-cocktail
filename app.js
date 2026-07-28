@@ -2079,7 +2079,7 @@ async function chargerAAcheter() {
         </button>
       `).join('')}
     </div>
- <!-- ANALYSER UNE BOUTEILLE -->
+<!-- ANALYSER UNE BOUTEILLE -->
     <div class="aacheter-groupe">
       <div class="aacheter-groupe-titre">🔍 Analyser une bouteille</div>
       <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -2091,6 +2091,11 @@ async function chargerAAcheter() {
           🔍 Analyser
         </button>
       </div>
+      <input type="file" id="analyser-photo-input" accept="image/*" style="display:none" onchange="analyserBouteillePhoto(event)">
+      <button id="analyser-photo-btn" onclick="document.getElementById('analyser-photo-input').click()"
+        style="width:100%;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:14px;cursor:pointer;">
+        📷 Analyser depuis une photo (appareil ou galerie)
+      </button>
       <div id="analyser-result"></div>
     </div>
     <!-- MEILLEUR ACHAT -->
@@ -2162,7 +2167,6 @@ async function analyserBouteille() {
   btn.textContent = 'Analyse en cours…';
   result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
 
-  // Préparer la liste cave pour le contexte
   const caveListe = (cave?.categories || [])
     .flatMap(c => c.items)
     .filter(i => i.detenu !== false)
@@ -2179,94 +2183,9 @@ async function analyserBouteille() {
 
     if (!data.identifie) {
       result.innerHTML = '<div class="simulateur-vide">Alcool non reconnu. Essaie un nom plus précis.</div>';
-      btn.disabled = false;
-      btn.textContent = '🔍 Analyser';
-      return;
+    } else {
+      result.innerHTML = construireResultatAnalyse(data, nom);
     }
-
-    // Calcul recettes débloquées via simulation
-    const caveIds = getItemsCave();
-    // On cherche un item_cave_id correspondant au nom soumis
-    const itemMatch = (cave?.categories || [])
-      .flatMap(c => c.items)
-      .find(i => i.nom.toLowerCase().includes(nom.toLowerCase()) && i.detenu === false);
-
-    let recettesHTML = '';
-    if (itemMatch) {
-      const simulCave = new Set([...caveIds, itemMatch.id]);
-      const debloquees = recettes.filter(r => {
-        const avant  = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel).length;
-        const apres  = (r.ingredients || []).filter(i => i.item_cave_id && !simulCave.has(i.item_cave_id) && !i.optionnel).length;
-        return avant > 0 && apres === 0;
-      });
-      if (debloquees.length) {
-        recettesHTML = `
-          <div class="analyser-section">
-            <div class="analyser-label">🍹 Recettes débloquées (+${debloquees.length})</div>
-            ${debloquees.map(r => `
-              <div class="simulateur-recette" onclick="onclick="ouvrirFicheRecette('${r.id}')">
-                <span class="simulateur-recette-nom">${r.nom}</span>
-                <span class="simulateur-recette-gouts">${(r.gouts || []).join(', ')}</span>
-              </div>`).join('')}
-          </div>`;
-      }
-    }
-
-    const verdictClass = {
-      ACHETER: 'analyser-verdict--acheter',
-      PASSER: 'analyser-verdict--passer',
-      DOUBLON: 'analyser-verdict--doublon',
-      MIEUX_AILLEURS: 'analyser-verdict--mieux'
-    }[data.verdict] || '';
-
-    result.innerHTML = `
-      <div class="analyser-card">
-        <div class="analyser-nom">${data.nom_complet}</div>
-        <div class="analyser-meta">${data.categorie} · ${data.degre}° · ${data.profil_gustatif}</div>
-${data.cocktails_possibles?.length ? `
-        <div class="analyser-section">
-          <div class="analyser-label">🍹 Cocktails réalisables</div>
-          ${data.cocktails_possibles.map(c => `
-            <div class="simulateur-recette">
-              <span class="simulateur-recette-nom">${c.nom}</span>
-              <span class="simulateur-recette-gouts">${
-                c.ingredients_manquants?.length
-                  ? '⚠️ manque : ' + c.ingredients_manquants.join(', ')
-                  : '✓ réalisable maintenant'
-              }</span>
-            </div>`).join('')}
-        </div>` : ''}
-        ${data.doublon_cave ? `
-        <div class="analyser-section analyser-section--warning">
-          <div class="analyser-label">⚠️ Déjà similaire en cave</div>
-          <div class="analyser-texte">${data.doublon_cave} — ${data.doublon_note}</div>
-        </div>` : ''}
-
-        ${recettesHTML}
-
-        ${data.meilleure_version ? `
-        <div class="analyser-section">
-          <div class="analyser-label">⭐ Meilleure version</div>
-          <div class="analyser-texte">${data.meilleure_version}${data.meilleure_version_prix ? ' — ~' + data.meilleure_version_prix : ''}</div>
-        </div>` : ''}
-
-        ${data.variante_moins_chere ? `
-        <div class="analyser-section">
-          <div class="analyser-label">💸 Alternative moins chère</div>
-          <div class="analyser-texte">${data.variante_moins_chere}${data.variante_moins_chere_prix ? ' — ~' + data.variante_moins_chere_prix : ''}</div>
-        </div>` : ''}
-
-        <div class="analyser-section">
-          <div class="analyser-label">🍸 Avis bartender</div>
-          <div class="analyser-texte">${data.complementarite}</div>
-        </div>
-
-        <div class="analyser-verdict ${verdictClass}">${data.verdict_raison}</div>
-
-${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}', '${itemMatch.nom.replace(/'/g, "\\'")}')">✓ Marquer comme acheté</button>` : ''}
-      </div>
-    `;
-
   } catch (e) {
     result.innerHTML = '<div class="simulateur-vide">Erreur de connexion. Réessaie.</div>';
   }
@@ -2274,8 +2193,140 @@ ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%
   btn.disabled = false;
   btn.textContent = '🔍 Analyser';
 }
+async function analyserBouteillePhoto(event) {
+  const fichier = event.target.files?.[0];
+  if (!fichier) return;
 
+  const photoBtn = document.getElementById('analyser-photo-btn');
+  const result = document.getElementById('analyser-result');
+  photoBtn.disabled = true;
+  photoBtn.textContent = '📷 Lecture de la photo…';
+  result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
 
+  const caveListe = (cave?.categories || [])
+    .flatMap(c => c.items)
+    .filter(i => i.detenu !== false)
+    .map(i => i.nom)
+    .join(', ');
+
+  try {
+    const image_base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(fichier);
+    });
+
+    photoBtn.textContent = '📷 Analyse en cours…';
+
+    const rep = await fetch('/api/analyser', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64, cave: caveListe })
+    });
+    const data = await rep.json();
+
+    if (!data.identifie) {
+      result.innerHTML = '<div class="simulateur-vide">Bouteille non reconnue sur la photo. Essaie un angle plus net sur l\'étiquette, ou passe par le champ texte.</div>';
+    } else {
+      result.innerHTML = construireResultatAnalyse(data, data.nom_complet || '');
+    }
+  } catch (e) {
+    result.innerHTML = '<div class="simulateur-vide">Erreur de lecture de la photo. Réessaie.</div>';
+  }
+
+  photoBtn.disabled = false;
+  photoBtn.textContent = '📷 Analyser depuis une photo (appareil ou galerie)';
+  event.target.value = '';
+}
+function construireResultatAnalyse(data, nomPourRecherche) {
+  const caveIds = getItemsCave();
+  const itemMatch = (cave?.categories || [])
+    .flatMap(c => c.items)
+    .find(i => i.nom.toLowerCase().includes((nomPourRecherche || '').toLowerCase()) && i.detenu === false);
+
+  let recettesHTML = '';
+  if (itemMatch) {
+    const simulCave = new Set([...caveIds, itemMatch.id]);
+    const debloquees = recettes.filter(r => {
+      const avant  = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel).length;
+      const apres  = (r.ingredients || []).filter(i => i.item_cave_id && !simulCave.has(i.item_cave_id) && !i.optionnel).length;
+      return avant > 0 && apres === 0;
+    });
+    if (debloquees.length) {
+      recettesHTML = `
+        <div class="analyser-section">
+          <div class="analyser-label">🍹 Recettes débloquées (+${debloquees.length})</div>
+          ${debloquees.map(r => `
+            <div class="simulateur-recette" onclick="ouvrirFicheRecette('${r.id}')">
+              <span class="simulateur-recette-nom">${r.nom}</span>
+              <span class="simulateur-recette-gouts">${(r.gouts || []).join(', ')}</span>
+            </div>`).join('')}
+        </div>`;
+    }
+  }
+
+  const verdictClass = {
+    ACHETER: 'analyser-verdict--acheter',
+    PASSER: 'analyser-verdict--passer',
+    DOUBLON: 'analyser-verdict--doublon',
+    MIEUX_AILLEURS: 'analyser-verdict--mieux'
+  }[data.verdict] || '';
+
+  return `
+    <div class="analyser-card">
+      <div class="analyser-nom">${data.nom_complet}</div>
+      <div class="analyser-meta">${data.categorie} · ${data.degre}° · ${data.profil_gustatif}</div>
+${data.cocktails_possibles?.length ? `
+      <div class="analyser-section">
+        <div class="analyser-label">🍹 Cocktails réalisables</div>
+        ${data.cocktails_possibles.map(c => `
+          <div class="simulateur-recette">
+            <span class="simulateur-recette-nom">${c.nom}</span>
+            <span class="simulateur-recette-gouts">${
+              c.ingredients_manquants?.length
+                ? '⚠️ manque : ' + c.ingredients_manquants.join(', ')
+                : '✓ réalisable maintenant'
+            }</span>
+          </div>`).join('')}
+      </div>` : ''}
+      ${data.doublon_cave ? `
+      <div class="analyser-section analyser-section--warning">
+        <div class="analyser-label">⚠️ Déjà similaire en cave</div>
+        <div class="analyser-texte">${data.doublon_cave} — ${data.doublon_note}</div>
+      </div>` : ''}
+
+      ${recettesHTML}
+
+      ${data.meilleure_version ? `
+      <div class="analyser-section">
+        <div class="analyser-label">⭐ Meilleure version</div>
+        <div class="analyser-texte">${data.meilleure_version}${data.meilleure_version_prix ? ' — ~' + data.meilleure_version_prix : ''}</div>
+      </div>` : ''}
+
+      ${data.variante_moins_chere ? `
+      <div class="analyser-section">
+        <div class="analyser-label">💸 Alternative moins chère</div>
+        <div class="analyser-texte">${data.variante_moins_chere}${data.variante_moins_chere_prix ? ' — ~' + data.variante_moins_chere_prix : ''}</div>
+      </div>` : ''}
+
+      <div class="analyser-section">
+        <div class="analyser-label">🍸 Avis bartender</div>
+        <div class="analyser-texte">${data.complementarite}</div>
+      </div>
+
+      ${data.anecdote_pedagogique ? `
+      <div class="analyser-section">
+        <div class="analyser-label">🎓 Le saviez-tu</div>
+        <div class="analyser-texte">${data.anecdote_pedagogique}</div>
+      </div>` : ''}
+
+      <div class="analyser-verdict ${verdictClass}">${data.verdict_raison}</div>
+
+      ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}', '${itemMatch.nom.replace(/'/g, "\\'")}')">✓ Marquer comme acheté</button>` : ''}
+    </div>
+  `;
+}
 function renderItemAAcheter(item, isTop) {
   const nbRecettes      = item.recettesDetail.length;
   const prix            = parseFloat(item.prix) || null;
