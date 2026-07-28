@@ -2176,12 +2176,7 @@ const stockBas = (allItems || []).filter(i =>
       ${renderItemAAcheter(meilleur, true)}
     </div>` : ''}
 
-    ${stockBas.length > 0 ? `
-    <div class="aacheter-groupe">
-      <div class="aacheter-groupe-titre">⚠️ Stock bas — à racheter bientôt</div>
-      ${stockBas.map(item => renderItemAAcheter(item, false)).join('')}
-    </div>` : ''}
-
+  
     <!-- PAR CATÉGORIE -->
     ${Object.entries(catGroupes).map(([key, groupe]) => {
       if (filtreActif !== 'tout' && filtreActif !== key) return '';
