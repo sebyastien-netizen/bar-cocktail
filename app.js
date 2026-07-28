@@ -2206,53 +2206,6 @@ async function analyserBouteillePhoto(event) {
   if (!fichier) { alert('DEBUG — aucun fichier'); return; }
   alert('DEBUG 1 — fichier reçu : ' + fichier.name + ' (' + Math.round(fichier.size/1024) + ' Ko)');
 
-  const photoBtn = document.getElementById('analyser-photo-btn');
-  const result = document.getElementById('analyser-result');
-  photoBtn.disabled = true;
-  photoBtn.textContent = '📷 Lecture de la photo…';
-  result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
-
-  const caveListe = (cave?.categories || [])
-    .flatMap(c => c.items)
-    .filter(i => i.detenu !== false)
-    .map(i => i.nom)
-    .join(', ');
-
-  try {
-    const image_base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(fichier);
-    });
-    alert('DEBUG 2 — image convertie, taille base64 : ' + Math.round(image_base64.length/1024) + ' Ko');
-
-    photoBtn.textContent = '📷 Analyse en cours…';
-
-    const rep = await fetch('/api/analyser', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_base64, cave: caveListe })
-    });
-    alert('DEBUG 3 — réponse serveur, statut : ' + rep.status);
-
-    const data = await rep.json();
-    alert('DEBUG 4 — data reçue : ' + JSON.stringify(data).slice(0, 200));
-
-    if (!data.identifie) {
-      result.innerHTML = '<div class="simulateur-vide">Bouteille non reconnue sur la photo. Essaie un angle plus net sur l\'étiquette, ou passe par le champ texte.</div>';
-    } else {
-      result.innerHTML = construireResultatAnalyse(data, data.nom_complet || '');
-    }
-  } catch (e) {
-    alert('DEBUG ERREUR — ' + e.message);
-    result.innerHTML = '<div class="simulateur-vide">Erreur de lecture de la photo. Réessaie.</div>';
-  }
-
-  photoBtn.disabled = false;
-  photoBtn.textContent = '📷 Analyser depuis une photo (appareil ou galerie)';
-  event.target.value = '';
-}
 
   const photoBtn = document.getElementById('analyser-photo-btn');
   const result = document.getElementById('analyser-result');
