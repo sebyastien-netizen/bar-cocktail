@@ -2202,9 +2202,11 @@ async function analyserBouteille() {
   btn.textContent = '🔍 Analyser';
 }
 async function analyserBouteillePhoto(event) {
+  alert('HANDLER APPELÉ');
   const fichier = event.target.files?.[0];
   const result = document.getElementById('analyser-result');
-  if (!fichier) { result.innerHTML = 'DEBUG : aucun fichier'; return; }
+  alert('result trouvé : ' + (result ? 'OUI' : 'NON') + ' / fichier : ' + (fichier ? 'OUI' : 'NON'));
+  if (!fichier) { if(result) result.innerHTML = 'DEBUG : aucun fichier'; return; }
   result.innerHTML = 'DEBUG 1 — fichier reçu : ' + fichier.name + ' (' + Math.round(fichier.size/1024) + ' Ko), type : ' + fichier.type;
 
   const photoBtn = document.getElementById('analyser-photo-btn');
