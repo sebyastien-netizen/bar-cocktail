@@ -2049,7 +2049,8 @@ const stockBas = (allItems || []).filter(i =>
   i.cl_total > 0 &&
   i.cl_restants !== null &&
   (i.cl_restants / i.cl_total) <= 0.10 &&
-  !categoriesExclues.includes(i.category_id)
+  !categoriesExclues.includes(i.category_id) &&
+  !i.ne_pas_reapprovisionner
 ).map(i => ({
   id: i.id,
   nom: i.nom,
@@ -2533,6 +2534,10 @@ function renderItemAAcheter(item, isTop) {
 <button class="btn-outline" style="width:100%;margin-top:10px" onclick="marquerAchete('${item.id}', '${item.category_id}', '${item.nom.replace(/'/g, "\\'")}')">
 ✓ Marquer comme acheté
       </button>
+      ${item.stockBas ? `
+      <button class="btn-outline" style="width:100%;margin-top:6px;color:var(--text-muted);font-size:0.8rem;" onclick="toggleReapprovisionner('${item.id}', true)">
+        🔕 Ne pas réapprovisionner
+      </button>` : ''}
     </div>
   `;
 }
@@ -2555,7 +2560,11 @@ async function marquerAchete(itemId, catId, nom) {
   await chargerCave();
   chargerAAcheter();
 }
-
+async function toggleReapprovisionner(itemId, valeur) {
+  await db.from('items').update({ ne_pas_reapprovisionner: valeur }).eq('id', itemId).eq('user_id', currentUser.id);
+  await chargerCave();
+  chargerAAcheter();
+}
 function ouvrirModalReassignerCategorie(itemId, catId, nom) {
   const cibles = REASSIGNATION_CATEGORIES[catId] || [];
   const optionsHtml = cibles.map(id => {
