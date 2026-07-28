@@ -2135,7 +2135,11 @@ chargerAAcheter
   const filtreActif = window.aacheterFiltreActif || 'tout';
 
   container.innerHTML = `
-
+<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+  <button class="btn-outline" onclick="partagerListeAAcheter()" style="font-size:0.85rem;">
+    📤 Partager la liste
+  </button>
+</div>
     <!-- FILTRES -->
     <div class="aacheter-filtres">
       <button class="aacheter-filtre-btn ${filtreActif === 'tout' ? 'active' : ''}"
