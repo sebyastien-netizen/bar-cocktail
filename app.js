@@ -2312,7 +2312,7 @@ function renderItemAAcheter(item, isTop) {
 
 <div class="aacheter-recettes-chips">
         ${item.recettesDetail.slice(0, 4).map(r => `
-          <span class="aacheter-chip">
+<span class="aacheter-chip">
             <span class="aacheter-chip-nom">${r.nom}</span>
             <span class="aacheter-chip-diff diff-${r.difficulte}">${{facile:'F',moyen:'M',avance:'A'}[r.difficulte]||''}</span>
           </span>
