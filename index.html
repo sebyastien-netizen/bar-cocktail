@@ -127,10 +127,19 @@
   <div id="ecole-container"><div class="loading-state">Chargement…</div></div>
 </div>
 
-      <!-- À ACHETER -->
+<!-- À ACHETER -->
 <div id="section-aacheter" class="tab-section hidden">
   <div class="cave-header"><h2>🛒 À acheter</h2></div>
-  <div id="aacheter-container"><div class="loading-state">Calcul en cours…</div></div>
+  <div class="conc-sous-onglets">
+    <button class="conc-sous-onglet active" onclick="switchSousOngletAAcheter('ingredient', this)">🥃 Par ingrédient</button>
+    <button class="conc-sous-onglet" onclick="switchSousOngletAAcheter('recette', this)">🍹 Par recette</button>
+  </div>
+  <div id="aacheter-panel-ingredient">
+    <div id="aacheter-container"><div class="loading-state">Calcul en cours…</div></div>
+  </div>
+  <div id="aacheter-panel-recette" style="display:none">
+    <div id="aacheter-recette-container"><div class="loading-state">Calcul en cours…</div></div>
+  </div>
 </div>
   <!-- MODAL : FICHE RECETTE -->
   <div class="modal-overlay modal-large" id="modal-fiche-recette">
