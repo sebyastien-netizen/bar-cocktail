@@ -2203,15 +2203,13 @@ async function analyserBouteille() {
 }
 async function analyserBouteillePhoto(event) {
   const fichier = event.target.files?.[0];
-  if (!fichier) { alert('DEBUG — aucun fichier'); return; }
-  alert('DEBUG 1 — fichier reçu : ' + fichier.name + ' (' + Math.round(fichier.size/1024) + ' Ko)');
-
+  const result = document.getElementById('analyser-result');
+  if (!fichier) { result.innerHTML = 'DEBUG : aucun fichier'; return; }
+  result.innerHTML = 'DEBUG 1 — fichier reçu : ' + fichier.name + ' (' + Math.round(fichier.size/1024) + ' Ko), type : ' + fichier.type;
 
   const photoBtn = document.getElementById('analyser-photo-btn');
-  const result = document.getElementById('analyser-result');
   photoBtn.disabled = true;
   photoBtn.textContent = '📷 Lecture de la photo…';
-  result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
 
   const caveListe = (cave?.categories || [])
     .flatMap(c => c.items)
@@ -2220,12 +2218,16 @@ async function analyserBouteillePhoto(event) {
     .join(', ');
 
   try {
+    result.innerHTML += '<br>DEBUG 2 — avant lecture FileReader';
     const image_base64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
+      reader.onloadstart = () => { result.innerHTML += '<br>DEBUG — onloadstart'; };
+      reader.onprogress = (e) => { result.innerHTML += '<br>DEBUG — progress ' + e.loaded + '/' + e.total; };
+      reader.onload = () => { result.innerHTML += '<br>DEBUG 3 — onload déclenché'; resolve(reader.result.split(',')[1]); };
+      reader.onerror = () => { result.innerHTML += '<br>DEBUG — onerror : ' + reader.error; reject(reader.error); };
       reader.readAsDataURL(fichier);
     });
+    result.innerHTML += '<br>DEBUG 4 — image convertie, taille base64 : ' + Math.round(image_base64.length/1024) + ' Ko';
 
     photoBtn.textContent = '📷 Analyse en cours…';
 
@@ -2234,15 +2236,18 @@ async function analyserBouteillePhoto(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64, cave: caveListe })
     });
+    result.innerHTML += '<br>DEBUG 5 — réponse serveur, statut : ' + rep.status;
+
     const data = await rep.json();
+    result.innerHTML += '<br>DEBUG 6 — data reçue : ' + JSON.stringify(data).slice(0, 200);
 
     if (!data.identifie) {
-      result.innerHTML = '<div class="simulateur-vide">Bouteille non reconnue sur la photo. Essaie un angle plus net sur l\'étiquette, ou passe par le champ texte.</div>';
+      result.innerHTML += '<div class="simulateur-vide">Bouteille non reconnue sur la photo.</div>';
     } else {
-      result.innerHTML = construireResultatAnalyse(data, data.nom_complet || '');
+      result.innerHTML += construireResultatAnalyse(data, data.nom_complet || '');
     }
   } catch (e) {
-    result.innerHTML = '<div class="simulateur-vide">Erreur de lecture de la photo. Réessaie.</div>';
+    result.innerHTML += '<br>DEBUG ERREUR — ' + (e?.message || e);
   }
 
   photoBtn.disabled = false;
