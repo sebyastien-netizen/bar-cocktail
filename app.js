@@ -2099,8 +2099,7 @@ async function chargerAAcheter() {
           🔍 Analyser
         </button>
       </div>
-      <input type="file" id="analyser-photo-input" accept="image/*" style="display:none" onchange="analyserBouteillePhoto(event)">
-      <button id="analyser-photo-btn" onclick="document.getElementById('analyser-photo-input').click()"
+            <button id="analyser-photo-btn" onclick="document.getElementById('analyser-photo-input').click()"
         style="width:100%;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:14px;cursor:pointer;">
         📷 Analyser depuis une photo (appareil ou galerie)
       </button>
