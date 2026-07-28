@@ -2213,20 +2213,51 @@ function attendreElement(id, essaisMax = 30) {
   });
 }
 
+function redimensionnerImage(fichier, maxDim = 1280, qualite = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(fichier);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Compression échouée')); return; }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', qualite);
+    };
+    img.onerror = () => reject(new Error('Image illisible'));
+    img.src = url;
+  });
+}
+
 async function analyserBouteillePhoto(event) {
   const fichier = event.target.files?.[0];
   if (!fichier) return;
 
-  // S'assure que l'onglet À acheter est bien affiché (utile si la page a rechargé pendant la sélection de la photo)
   const btnAacheter = document.querySelector('nav button[data-tab="aacheter"]');
   if (btnAacheter && !btnAacheter.classList.contains('active')) btnAacheter.click();
 
-  const result = await attendreElement('analyser-result');
-  const photoBtn = await attendreElement('analyser-photo-btn');
-  if (!result || !photoBtn) return;
+const result = await attendreElement('analyser-result', 60);
+  const photoBtn = await attendreElement('analyser-photo-btn', 60);
+  if (!result || !photoBtn) {
+    alert('La page n\'a pas fini de se recharger à temps. Retourne sur À acheter et réessaie.');
+    return;
+  }
 
   photoBtn.disabled = true;
-  photoBtn.textContent = '📷 Lecture de la photo…';
+  photoBtn.textContent = '📷 Compression de la photo…';
   result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
 
   const caveListe = (cave?.categories || [])
@@ -2236,12 +2267,7 @@ async function analyserBouteillePhoto(event) {
     .join(', ');
 
   try {
-    const image_base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(fichier);
-    });
+    const image_base64 = await redimensionnerImage(fichier);
 
     photoBtn.textContent = '📷 Analyse en cours…';
 
@@ -2250,6 +2276,15 @@ async function analyserBouteillePhoto(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64, cave: caveListe })
     });
+
+    if (!rep.ok) {
+      result.innerHTML = `<div class="simulateur-vide">Erreur serveur (${rep.status}). Réessaie, ou passe par le champ texte.</div>`;
+      photoBtn.disabled = false;
+      photoBtn.textContent = '📷 Analyser depuis une photo (appareil ou galerie)';
+      event.target.value = '';
+      return;
+    }
+
     const data = await rep.json();
 
     if (!data.identifie) {
@@ -2258,7 +2293,7 @@ async function analyserBouteillePhoto(event) {
       result.innerHTML = construireResultatAnalyse(data, data.nom_complet || '');
     }
   } catch (e) {
-    result.innerHTML = '<div class="simulateur-vide">Erreur de lecture de la photo. Réessaie.</div>';
+    result.innerHTML = '<div class="simulateur-vide">Erreur : ' + (e?.message || e) + '. Réessaie.</div>';
   }
 
   photoBtn.disabled = false;
