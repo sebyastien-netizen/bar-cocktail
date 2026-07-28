@@ -1710,7 +1710,7 @@ ${etapesTotal > 0 && c.date_creation && c.date_fin ? (() => {
             </div>
             <div style="position:relative;">
               <div style="display:flex;gap:2px;height:10px;border-radius:6px;overflow:hidden;">
-                ${phases.map((p, i) => `<div style="flex:${p.duree};background:${p.faite ? couleurs[i % couleurs.length] : 'var(--border-strong)'};opacity:${p.faite ? 1 : 0.35};"></div>`).join('')}
+${phases.map((p, i) => `<div style="flex:${p.duree};background:${p.faite ? couleurs[i % couleurs.length] : 'rgba(255,255,255,0.12)'};"></div>`).join('')}
               </div>
               <div style="position:absolute;top:-2px;left:${pctCurseur}%;width:3px;height:14px;background:var(--text-primary);border-radius:2px;transform:translateX(-50%);opacity:0.8;"></div>
             </div>
