@@ -4151,31 +4151,102 @@ function mettreAJourRecap() {
 async function validerConfigurateur() {
   const r = configGrimoireCourant;
   if (!r) return;
-
   const alcoolBase = document.getElementById('config-alcool-base').value.trim();
   const dateDebut = document.getElementById('config-date-debut').value;
   const ratioSucreLabel = { leger: '100g/L', standard: r.ratio_sucre || '200g/L', riche: '350g/L' };
 
-  // Enrichir le grimoire avec la config
-  const grimoireConfig = {
-    ...r,
+  const notes = [
+    r.notes_bartender || '',
+    alcoolBase ? `Alcool de base choisi : ${alcoolBase}` : '',
+    `Volume configuré : ${configVolume}cl`,
+    `Degré sucre : ${configSucre} (${ratioSucreLabel[configSucre]})`
+  ].filter(Boolean).join('\n');
+
+  const id = 'custom-conc-' + Date.now();
+  const { data, error } = await db.from('concoctions').insert({
+    id,
+    user_id: currentUser.id,
     nom: r.nom,
-    description: r.description,
-    notes_bartender: [
-      r.notes_bartender || '',
-      alcoolBase ? `Alcool de base choisi : ${alcoolBase}` : '',
-      `Volume configuré : ${configVolume}cl`,
-      `Degré sucre : ${configSucre} (${ratioSucreLabel[configSucre]})`
-    ].filter(Boolean).join('\n'),
-    base_volume_cl: configVolume,
-    duree_jours: r.duree_jours
+    type: r.avec_alcool ? 'maceration' : 'infusion',
+    description: r.description || '',
+    date_creation: dateDebut,
+    statut: 'en_cours',
+    notes,
+    grimoire_id: r.id
+  }).select().single();
+  console.log('INSERT result:', data, 'ERROR:', error);
+
+  if (!data) return;
+
+  const debut = new Date(dateDebut);
+  const duree = r.duree_jours || 14;
+  const fin = new Date(debut);
+  fin.setDate(fin.getDate() + duree);
+  const milieu = new Date(debut);
+  milieu.setDate(milieu.getDate() + Math.floor(duree / 2));
+
+  const etapesParCategorie = {
+    maceration: [
+      { ordre: 1, titre: 'Mise en macération', description: 'Placer les ingrédients dans le bocal hermétique avec l\'alcool. Fermer et placer à l\'abri de la lumière.', date: debut },
+      { ordre: 2, titre: 'Vérification couleur et arômes', description: 'Goûter et observer la couleur. Ajuster si nécessaire.', date: milieu },
+      { ordre: 3, titre: 'Filtration', description: 'Filtrer à travers une étamine fine. Presser légèrement pour extraire le maximum.', date: new Date(fin.getTime() - 2 * 86400000) },
+      { ordre: 4, titre: 'Mise en bouteille', description: 'Transvaser dans une bouteille propre hermétique. Étiqueter avec la date et le contenu.', date: new Date(fin.getTime() - 86400000) },
+      { ordre: 5, titre: 'Dégustation officielle', description: 'Première dégustation — noter les arômes, la couleur et l\'équilibre.', date: fin }
+    ],
+    liqueur: [
+      { ordre: 1, titre: 'Mise en macération', description: 'Placer les ingrédients dans le bocal hermétique avec l\'alcool. Fermer et placer à l\'abri de la lumière.', date: debut },
+      { ordre: 2, titre: 'Vérification couleur et arômes', description: 'Goûter et observer la couleur. Ajuster si nécessaire.', date: milieu },
+      { ordre: 3, titre: 'Ajout du sucre', description: `Filtrer et ajouter le sirop simple selon le ratio : ${r.ratio_sucre || 'voir fiche Grimoire'}. Bien mélanger.`, date: new Date(fin.getTime() - 3 * 86400000) },
+      { ordre: 4, titre: 'Filtration finale', description: 'Filtrer à nouveau finement. La liqueur doit être limpide.', date: new Date(fin.getTime() - 2 * 86400000) },
+      { ordre: 5, titre: 'Mise en bouteille', description: 'Transvaser dans une bouteille propre hermétique. Étiqueter.', date: new Date(fin.getTime() - 86400000) },
+      { ordre: 6, titre: 'Dégustation officielle', description: 'Première dégustation — noter les arômes, la couleur et l\'équilibre.', date: fin }
+    ],
+    'creme-de': [
+      { ordre: 1, titre: 'Mise en macération', description: 'Placer les ingrédients dans le bocal hermétique avec l\'alcool.', date: debut },
+      { ordre: 2, titre: 'Vérification', description: 'Goûter et observer. Ajuster si nécessaire.', date: milieu },
+      { ordre: 3, titre: 'Ajout du sucre (ratio élevé)', description: `Filtrer et ajouter le sirop riche : ${r.ratio_sucre || 'minimum 400g/L'}. Bien mélanger.`, date: new Date(fin.getTime() - 2 * 86400000) },
+      { ordre: 4, titre: 'Mise en bouteille', description: 'Transvaser dans une bouteille propre. Étiqueter avec date et ratio sucre.', date: new Date(fin.getTime() - 86400000) },
+      { ordre: 5, titre: 'Dégustation officielle', description: 'Première dégustation.', date: fin }
+    ],
+    sirop: [
+      { ordre: 1, titre: 'Préparation des ingrédients', description: 'Peser et préparer tous les ingrédients. Stériliser les contenants.', date: debut },
+      { ordre: 2, titre: 'Infusion', description: 'Infuser les ingrédients dans l\'eau chaude selon la recette. Surveiller la durée.', date: debut },
+      { ordre: 3, titre: 'Filtration', description: 'Filtrer finement à travers une étamine ou un filtre à café.', date: debut },
+      { ordre: 4, titre: 'Mise en bouteille', description: 'Ajouter le sucre, mélanger jusqu\'à dissolution complète. Mettre en bouteille au frigo.', date: fin }
+    ],
+    shrub: [
+      { ordre: 1, titre: 'Macération à froid', description: 'Mélanger les fruits avec le sucre. Laisser macérer 48h au frigo.', date: debut },
+      { ordre: 2, titre: 'Ajout du vinaigre', description: 'Filtrer le jus obtenu et ajouter le vinaigre de cidre. Bien mélanger.', date: new Date(debut.getTime() + 2 * 86400000) },
+      { ordre: 3, titre: 'Filtration et mise en bouteille', description: 'Filtrer finement et mettre en bouteille au frigo.', date: fin }
+    ],
+    teinture: [
+      { ordre: 1, titre: 'Mise en macération', description: 'Placer les ingrédients dans l\'alcool fort (70°+). Fermer hermétiquement.', date: debut },
+      { ordre: 2, titre: 'Vérification intensité', description: 'Goûter — très puissant. Ajuster la durée selon l\'intensité souhaitée.', date: milieu },
+      { ordre: 3, titre: 'Filtration fine', description: 'Filtrer à travers étamine très fine ou filtre à café. Mettre en petite bouteille compte-gouttes.', date: fin }
+    ],
+    infusion: [
+      { ordre: 1, titre: 'Préparation', description: 'Préparer les ingrédients. Stériliser les contenants.', date: debut },
+      { ordre: 2, titre: 'Infusion', description: 'Infuser selon la recette du Grimoire. Surveiller la durée et la couleur.', date: debut },
+      { ordre: 3, titre: 'Filtration et mise en bouteille', description: 'Filtrer et mettre en bouteille. Conserver au frigo.', date: fin }
+    ]
   };
 
-  fermerModal('modal-configurateur-grimoire');
+  const etapes = etapesParCategorie[r.categorie] || etapesParCategorie['maceration'];
+  const etapesAInserer = etapes.map(e => ({
+    concoction_id: data.id,
+    user_id: currentUser.id,
+    ordre: e.ordre,
+    titre: e.titre,
+    description: e.description,
+    date_etape: e.date.toISOString().split('T')[0],
+    faite: false
+  }));
+
+  await db.from('concoction_etapes').insert(etapesAInserer);
+
+  document.getElementById('modal-configurateur-grimoire').classList.remove('visible');
   switchSousOngletConc('en-cours', document.querySelector('.conc-sous-onglet'));
-  
-  // Passer la date de début au modal ajout
-  await ouvrirModalAjoutConcoction(grimoireConfig, dateDebut);
+  await chargerConcoctions();
 }
 
 async function chargerLexiqueConc() {
