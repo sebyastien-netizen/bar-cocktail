@@ -4174,7 +4174,7 @@ async function validerConfigurateur() {
     notes,
     grimoire_id: r.id
   }).select().single();
-  console.log('INSERT result:', data, 'ERROR:', error);
+
 
   if (!data) return;
 
