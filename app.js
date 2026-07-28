@@ -4080,7 +4080,11 @@ let configGrimoireCourant = null;
 let configVolume = 50;
 let configSucre = 'standard';
 
-function lancerConcoction(grimoireId) {
+async function lancerConcoction(grimoireId) {
+  if (grimoireList.length === 0) {
+    const { data } = await db.from('grimoire').select('*').order('nom');
+    if (data) grimoireList = data;
+  }
   const r = grimoireList.find(x => x.id === grimoireId);
   if (!r) return;
   fermerModal('modal-fiche-grimoire');
