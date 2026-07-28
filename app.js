@@ -4693,14 +4693,16 @@ function renderDashboardSaison(plantesData, grimoireData) {
     p.disponibilite_mois?.includes(moisActuel) || p.disponibilite_mois?.includes(moisSuivant)
   );
   if (plantesSaison.length === 0) return '';
-  const alertes = plantesSaison.map(plante => {
+  const alertesToutes = plantesSaison.map(plante => {
     const enSaison = plante.disponibilite_mois?.includes(moisActuel);
     const recettesAssociees = grimoireData.filter(g =>
       g.plante_ids?.includes(plante.id) ||
       (plante.categories_preparation || []).some(cat => g.categorie === cat)
     ).slice(0, 3);
     return { plante, enSaison, recettesAssociees };
-  }).slice(0, 4);
+  }).sort((a, b) => (b.enSaison === true) - (a.enSaison === true));
+  const alertes = alertesToutes.slice(0, 4);
+  const restantes = alertesToutes.length - alertes.length;
   return `
     <div class="dash-card">
       <div class="dash-card-header">
@@ -4730,6 +4732,7 @@ function renderDashboardSaison(plantesData, grimoireData) {
             </div>` : ''}
           </div>
         `).join('')}
+        ${restantes > 0 ? `<div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);padding:4px">+${restantes} autre${restantes > 1 ? 's' : ''} en saison ce mois-ci</div>` : ''}
       </div>
     </div>`;
 }
