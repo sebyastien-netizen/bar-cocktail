@@ -4087,8 +4087,8 @@ async function lancerConcoction(grimoireId) {
   }
   const r = grimoireList.find(x => x.id === grimoireId);
   if (!r) return;
-  fermerModal('modal-fiche-grimoire');
   ouvrirConfigurateur(r);
+  fermerModal('modal-fiche-grimoire');
 }
 
 function ouvrirConfigurateur(grimoire) {
