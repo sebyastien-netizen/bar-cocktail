@@ -2164,6 +2164,11 @@ const stockBas = (allItems || []).filter(i =>
       </button>
       <div id="analyser-result"></div>
     </div>
+    ${stockBas.length > 0 ? `
+<div class="aacheter-groupe">
+  <div class="aacheter-groupe-titre">⚠️ Stock bas — à racheter bientôt</div>
+  ${stockBas.map(item => renderItemAAcheter(item, false)).join('')}
+</div>` : ''}
     <!-- MEILLEUR ACHAT -->
     ${filtreActif === 'tout' ? `
     <div class="aacheter-top-card">
@@ -2501,6 +2506,7 @@ function renderItemAAcheter(item, isTop) {
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <div class="aacheter-nom">${item.nom}</div>
           ${colorant ? '<span class="aacheter-colorant-badge">🎨</span>' : ''}
+          ${item.stockBas ? `<span style="background:var(--bg-warning);color:var(--text-warning);border:1px solid var(--border-warning);border-radius:20px;font-size:0.72rem;padding:3px 8px;">⚠️ Stock bas · ${item.pctRestant}%</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           ${prix ? `<span class="item-prix">~${prix}€</span>` : ''}
