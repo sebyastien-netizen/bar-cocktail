@@ -2203,6 +2203,7 @@ async function analyserBouteille() {
 }
 async function analyserBouteillePhoto(event) {
   const fichier = event.target.files?.[0];
+  alert('DEBUG — fichier : ' + (fichier ? fichier.name + ' (' + Math.round(fichier.size/1024) + ' Ko)' : 'AUCUN FICHIER'));
   if (!fichier) return;
 
   const photoBtn = document.getElementById('analyser-photo-btn');
