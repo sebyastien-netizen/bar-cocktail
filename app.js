@@ -2124,45 +2124,18 @@ async function chargerAAcheter() {
         </div>
       `;
     }).join('')}
-<!-- PRESQUE PRÊTES -->
-    ${(() => {
-      const a1 = [], a2 = [];
-      recettes.forEach(r => {
-        const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
-        if (manquants.length === 1) a1.push({ recette: r, manquants });
-        else if (manquants.length === 2) a2.push({ recette: r, manquants });
-      });
-      if (a1.length === 0 && a2.length === 0) return '';
-      return `
-      <div class="aacheter-groupe">
-        <div class="aacheter-groupe-titre">🎯 Presque prêtes</div>
-        ${a1.length > 0 ? `
-        <div style="font-size:0.8rem;font-weight:600;color:var(--text-accent);margin:8px 0 6px">À 1 achat de la victoire (${a1.length})</div>
-        ${a1.map(({ recette, manquants }) => `
-          <div class="simulateur-recette" onclick="ouvrirFicheRecette('${recette.id}')">
-            <span class="simulateur-recette-nom">${recette.nom}</span>
-            <span class="simulateur-recette-gouts">Il manque : ${manquants.map(m => m.nom).join(', ')}</span>
-          </div>
-        `).join('')}` : ''}
-        ${a2.length > 0 ? `
-        <div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin:14px 0 6px">À 2 achats de la victoire (${a2.length})</div>
-        ${a2.map(({ recette, manquants }) => `
-          <div class="simulateur-recette" onclick="ouvrirFicheRecette('${recette.id}')">
-            <span class="simulateur-recette-nom">${recette.nom}</span>
-            <span class="simulateur-recette-gouts">Il manque : ${manquants.map(m => m.nom).join(', ')}</span>
-          </div>
-        `).join('')}` : ''}
-      </div>`;
-    })()}
+
 
     <!-- APPORT GUSTATIF -->
     <div class="aacheter-groupe">
       <button class="btn btn-outline btn-apport" id="btn-apport-gustatif" onclick="chargerApportGustatif()">
         ✨ Analyser l'apport gustatif (Claude)
       </button>
-      <div id="apport-gustatif-result"></div>
+<div id="apport-gustatif-result"></div>
     </div>
   `;
+
+  renderAAcheterParRecette();
 }
 async function analyserBouteille() {
   const nom = document.getElementById('analyser-input')?.value?.trim();
@@ -2387,6 +2360,69 @@ ${data.cocktails_possibles?.length ? `
       ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}', '${itemMatch.nom.replace(/'/g, "\\'")}')">✓ Marquer comme acheté</button>` : ''}
     </div>
   `;
+}
+function switchSousOngletAAcheter(panel, btn) {
+  document.querySelectorAll('#section-aacheter .conc-sous-onglet').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('aacheter-panel-ingredient').style.display = panel === 'ingredient' ? '' : 'none';
+  document.getElementById('aacheter-panel-recette').style.display = panel === 'recette' ? '' : 'none';
+  if (panel === 'recette') renderAAcheterParRecette();
+}
+
+function renderAAcheterParRecette() {
+  const container = document.getElementById('aacheter-recette-container');
+  if (!container) return;
+
+  const caveIds = getItemsCave();
+  const paliers = {};
+  recettes.forEach(r => {
+    const manquants = (r.ingredients || []).filter(i => i.item_cave_id && !caveIds.has(i.item_cave_id) && !i.optionnel);
+    const n = manquants.length;
+    if (n >= 1 && n <= 4) {
+      if (!paliers[n]) paliers[n] = [];
+      paliers[n].push({ recette: r, manquants });
+    }
+  });
+
+  const paliersDisponibles = Object.keys(paliers).map(Number).sort((a, b) => a - b);
+  if (paliersDisponibles.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🎉</div>
+        <div class="empty-state-titre">Tout est déjà réalisable</div>
+        <div class="empty-state-texte">Aucune recette ne dépend d'un ingrédient manquant en ce moment.</div>
+      </div>`;
+    return;
+  }
+
+  const MAX = 8;
+  const labelPalier = { 1: "À 1 achat de la victoire", 2: "À 2 achats de la victoire", 3: "À 3 achats de la victoire", 4: "À 4 achats de la victoire" };
+
+  const renderCarte = (recette, manquants, accent) => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer"
+      onclick="ouvrirFicheRecette('${recette.id}')">
+      <div style="font-weight:600;font-size:0.88rem;margin-bottom:6px">${recette.nom}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${manquants.map(m => `
+          <span style="font-size:0.72rem;padding:2px 9px;border-radius:20px;
+            background:${accent ? 'var(--bg-accent)' : 'var(--bg-card)'};
+            color:${accent ? 'var(--text-accent)' : 'var(--text-secondary)'};
+            border:1px solid ${accent ? 'var(--accent)' : 'var(--border)'}">${m.nom}</span>
+        `).join('')}
+      </div>
+    </div>`;
+
+  container.innerHTML = paliersDisponibles.map(n => {
+    const items = paliers[n];
+    return `
+      <div class="aacheter-groupe">
+        <div style="font-size:0.8rem;font-weight:600;color:${n === 1 ? 'var(--text-accent)' : 'var(--text-secondary)'};margin:10px 0 8px">
+          ${labelPalier[n] || `À ${n} achats de la victoire`} (${items.length})
+        </div>
+        ${items.slice(0, MAX).map(({ recette, manquants }) => renderCarte(recette, manquants, n === 1)).join('')}
+        ${items.length > MAX ? `<div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);padding:4px 0">+${items.length - MAX} autre${items.length - MAX > 1 ? 's' : ''}</div>` : ''}
+      </div>`;
+  }).join('');
 }
 function renderItemAAcheter(item, isTop) {
   const nbRecettes      = item.recettesDetail.length;
