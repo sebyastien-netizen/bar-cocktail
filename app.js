@@ -2487,6 +2487,16 @@ renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, 
 // SESSIONS
 // =============================================
 
+function renderDashNavTile(tab, icon, label) {
+  return `
+    <div class="dash-stat" style="cursor:pointer;align-items:center;justify-content:center;text-align:center;gap:4px"
+      onclick="document.querySelector('nav button[data-tab=&quot;${tab}&quot;]').click()">
+      <span style="font-size:1.6rem">${icon}</span>
+      <span class="dash-stat-label">${label}</span>
+    </div>
+  `;
+}
+
 function renderDashboard({ realisables, prixTotal, conservations, concEnCours, anecdote, conseil, realisations }) {
  const container = document.getElementById('dashboard-container');
   const categorieLabel = { technique: 'Technique', gestion: 'Gestion', service: 'Service' };
@@ -2497,17 +2507,12 @@ function renderDashboard({ realisables, prixTotal, conservations, concEnCours, a
 const nbRefs = (cave?.categories || []).reduce((n, c) => n + c.items.filter(i => i.detenu !== false).length, 0); 
   container.innerHTML = `
  
-    <!-- TUILES STATISTIQUES -->
-    <div class="dashboard-grid-top">
+<!-- TUILES STATISTIQUES + RACCOURCIS ONGLETS -->
+    <div class="dashboard-grid-top" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       <div class="dash-stat">
         <span class="dash-stat-label">Réalisables maintenant</span>
         <span class="dash-stat-val dash-val-accent">${realisables.length}</span>
         <span class="dash-stat-sub">sur ${recettes.filter(r => r.type === 'cocktail').length} cocktails</span>
-      </div>
-      <div class="dash-stat">
-        <span class="dash-stat-label">Valeur cave</span>
-        <span class="dash-stat-val">${prixTotal.toFixed(0)} €</span>
-        <span class="dash-stat-sub">${nbRefs} références</span>
       </div>
       <div class="dash-stat">
         <span class="dash-stat-label">Concoctions</span>
@@ -2518,11 +2523,12 @@ const nbRefs = (cave?.categories || []).reduce((n, c) => n + c.items.filter(i =>
             : '')
           : 'aucune en cours'}</span>
       </div>
-      <div class="dash-stat">
-        <span class="dash-stat-label">Conservations</span>
-        <span class="dash-stat-val ${nbConservations > 0 ? 'dash-val-danger' : ''}">${nbConservations}</span>
-        <span class="dash-stat-sub">${nbConservations > 0 ? 'à surveiller' : 'tout est bon'}</span>
-      </div>
+      ${renderDashNavTile('cave', '🥃', 'Ma Cave')}
+      ${renderDashNavTile('recettes', '🍸', 'Recettes')}
+      ${renderDashNavTile('sessions', '🎉', 'Sessions')}
+      ${renderDashNavTile('herboristerie', '🌿', 'Herboristerie')}
+      ${renderDashNavTile('ecole', '🎓', 'École')}
+      ${renderDashNavTile('aacheter', '🛒', 'À acheter')}
     </div>
  
     <!-- GRILLE PRINCIPALE -->
