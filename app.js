@@ -3890,7 +3890,15 @@ async function rejeterInspiration(id) {
   renderInspirations();
 }
 let completerInspirationData = null;
+function ouvrirCompleterDepuisFiche(id) {
+  document.getElementById('modal-fiche-inspiration').classList.remove('visible');
+  ouvrirModalCompleter(id);
+}
 
+function ouvrirQRDepuisFiche(id) {
+  document.getElementById('modal-fiche-inspiration').classList.remove('visible');
+  ouvrirQRBartender(id);
+}
 async function ouvrirModalCompleter(id) {
   const inspi = inspirationsList.find(x => x.id === id);
   if (!inspi) return;
