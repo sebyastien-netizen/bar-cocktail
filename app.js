@@ -3380,12 +3380,13 @@ function renderInspirations() {
   const validees = inspirationsList.filter(i => i.statut === 'validee');
   const rejetees = inspirationsList.filter(i => i.statut === 'rejetee');
 
-  container.innerHTML = `
-<div style="padding:1rem;display:flex;justify-content:flex-end;gap:8px">
-<button class="btn-outline" onclick="captureRapideBartender()">📱 Dévoile ton cocktail</button>
-<button class="btn-outline" onclick="ouvrirLaTournee()">🍹 La Tournée</button>
-      <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
-    </div>
+container.innerHTML = `
+<div style="padding:1rem;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+  <button class="btn-outline" onclick="captureRapideBartender()">📱 Dévoile ton cocktail</button>
+  <button class="btn-outline" onclick="ouvrirLaTournee()">🍹 La Tournée</button>
+  <button class="btn-outline" onclick="ouvrirImportURL()">🔗 Importer URL</button>
+  <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
+</div>
 
     ${enAttente.length > 0 ? `
     <div class="conc-section">
@@ -3483,6 +3484,110 @@ function ouvrirLaTournee() {
       colorDark: '#000000', colorLight: '#ffffff'
     });
   }
+}
+async function ouvrirImportURL() {
+  const url = prompt('Colle l\'URL de la page à scraper (ex: https://disaronno.com/fr/mix-with-style/)');
+  if (!url) return;
+
+  const btn = document.querySelector('[onclick="ouvrirImportURL()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyse…'; }
+
+  try {
+    const res = await fetch('/api/tavily', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+
+    if (data.error) { alert('Erreur : ' + data.error); return; }
+    if (!data.recettes || data.recettes.length === 0) { alert('Aucune recette détectée sur cette page.'); return; }
+
+    // Afficher les recettes détectées dans un modal
+    ouvrirModalImportRecettes(data.recettes, url);
+
+  } catch(e) {
+    alert('Erreur réseau : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 Importer URL'; }
+  }
+}
+
+function ouvrirModalImportRecettes(recettes, urlSource) {
+  const existing = document.getElementById('modal-import-recettes');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-import-recettes';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:1.1rem;font-weight:700">${recettes.length} recette${recettes.length > 1 ? 's' : ''} détectée${recettes.length > 1 ? 's' : ''}</div>
+        <button onclick="document.getElementById('modal-import-recettes').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px;word-break:break-all">${urlSource}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${recettes.map((r, i) => `
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div style="font-weight:600;font-size:0.9rem">${r.nom}</div>
+              <button onclick="importerRecette(${i})" 
+                style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:8px">
+                + Importer
+              </button>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-secondary)">
+              ${r.ingredients?.slice(0,4).map(ing => `${ing.quantite || ''}${ing.unite || ''} ${ing.nom}`).join(' · ')}${r.ingredients?.length > 4 ? ` +${r.ingredients.length - 4}` : ''}
+            </div>
+            ${r.verre ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">🥃 ${r.verre}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="importerToutesRecettes(${recettes.length})" 
+        style="width:100%;margin-top:16px;padding:12px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-primary);cursor:pointer;font-size:0.85rem;">
+        ✅ Importer toutes les recettes
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Stocker les recettes pour l'import
+  window._recettesImport = recettes;
+  window._urlImport = urlSource;
+}
+
+async function importerRecette(index) {
+  const r = window._recettesImport[index];
+  await _creerInspirationDepuisImport(r);
+}
+
+async function importerToutesRecettes(total) {
+  for (let i = 0; i < total; i++) {
+    await _creerInspirationDepuisImport(window._recettesImport[i]);
+  }
+  document.getElementById('modal-import-recettes')?.remove();
+  await chargerInspirations();
+  alert(`✅ ${total} recettes importées dans Inspirations !`);
+}
+
+async function _creerInspirationDepuisImport(r) {
+  const domaine = new URL(window._urlImport).hostname.replace('www.', '');
+  await db.from('inspirations').insert({
+    id: 'import-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+    user_id: currentUser.id,
+    nom: r.nom,
+    source: 'url',
+    source_detail: domaine,
+    ingredients: r.ingredients || [],
+    statut: 'en_attente',
+    notes: JSON.stringify({
+      type: 'cocktail',
+      verre: r.verre || null,
+      garniture: r.garniture || null,
+      methode: r.methode || null
+    })
+  });
 }
 function renderCarteInspiration(inspi) {
   const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
