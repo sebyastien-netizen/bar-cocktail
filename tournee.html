@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La Tournée 🍹</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    :root {
+      --bg: #0f1117;
+      --bg-card: #1a1d27;
+      --bg-card-hover: #1f2235;
+      --text-primary: #f0f0f0;
+      --text-secondary: #a0a8c0;
+      --text-muted: #606880;
+      --accent: #c9963a;
+      --accent-hover: #e0aa45;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --success: #4caf82;
+      --bg-success: rgba(76,175,130,0.12);
+      --text-success: #4caf82;
+      --border-success: rgba(76,175,130,0.3);
+      --radius: 12px;
+    }
+ 
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 0;
+    }
+ 
+    /* HEADER */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      text-align: center;
+    }
+ 
+    .header-titre {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+ 
+    .header-sous-titre {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+ 
+    /* ÉCRANS */
+    .screen { display: none; padding: 24px; max-width: 520px; margin: 0 auto; }
+    .screen.active { display: block; }
+ 
+    /* ÉCRAN ACCUEIL */
+    .accueil-intro {
+      text-align: center;
+      margin-bottom: 32px;
+      padding-top: 8px;
+    }
+ 
+    .accueil-intro p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+ 
+    .choix-grille {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+ 
+    .choix-carte {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+ 
+    .choix-carte:hover, .choix-carte:active {
+      border-color: var(--accent);
+      background: var(--bg-card-hover);
+    }
+ 
+    .choix-carte-emoji {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+ 
+    .choix-carte-titre {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+ 
+    .choix-carte-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+ 
+    /* FORMULAIRES */
+    .form-titre {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+ 
+    .form-sous-titre {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+ 
+    .form-group {
+      margin-bottom: 18px;
+    }
+ 
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+ 
+    .form-group .label-hint {
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+ 
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+ 
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+ 
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+ 
+    /* PHOTO */
+    .photo-zone {
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+ 
+    .photo-zone:hover { border-color: var(--accent); }
+ 
+    .photo-zone-texte {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+ 
+    .photo-preview {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: none;
+    }
+ 
+    input[type="file"] { display: none; }
+ 
+    /* INGRÉDIENTS */
+    .ingredient-ligne {
+      display: grid;
+      grid-template-columns: 1fr 80px 90px 36px;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+ 
+    .btn-suppr-ing {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 1rem;
+      cursor: pointer;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+ 
+    .btn-suppr-ing:hover { color: #e05555; border-color: #e05555; }
+ 
+    .btn-ajouter {
+      background: none;
+      border: 1px dashed var(--border-strong);
+      border-radius: 8px;
+      color: var(--accent);
+      font-size: 0.85rem;
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s;
+    }
+ 
+    .btn-ajouter:hover { background: var(--bg-card-hover); }
+ 
+    /* ÉTAPES */
+    .etape-bloc {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+ 
+    .etape-duree {
+      display: grid;
+      grid-template-columns: 1fr 80px 100px 36px;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+ 
+    .etape-duree label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+      margin-bottom: 0;
+    }
+ 
+    /* BOUTONS */
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      width: 100%;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+ 
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+ 
+    .btn-retour {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+ 
+    .btn-retour:hover { color: var(--text-primary); }
+ 
+    /* CONFIRMATION */
+    .confirmation {
+      text-align: center;
+      padding: 40px 24px;
+    }
+ 
+    .confirmation-emoji {
+      font-size: 4rem;
+      display: block;
+      margin-bottom: 20px;
+    }
+ 
+    .confirmation-titre {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+ 
+    .confirmation-texte {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+ 
+    .confirmation-badge {
+      background: var(--bg-success);
+      border: 1px solid var(--border-success);
+      color: var(--text-success);
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      display: inline-block;
+      margin-top: 16px;
+    }
+ 
+    .btn-nouveau {
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      padding: 12px 20px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.15s;
+    }
+ 
+    .btn-nouveau:hover { background: var(--bg-card-hover); }
+ 
+    /* ERREUR */
+    .erreur {
+      background: rgba(224, 85, 85, 0.12);
+      border: 1px solid rgba(224, 85, 85, 0.3);
+      color: #e05555;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+ 
+    /* LOADING */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,17,23,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 999;
+    }
+ 
+    .loading-overlay.active { display: flex; }
+ 
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+ 
+    @keyframes spin { to { transform: rotate(360deg); } }
+ 
+    .loading-texte {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+ 
+    @media (max-width: 480px) {
+      .choix-grille { grid-template-columns: 1fr; }
+      .ingredient-ligne { grid-template-columns: 1fr 70px 80px 36px; }
+      .etape-duree { grid-template-columns: 1fr 70px 90px 36px; }
+    }
+  </style>
+</head>
+<body>
+ 
+<!-- HEADER -->
+<div class="header">
+  <div class="header-titre">🍹 La Tournée</div>
+  <div class="header-sous-titre">Partage ta découverte avec Seb</div>
+</div>
+ 
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-texte">Envoi en cours…</div>
+</div>
+ 
+<!-- ÉCRAN ACCUEIL -->
+<div class="screen active" id="screen-accueil">
+  <div class="accueil-intro">
+    <p>Tu as un cocktail à partager ou une recette secrète à transmettre ? C'est ici !</p>
+  </div>
+ 
+  <div class="choix-grille">
+    <div class="choix-carte" onclick="allerVers('screen-cocktail')">
+      <span class="choix-carte-emoji">🍸</span>
+      <div class="choix-carte-titre">Un cocktail</div>
+      <div class="choix-carte-desc">Quelque chose que tu as vu, goûté ou inventé</div>
+    </div>
+    <div class="choix-carte" onclick="allerVers('screen-concoction')">
+      <span class="choix-carte-emoji">⚗️</span>
+      <div class="choix-carte-titre">Une recette</div>
+      <div class="choix-carte-desc">Un rhum arrangé, une liqueur, une préparation maison</div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ÉCRAN COCKTAIL -->
+<div class="screen" id="screen-cocktail">
+  <button class="btn-retour" onclick="allerVers('screen-accueil')">← Retour</button>
+  <div class="form-titre">🍸 Un cocktail</div>
+  <div class="form-sous-titre">Décris ce que tu as découvert</div>
+ 
+  <div class="erreur" id="erreur-cocktail">Merci de remplir au moins le nom et un ingrédient.</div>
+ 
+  <div class="form-group">
+    <label>Photo <span class="label-hint">optionnel</span></label>
+    <div class="photo-zone" onclick="document.getElementById('photo-cocktail-input').click()">
+      <img class="photo-preview" id="photo-cocktail-preview" src="" alt="">
+      <div class="photo-zone-texte" id="photo-cocktail-texte">📷 Ajouter une photo</div>
+    </div>
+    <input type="file" id="photo-cocktail-input" accept="image/*" onchange="previewPhoto(this, 'cocktail')">
+  </div>
+ 
+  <div class="form-group">
+    <label>Nom du cocktail</label>
+    <input type="text" id="cocktail-nom" placeholder="ex: Planteur de Marie, Spritz surprise…">
+  </div>
+ 
+  <div class="form-group">
+    <label>Origine, anecdote, histoire <span class="label-hint">optionnel</span></label>
+    <textarea id="cocktail-origine" placeholder="ex: Vu au bar Le Symbiose, c'est la spécialité du barman…"></textarea>
+  </div>
+ 
+  <div class="form-group">
+    <label>Ingrédients</label>
+    <div id="cocktail-ingredients"></div>
+    <button class="btn-ajouter" onclick="ajouterIngredient('cocktail')">+ Ajouter un ingrédient</button>
+  </div>
+ 
+  <div class="form-group">
+    <label>Ton prénom</label>
+    <input type="text" id="cocktail-prenom" placeholder="ex: Julie">
+  </div>
+ 
+  <button class="btn-primary" onclick="envoyerCocktail()">🍹 Envoyer à Seb</button>
+</div>
+ 
+<!-- ÉCRAN CONCOCTION -->
+<div class="screen" id="screen-concoction">
+  <button class="btn-retour" onclick="allerVers('screen-accueil')">← Retour</button>
+  <div class="form-titre">⚗️ Une recette</div>
+  <div class="form-sous-titre">Ta recette maison à transmettre</div>
+ 
+  <div class="erreur" id="erreur-concoction">Merci de remplir au moins le nom et un ingrédient.</div>
+ 
+  <div class="form-group">
+    <label>Photo <span class="label-hint">optionnel</span></label>
+    <div class="photo-zone" onclick="document.getElementById('photo-concoction-input').click()">
+      <img class="photo-preview" id="photo-concoction-preview" src="" alt="">
+      <div class="photo-zone-texte" id="photo-concoction-texte">📷 Ajouter une photo</div>
+    </div>
+    <input type="file" id="photo-concoction-input" accept="image/*" onchange="previewPhoto(this, 'concoction')">
+  </div>
+ 
+  <div class="form-group">
+    <label>Nom de la recette</label>
+    <input type="text" id="concoction-nom" placeholder="ex: Rhum arrangé Grand-Père, Limoncello maison…">
+  </div>
+ 
+  <div class="form-group">
+    <label>Origine, anecdote, histoire <span class="label-hint">optionnel</span></label>
+    <textarea id="concoction-origine" placeholder="ex: Recette de mon grand-père, on en fait chaque été…"></textarea>
+  </div>
+ 
+  <div class="form-group">
+    <label>Étapes <span class="label-hint">optionnel</span></label>
+    <div id="concoction-etapes"></div>
+    <button class="btn-ajouter" onclick="ajouterEtape()">+ Ajouter une étape</button>
+  </div>
+ 
+  <div class="form-group">
+    <label>Ingrédients</label>
+    <div id="concoction-ingredients"></div>
+    <button class="btn-ajouter" onclick="ajouterIngredient('concoction')">+ Ajouter un ingrédient</button>
+  </div>
+ 
+  <div class="form-group">
+    <label>Ton prénom</label>
+    <input type="text" id="concoction-prenom" placeholder="ex: Marc">
+  </div>
+ 
+  <button class="btn-primary" onclick="envoyerConcoction()">🍹 Envoyer à Seb</button>
+</div>
+ 
+<!-- ÉCRAN CONFIRMATION -->
+<div class="screen" id="screen-confirmation">
+  <div class="confirmation">
+    <span class="confirmation-emoji">🎉</span>
+    <div class="confirmation-titre" id="confirmation-titre">Merci !</div>
+    <div class="confirmation-texte" id="confirmation-texte">Ta recette a bien été envoyée à Seb.</div>
+    <div class="confirmation-badge">✓ Reçu par Seb</div>
+    <button class="btn-nouveau" onclick="allerVers('screen-accueil')">Partager une autre recette</button>
+  </div>
+</div>
+ 
+<script>
+  // =============================================
+  // SUPABASE
+  // =============================================
+  const { createClient } = supabase;
+  const db = createClient(
+    'https://mfbmbixjroqhdxbpwnlb.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mYm1iaXhqcm9xaGR4YnB3bmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTkzMTM4MDcsImV4cCI6MjAzNDg4OTgwN30.Oa8DGBxjhXqWfqXOiMGOocoRzFLLGvpfFJWnLjolbA0'
+  );
+ 
+  const SEB_USER_ID = 'a2da3002-2fb8-4698-838d-35185f5fbe36';
+ 
+  // =============================================
+  // NAVIGATION
+  // =============================================
+  function allerVers(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+ 
+  // =============================================
+  // PHOTO PREVIEW
+  // =============================================
+  const photoData = { cocktail: null, concoction: null };
+ 
+  function previewPhoto(input, type) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = document.getElementById(`photo-${type}-preview`);
+      const texte = document.getElementById(`photo-${type}-texte`);
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      texte.style.display = 'none';
+      photoData[type] = file;
+    };
+    reader.readAsDataURL(file);
+  }
+ 
+  async function uploaderPhoto(file, type) {
+    if (!file) return null;
+    // Compression
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const max = 1280;
+        let w = img.width, h = img.height;
+        if (w > max) { h = Math.round(h * max / w); w = max; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(async (blob) => {
+          const nomFichier = `tournee-${type}-${Date.now()}.jpg`;
+          const { data, error } = await db.storage
+            .from('photos-inspirations')
+            .upload(nomFichier, blob, { contentType: 'image/jpeg', upsert: false });
+          if (error) { resolve(null); return; }
+          const { data: urlData } = db.storage.from('photos-inspirations').getPublicUrl(nomFichier);
+          resolve(urlData?.publicUrl || null);
+          URL.revokeObjectURL(url);
+        }, 'image/jpeg', 0.8);
+      };
+      img.src = url;
+    });
+  }
+ 
+  // =============================================
+  // INGRÉDIENTS
+  // =============================================
+  const unites = ['cl', 'ml', 'g', 'kg', 'litre', 'verre', 'bouteille', 'cuillère', 'pincée', 'trait'];
+ 
+  function ajouterIngredient(type) {
+    const container = document.getElementById(`${type}-ingredients`);
+    const idx = container.children.length;
+    const div = document.createElement('div');
+    div.className = 'ingredient-ligne';
+    div.innerHTML = `
+      <input type="text" placeholder="Ingrédient" data-type="${type}" data-idx="${idx}" data-field="nom">
+      <input type="number" placeholder="Qté" min="0" step="0.5" data-type="${type}" data-idx="${idx}" data-field="quantite">
+      <select data-type="${type}" data-idx="${idx}" data-field="unite">
+        ${unites.map(u => `<option value="${u}">${u}</option>`).join('')}
+      </select>
+      <button class="btn-suppr-ing" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(div);
+  }
+ 
+  function lireIngredients(type) {
+    const container = document.getElementById(`${type}-ingredients`);
+    const result = [];
+    container.querySelectorAll('.ingredient-ligne').forEach(ligne => {
+      const nom = ligne.querySelector('[data-field="nom"]').value.trim();
+      const quantite = ligne.querySelector('[data-field="quantite"]').value;
+      const unite = ligne.querySelector('[data-field="unite"]').value;
+      if (nom) result.push({ nom, quantite: parseFloat(quantite) || null, unite });
+    });
+    return result;
+  }
+ 
+  // =============================================
+  // ÉTAPES (concoction seulement)
+  // =============================================
+  const unitesTemps = ['heures', 'jours', 'semaines', 'mois'];
+ 
+  function ajouterEtape() {
+    const container = document.getElementById('concoction-etapes');
+    const div = document.createElement('div');
+    div.className = 'etape-bloc';
+    div.innerHTML = `
+      <textarea placeholder="Description de l'étape (ex: Faire macérer les poires dans le rhum)" rows="2" style="width:100%;margin-bottom:8px;background:var(--bg);border:1px solid var(--border-strong);border-radius:6px;padding:8px 10px;color:var(--text-primary);font-size:0.88rem;resize:vertical;outline:none;"></textarea>
+      <div class="etape-duree">
+        <label style="grid-column:1;align-self:center;color:var(--text-muted);font-size:0.78rem;">Durée</label>
+        <input type="number" placeholder="ex: 40" min="0" style="grid-column:2;">
+        <select style="grid-column:3;">
+          ${unitesTemps.map(u => `<option value="${u}">${u}</option>`).join('')}
+        </select>
+        <button class="btn-suppr-ing" style="grid-column:4;" onclick="this.closest('.etape-bloc').remove()">×</button>
+      </div>
+    `;
+    container.appendChild(div);
+  }
+ 
+  function lireEtapes() {
+    const container = document.getElementById('concoction-etapes');
+    const result = [];
+    container.querySelectorAll('.etape-bloc').forEach(bloc => {
+      const description = bloc.querySelector('textarea').value.trim();
+      const dureeVal = bloc.querySelector('input[type="number"]').value;
+      const unite = bloc.querySelector('select').value;
+      if (description) result.push({
+        description,
+        duree: parseFloat(dureeVal) || null,
+        unite
+      });
+    });
+    return result;
+  }
+ 
+  // =============================================
+  // ENVOI COCKTAIL
+  // =============================================
+  async function envoyerCocktail() {
+    const nom = document.getElementById('cocktail-nom').value.trim();
+    const ingredients = lireIngredients('cocktail');
+    const erreurEl = document.getElementById('erreur-cocktail');
+ 
+    if (!nom || ingredients.length === 0) {
+      erreurEl.style.display = 'block';
+      return;
+    }
+    erreurEl.style.display = 'none';
+ 
+    document.getElementById('loading').classList.add('active');
+ 
+    const photoUrl = await uploaderPhoto(photoData.cocktail, 'cocktail');
+    const prenom = document.getElementById('cocktail-prenom').value.trim();
+    const origine = document.getElementById('cocktail-origine').value.trim();
+ 
+    const { error } = await db.from('inspirations').insert({
+      user_id: SEB_USER_ID,
+      nom,
+      source: 'tournee',
+      source_detail: prenom || 'Anonyme',
+      photo_url: photoUrl,
+      ingredients: ingredients,
+      statut: 'en_attente',
+      notes: JSON.stringify({
+        type: 'cocktail',
+        origine: origine || null,
+        prenom: prenom || 'Anonyme'
+      })
+    });
+ 
+    document.getElementById('loading').classList.remove('active');
+ 
+    if (error) {
+      document.getElementById('erreur-cocktail').textContent = 'Une erreur est survenue. Réessaie !';
+      document.getElementById('erreur-cocktail').style.display = 'block';
+      return;
+    }
+ 
+    document.getElementById('confirmation-titre').textContent = `Merci ${prenom || ''} ! 🎉`.trim();
+    document.getElementById('confirmation-texte').textContent = `Ton cocktail "${nom}" a bien été envoyé à Seb.`;
+    allerVers('screen-confirmation');
+  }
+ 
+  // =============================================
+  // ENVOI CONCOCTION
+  // =============================================
+  async function envoyerConcoction() {
+    const nom = document.getElementById('concoction-nom').value.trim();
+    const ingredients = lireIngredients('concoction');
+    const erreurEl = document.getElementById('erreur-concoction');
+ 
+    if (!nom || ingredients.length === 0) {
+      erreurEl.style.display = 'block';
+      return;
+    }
+    erreurEl.style.display = 'none';
+ 
+    document.getElementById('loading').classList.add('active');
+ 
+    const photoUrl = await uploaderPhoto(photoData.concoction, 'concoction');
+    const prenom = document.getElementById('concoction-prenom').value.trim();
+    const origine = document.getElementById('concoction-origine').value.trim();
+    const etapes = lireEtapes();
+ 
+    const { error } = await db.from('inspirations').insert({
+      user_id: SEB_USER_ID,
+      nom,
+      source: 'tournee',
+      source_detail: prenom || 'Anonyme',
+      photo_url: photoUrl,
+      ingredients: ingredients,
+      statut: 'en_attente',
+      notes: JSON.stringify({
+        type: 'concoction',
+        origine: origine || null,
+        etapes: etapes.length > 0 ? etapes : null,
+        prenom: prenom || 'Anonyme'
+      })
+    });
+ 
+    document.getElementById('loading').classList.remove('active');
+ 
+    if (error) {
+      document.getElementById('erreur-concoction').textContent = 'Une erreur est survenue. Réessaie !';
+      document.getElementById('erreur-concoction').style.display = 'block';
+      return;
+    }
+ 
+    document.getElementById('confirmation-titre').textContent = `Merci ${prenom || ''} ! 🎉`.trim();
+    document.getElementById('confirmation-texte').textContent = `Ta recette "${nom}" a bien été envoyée à Seb.`;
+    allerVers('screen-confirmation');
+  }
+ 
+  // Ajouter un ingrédient par défaut au chargement
+  window.addEventListener('load', () => {
+    ajouterIngredient('cocktail');
+    ajouterIngredient('concoction');
+  });
+</script>
+</body>
+</html>
+ 
