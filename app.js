@@ -3488,7 +3488,13 @@ function renderCarteInspiration(inspi) {
   const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
   const tags = inspi.tags || [];
   const dateStr = new Date(inspi.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-  const sourceIcon = { manuel: '✍️', photo: '📷', url: '🔗' };
+  const sourceIcon = { manuel: '✍️', photo: '📷', url: '🔗', tournee: '🍻' };
+
+  // Parser les notes La Tournée
+  let notesTournee = {};
+  if (inspi.source === 'tournee' && inspi.notes) {
+    try { notesTournee = JSON.parse(inspi.notes); } catch(e) {}
+  }
 
   return `
     <div class="herbo-carte" onclick="ouvrirFicheInspiration('${inspi.id}')">
@@ -3497,12 +3503,18 @@ function renderCarteInspiration(inspi) {
         <span class="herbo-emoji">${sourceIcon[inspi.source] || '💡'}</span>
         <div class="herbo-carte-info">
           <div class="herbo-nom">${inspi.nom}</div>
-          ${inspi.source_detail ? `<div class="herbo-latin">${inspi.source_detail}</div>` : ''}
+          ${inspi.source === 'tournee' && notesTournee.prenom ? 
+            `<div class="herbo-latin">🍻 De ${notesTournee.prenom}</div>` : 
+            inspi.source_detail ? `<div class="herbo-latin">${inspi.source_detail}</div>` : ''}
         </div>
         <span class="herbo-saison ${inspi.statut === 'en_attente' ? 'herbo-saison--off' : inspi.statut === 'validee' ? 'herbo-saison--ok' : ''}">
           ${inspi.statut === 'en_attente' ? '⏳' : inspi.statut === 'validee' ? '✅' : '❌'}
         </span>
       </div>
+      ${inspi.source === 'tournee' && notesTournee.origine ? `
+      <div style="font-size:0.78rem;font-style:italic;color:var(--text-muted);margin-top:6px;line-height:1.4">
+        💬 "${notesTournee.origine}"
+      </div>` : ''}
       ${ings.length > 0 ? `
       <div class="herbo-profil" style="margin-top:6px">
         ${ings.slice(0, 3).map(ing => typeof ing === 'string' ? ing : ing.nom).join(' · ')}${ings.length > 3 ? ` +${ings.length - 3}` : ''}
