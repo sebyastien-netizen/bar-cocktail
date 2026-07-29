@@ -2600,8 +2600,7 @@ function renderItemAAcheter(item, isTop) {
 🎓 ${ficheEcole.nom}
   </a>` : '';
 })()}
-<span title="Débloque ${item.recettesDetail.length} recette${item.recettesDetail.length > 1 ? 's' : ''}${item.prix ? ' · ~' + item.prix + '€' : ''}${item.prix && item.recettesDetail.length ? ' · ' + (parseFloat(item.prix) / item.recettesDetail.length).toFixed(1) + '€/recette' : ''}" 
-  style="cursor:help;color:var(--text-muted);font-size:0.85rem;flex-shrink:0;">ℹ️</span>
+
           ${colorant ? '<span class="aacheter-colorant-badge">🎨</span>' : ''}
           ${item.stockBas ? `<span style="background:var(--bg-warning);color:var(--text-warning);border:1px solid var(--border-warning);border-radius:20px;font-size:0.72rem;padding:3px 8px;">⚠️ Stock bas · ${item.pctRestant}%</span>` : ''}
         </div>
