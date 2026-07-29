@@ -3638,9 +3638,9 @@ async function ouvrirFicheInspiration(id) {
       <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
         ✨ Analyser avec Claude
       </button>
-      ${inspi.statut === 'en_attente' ? `
-onclick="document.getElementById('modal-fiche-inspiration').classList.remove('visible'); ouvrirModalCompleter('${inspi.id}')"
-onclick="document.getElementById('modal-fiche-inspiration').classList.remove('visible'); ouvrirQRBartender('${inspi.id}')"
+     ${inspi.statut === 'en_attente' ? `
+      <button class="btn-outline" onclick="ouvrirCompleterDepuisFiche('${inspi.id}')">✨ Compléter et valider</button>
+      <button class="btn-outline" onclick="ouvrirQRDepuisFiche('${inspi.id}')">📱 Dévoile ton cocktail</button>
       <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
       ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
     </div>
