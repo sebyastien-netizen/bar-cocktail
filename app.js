@@ -861,32 +861,7 @@ function renderFiche(portions) {
       <div class="fiche-conseil-texte">${conseil.texte}</div>
     </div>` : ''}
 
-    <!-- GRILLE INFOS + SERVICE -->
-    ${r.saveur_dominante || r.verre_type ? `
-    <div class="fiche-grid-2">
-      ${r.saveur_dominante ? `
-      <div class="fiche-card">
-        <div class="fiche-card-titre">Aperçu des caractéristiques</div>
-        ${r.saveur_dominante ? `<div class="fiche-carac-row"><span>Saveur dominante</span><span>${r.saveur_dominante}</span></div>` : ''}
-        ${r.aromes ? `<div class="fiche-carac-row"><span>Arômes</span><span>${r.aromes}</span></div>` : ''}
-        ${r.arriere_gout ? `<div class="fiche-carac-row"><span>Arrière-goût</span><span>${r.arriere_gout}</span></div>` : ''}
-        ${r.texture ? `<div class="fiche-carac-row"><span>Texture</span><span>${r.texture}</span></div>` : ''}
-        ${r.couleur_robe ? `<div class="fiche-carac-row"><span>Couleur et robe</span><span>${r.couleur_robe}</span></div>` : ''}
-        ${r.petillance ? `<div class="fiche-carac-row"><span>Pétillance</span><span>${r.petillance}</span></div>` : ''}
-        ${r.sucrosite ? `<div class="fiche-carac-row"><span>Sucrosité</span><span>${r.sucrosite}</span></div>` : ''}
-      </div>` : ''}
-      ${r.verre_type ? `
-      <div class="fiche-card">
-        <div class="fiche-card-titre">Service</div>
-        ${r.verre_type ? `<div class="fiche-carac-row"><span>Verre</span><span>${r.verre_type}</span></div>` : ''}
-        ${r.glace_type ? `<div class="fiche-carac-row"><span>Glace</span><span>${r.glace_type}</span></div>` : ''}
-        ${r.temperature_service ? `<div class="fiche-carac-row"><span>Température</span><span>${r.temperature_service}</span></div>` : ''}
-        ${r.garniture ? `<div class="fiche-carac-row"><span>Garniture</span><span>${r.garniture}</span></div>` : ''}
-        ${r.abv_estime ? `<div class="fiche-carac-row"><span>ABV estimé</span><span>${r.abv_estime}</span></div>` : ''}
-        ${r.prix_portion ? `<div class="fiche-carac-row"><span>Prix / verre</span><span>~${r.prix_portion.toFixed(2)}€</span></div>` : ''}
-        ${r.kit_portable ? `<div class="fiche-carac-row"><span>Kit portable</span><span>✓ Oui</span></div>` : ''}
-      </div>` : ''}
-    </div>` : ''}
+
 
     <!-- PROFIL GUSTATIF -->
     ${hasProfil(r) ? `
@@ -1077,23 +1052,7 @@ ${r.materiels && r.materiels.length > 0 ? `
       </div>` : ''}
     </div>` : ''}
 
-    <!-- OCCASIONS + INFOS -->
-    ${r.occasions?.length || r.anecdote ? `
-    <div class="fiche-grid-2">
-      ${r.occasions?.length ? `
-      <div class="fiche-card">
-        <div class="fiche-card-titre">Occasions</div>
-        <div class="fiche-occasions">${r.occasions.map(o => `<span class="fiche-occasion-chip">${o}</span>`).join('')}</div>
-      </div>` : ''}
-      <div class="fiche-card">
-        <div class="fiche-card-titre">Infos</div>
-        <div class="fiche-carac-row"><span>Sans gluten</span><span class="${r.sans_gluten !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.sans_gluten !== false ? '✓ Oui' : '✗ Non'}</span></div>
-        <div class="fiche-carac-row"><span>Vegan</span><span class="${r.vegan !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.vegan !== false ? '✓ Oui' : '✗ Non'}</span></div>
-        <div class="fiche-carac-row"><span>Sans lactose</span><span class="${r.sans_lactose !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.sans_lactose !== false ? '✓ Oui' : '✗ Non'}</span></div>
-        <div class="fiche-carac-row"><span>Sans œuf</span><span class="${r.sans_oeuf !== false ? 'fiche-info-ok' : 'fiche-info-no'}">${r.sans_oeuf !== false ? '✓ Oui' : '✗ Non'}</span></div>
-        <div class="fiche-carac-row"><span>Kit portable</span><span class="${r.kit_portable ? 'fiche-info-ok' : 'fiche-info-no'}">${r.kit_portable ? '✓ Oui' : '✗ Non'}</span></div>
-      </div>
-    </div>` : ''}
+   
 
     <!-- ANECDOTE -->
     ${r.anecdote ? `
