@@ -4588,7 +4588,7 @@ function voirPreparationsGrimoire(btn) {
   fermerModal('modal-fiche-plante');
   if (categories && categories.length > 0) {
     filtreGrimoireCategorie = categories[0];
-     = null;
+filtreGrimoireAlcool = null;
   }
   document.querySelector('nav button[data-tab="concoctions"]').click();
   const btnGrimoire = document.querySelectorAll('.conc-sous-onglet')[1];
