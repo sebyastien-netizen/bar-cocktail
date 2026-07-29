@@ -2580,11 +2580,21 @@ function renderItemAAcheter(item, isTop) {
       <div class="aacheter-item-header">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <div class="aacheter-nom">${item.nom}</div>
-          ${(() => {
-  const ficheEcole = ecoleData.alcools.find(e => 
-    item.nom.toLowerCase().includes(e.famille?.toLowerCase() || '') ||
-    e.nom.toLowerCase().includes(item.nom.toLowerCase().split(' ')[0])
-  );
+         ${(() => {
+  const catToEcole = {
+    'gin': 'gin',
+    'vodka': 'vodka',
+    'whisky': 'whisky-scotch',
+    'rhum': 'rhum',
+    'mezcal-tequila': 'mezcal-tequila',
+    'eaux-de-vie': 'cognac-armagnac',
+    'liqueurs': 'liqueurs',
+    'triples-secs': 'liqueurs',
+    'bitters': 'bitters',
+    'vermouth': 'vermouth'
+  };
+  const ecoleId = catToEcole[item.category_id];
+  const ficheEcole = ecoleId ? ecoleData.alcools.find(e => e.id === ecoleId) : null;
   return ficheEcole ? `<a style="font-size:0.72rem;color:var(--text-accent);text-decoration:none;white-space:nowrap;" 
     onclick="event.stopPropagation();ouvrirFicheEcole('alcools','${ficheEcole.id}')" href="#">
     🎓 En savoir plus
