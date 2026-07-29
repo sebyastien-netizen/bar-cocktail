@@ -34,7 +34,6 @@
       padding: 0;
     }
  
-    /* HEADER */
     .header {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
@@ -55,11 +54,9 @@
       margin-top: 6px;
     }
  
-    /* ÉCRANS */
     .screen { display: none; padding: 24px; max-width: 520px; margin: 0 auto; }
     .screen.active { display: block; }
  
-    /* ÉCRAN ACCUEIL */
     .accueil-intro {
       text-align: center;
       margin-bottom: 32px;
@@ -94,41 +91,13 @@
       background: var(--bg-card-hover);
     }
  
-    .choix-carte-emoji {
-      font-size: 3rem;
-      display: block;
-      margin-bottom: 12px;
-    }
+    .choix-carte-emoji { font-size: 3rem; display: block; margin-bottom: 12px; }
+    .choix-carte-titre { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .choix-carte-desc { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; }
  
-    .choix-carte-titre {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 6px;
-    }
- 
-    .choix-carte-desc {
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-      line-height: 1.4;
-    }
- 
-    /* FORMULAIRES */
-    .form-titre {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
- 
-    .form-sous-titre {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      margin-bottom: 24px;
-    }
- 
-    .form-group {
-      margin-bottom: 18px;
-    }
+    .form-titre { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+    .form-sous-titre { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 24px; }
+    .form-group { margin-bottom: 18px; }
  
     .form-group label {
       display: block;
@@ -160,16 +129,12 @@
       transition: border-color 0.15s;
     }
  
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-    }
- 
-    textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; }
  
     /* PHOTO */
+    .photo-wrapper { position: relative; }
+ 
     .photo-zone {
       border: 2px dashed var(--border-strong);
       border-radius: var(--radius);
@@ -182,11 +147,7 @@
     }
  
     .photo-zone:hover { border-color: var(--accent); }
- 
-    .photo-zone-texte {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
+    .photo-zone-texte { color: var(--text-muted); font-size: 0.85rem; }
  
     .photo-preview {
       width: 100%;
@@ -195,6 +156,26 @@
       border-radius: 8px;
       display: none;
     }
+ 
+    .btn-suppr-photo {
+      display: none;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+ 
+    .btn-suppr-photo.visible { display: flex; }
  
     input[type="file"] { display: none; }
  
@@ -248,19 +229,10 @@
  
     .etape-duree {
       display: grid;
-      grid-template-columns: 1fr 80px 100px 36px;
+      grid-template-columns: auto 80px 100px 36px;
       gap: 8px;
       align-items: center;
       margin-top: 8px;
-    }
- 
-    .etape-duree label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: none;
-      letter-spacing: 0;
-      font-weight: 400;
-      margin-bottom: 0;
     }
  
     /* BOUTONS */
@@ -297,28 +269,10 @@
     .btn-retour:hover { color: var(--text-primary); }
  
     /* CONFIRMATION */
-    .confirmation {
-      text-align: center;
-      padding: 40px 24px;
-    }
- 
-    .confirmation-emoji {
-      font-size: 4rem;
-      display: block;
-      margin-bottom: 20px;
-    }
- 
-    .confirmation-titre {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
- 
-    .confirmation-texte {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
+    .confirmation { text-align: center; padding: 40px 24px; }
+    .confirmation-emoji { font-size: 4rem; display: block; margin-bottom: 20px; }
+    .confirmation-titre { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+    .confirmation-texte { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; }
  
     .confirmation-badge {
       background: var(--bg-success);
@@ -383,39 +337,32 @@
     }
  
     @keyframes spin { to { transform: rotate(360deg); } }
- 
-    .loading-texte {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
+    .loading-texte { color: var(--text-secondary); font-size: 0.9rem; }
  
     @media (max-width: 480px) {
       .choix-grille { grid-template-columns: 1fr; }
       .ingredient-ligne { grid-template-columns: 1fr 70px 80px 36px; }
-      .etape-duree { grid-template-columns: 1fr 70px 90px 36px; }
+      .etape-duree { grid-template-columns: auto 70px 90px 36px; }
     }
   </style>
 </head>
 <body>
  
-<!-- HEADER -->
 <div class="header">
   <div class="header-titre">🍹 La Tournée</div>
   <div class="header-sous-titre">Partage ta découverte avec Seb</div>
 </div>
  
-<!-- LOADING -->
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
   <div class="loading-texte">Envoi en cours…</div>
 </div>
  
-<!-- ÉCRAN ACCUEIL -->
+<!-- ACCUEIL -->
 <div class="screen active" id="screen-accueil">
   <div class="accueil-intro">
     <p>Tu as un cocktail à partager ou une recette secrète à transmettre ? C'est ici !</p>
   </div>
- 
   <div class="choix-grille">
     <div class="choix-carte" onclick="allerVers('screen-cocktail')">
       <span class="choix-carte-emoji">🍸</span>
@@ -430,31 +377,33 @@
   </div>
 </div>
  
-<!-- ÉCRAN COCKTAIL -->
+<!-- COCKTAIL -->
 <div class="screen" id="screen-cocktail">
   <button class="btn-retour" onclick="allerVers('screen-accueil')">← Retour</button>
   <div class="form-titre">🍸 Un cocktail</div>
   <div class="form-sous-titre">Décris ce que tu as découvert</div>
- 
   <div class="erreur" id="erreur-cocktail">Merci de remplir au moins le nom et un ingrédient.</div>
  
   <div class="form-group">
     <label>Photo <span class="label-hint">optionnel</span></label>
-    <div class="photo-zone" onclick="document.getElementById('photo-cocktail-input').click()">
-      <img class="photo-preview" id="photo-cocktail-preview" src="" alt="">
-      <div class="photo-zone-texte" id="photo-cocktail-texte">📷 Ajouter une photo</div>
+    <div class="photo-wrapper">
+      <div class="photo-zone" id="photo-cocktail-zone" onclick="document.getElementById('photo-cocktail-input').click()">
+        <img class="photo-preview" id="photo-cocktail-preview" src="" alt="">
+        <div class="photo-zone-texte" id="photo-cocktail-texte">📷 Ajouter une photo</div>
+      </div>
+      <button class="btn-suppr-photo" id="btn-suppr-photo-cocktail" onclick="supprimerPhoto('cocktail')" title="Supprimer la photo">✕</button>
     </div>
     <input type="file" id="photo-cocktail-input" accept="image/*" onchange="previewPhoto(this, 'cocktail')">
   </div>
  
   <div class="form-group">
     <label>Nom du cocktail</label>
-    <input type="text" id="cocktail-nom" placeholder="ex: Planteur de Marie, Spritz surprise…">
+    <input type="text" id="cocktail-nom" placeholder="ex: Mojito de plage, Punch du réveillon, Spritz surprise…">
   </div>
  
   <div class="form-group">
     <label>Origine, anecdote, histoire <span class="label-hint">optionnel</span></label>
-    <textarea id="cocktail-origine" placeholder="ex: Vu au bar Le Symbiose, c'est la spécialité du barman…"></textarea>
+    <textarea id="cocktail-origine" placeholder="ex: Vu en vacances à Lisbonne, recette de ma mère, inventé ce soir…"></textarea>
   </div>
  
   <div class="form-group">
@@ -471,31 +420,33 @@
   <button class="btn-primary" onclick="envoyerCocktail()">🍹 Envoyer à Seb</button>
 </div>
  
-<!-- ÉCRAN CONCOCTION -->
+<!-- CONCOCTION -->
 <div class="screen" id="screen-concoction">
   <button class="btn-retour" onclick="allerVers('screen-accueil')">← Retour</button>
   <div class="form-titre">⚗️ Une recette</div>
   <div class="form-sous-titre">Ta recette maison à transmettre</div>
- 
   <div class="erreur" id="erreur-concoction">Merci de remplir au moins le nom et un ingrédient.</div>
  
   <div class="form-group">
     <label>Photo <span class="label-hint">optionnel</span></label>
-    <div class="photo-zone" onclick="document.getElementById('photo-concoction-input').click()">
-      <img class="photo-preview" id="photo-concoction-preview" src="" alt="">
-      <div class="photo-zone-texte" id="photo-concoction-texte">📷 Ajouter une photo</div>
+    <div class="photo-wrapper">
+      <div class="photo-zone" id="photo-concoction-zone" onclick="document.getElementById('photo-concoction-input').click()">
+        <img class="photo-preview" id="photo-concoction-preview" src="" alt="">
+        <div class="photo-zone-texte" id="photo-concoction-texte">📷 Ajouter une photo</div>
+      </div>
+      <button class="btn-suppr-photo" id="btn-suppr-photo-concoction" onclick="supprimerPhoto('concoction')" title="Supprimer la photo">✕</button>
     </div>
     <input type="file" id="photo-concoction-input" accept="image/*" onchange="previewPhoto(this, 'concoction')">
   </div>
  
   <div class="form-group">
     <label>Nom de la recette</label>
-    <input type="text" id="concoction-nom" placeholder="ex: Rhum arrangé Grand-Père, Limoncello maison…">
+    <input type="text" id="concoction-nom" placeholder="ex: Rhum arrangé vanille-ananas, Limoncello oncle Pierre…">
   </div>
  
   <div class="form-group">
     <label>Origine, anecdote, histoire <span class="label-hint">optionnel</span></label>
-    <textarea id="concoction-origine" placeholder="ex: Recette de mon grand-père, on en fait chaque été…"></textarea>
+    <textarea id="concoction-origine" placeholder="ex: Recette familiale des Antilles, transmise par mon grand-père guadeloupéen…"></textarea>
   </div>
  
   <div class="form-group">
@@ -518,7 +469,7 @@
   <button class="btn-primary" onclick="envoyerConcoction()">🍹 Envoyer à Seb</button>
 </div>
  
-<!-- ÉCRAN CONFIRMATION -->
+<!-- CONFIRMATION -->
 <div class="screen" id="screen-confirmation">
   <div class="confirmation">
     <span class="confirmation-emoji">🎉</span>
@@ -530,28 +481,39 @@
 </div>
  
 <script>
-  // =============================================
-  // SUPABASE
-  // =============================================
   const { createClient } = supabase;
   const db = createClient(
-    'https://mfbmbixjroqhdxbpwnlb.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mYm1iaXhqcm9xaGR4YnB3bmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTkzMTM4MDcsImV4cCI6MjAzNDg4OTgwN30.Oa8DGBxjhXqWfqXOiMGOocoRzFLLGvpfFJWnLjolbA0'
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY'
   );
  
   const SEB_USER_ID = 'a2da3002-2fb8-4698-838d-35185f5fbe36';
  
   // =============================================
-  // NAVIGATION
+  // NAVIGATION + RETOUR MOBILE
   // =============================================
+  const historique = ['screen-accueil'];
+ 
   function allerVers(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
     window.scrollTo(0, 0);
+    if (screenId !== historique[historique.length - 1]) {
+      historique.push(screenId);
+      history.pushState({ screen: screenId }, '');
+    }
   }
  
+  window.addEventListener('popstate', (e) => {
+    historique.pop();
+    const precedent = historique[historique.length - 1] || 'screen-accueil';
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(precedent).classList.add('active');
+    window.scrollTo(0, 0);
+  });
+ 
   // =============================================
-  // PHOTO PREVIEW
+  // PHOTO
   // =============================================
   const photoData = { cocktail: null, concoction: null };
  
@@ -560,19 +522,33 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      const preview = document.getElementById(`photo-${type}-preview`);
-      const texte = document.getElementById(`photo-${type}-texte`);
+      const preview = document.getElementById('photo-' + type + '-preview');
+      const texte = document.getElementById('photo-' + type + '-texte');
+      const btnSuppr = document.getElementById('btn-suppr-photo-' + type);
       preview.src = e.target.result;
       preview.style.display = 'block';
       texte.style.display = 'none';
+      btnSuppr.classList.add('visible');
       photoData[type] = file;
     };
     reader.readAsDataURL(file);
   }
  
+  function supprimerPhoto(type) {
+    const preview = document.getElementById('photo-' + type + '-preview');
+    const texte = document.getElementById('photo-' + type + '-texte');
+    const btnSuppr = document.getElementById('btn-suppr-photo-' + type);
+    const input = document.getElementById('photo-' + type + '-input');
+    preview.src = '';
+    preview.style.display = 'none';
+    texte.style.display = 'block';
+    btnSuppr.classList.remove('visible');
+    input.value = '';
+    photoData[type] = null;
+  }
+ 
   async function uploaderPhoto(file, type) {
     if (!file) return null;
-    // Compression
     return new Promise((resolve) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -584,8 +560,8 @@
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         canvas.toBlob(async (blob) => {
-          const nomFichier = `tournee-${type}-${Date.now()}.jpg`;
-          const { data, error } = await db.storage
+          const nomFichier = 'tournee-' + type + '-' + Date.now() + '.jpg';
+          const { error } = await db.storage
             .from('photos-inspirations')
             .upload(nomFichier, blob, { contentType: 'image/jpeg', upsert: false });
           if (error) { resolve(null); return; }
@@ -604,35 +580,33 @@
   const unites = ['cl', 'ml', 'g', 'kg', 'litre', 'verre', 'bouteille', 'cuillère', 'pincée', 'trait'];
  
   function ajouterIngredient(type) {
-    const container = document.getElementById(`${type}-ingredients`);
-    const idx = container.children.length;
+    const container = document.getElementById(type + '-ingredients');
     const div = document.createElement('div');
     div.className = 'ingredient-ligne';
-    div.innerHTML = `
-      <input type="text" placeholder="Ingrédient" data-type="${type}" data-idx="${idx}" data-field="nom">
-      <input type="number" placeholder="Qté" min="0" step="0.5" data-type="${type}" data-idx="${idx}" data-field="quantite">
-      <select data-type="${type}" data-idx="${idx}" data-field="unite">
-        ${unites.map(u => `<option value="${u}">${u}</option>`).join('')}
-      </select>
-      <button class="btn-suppr-ing" onclick="this.parentElement.remove()">×</button>
-    `;
+    div.innerHTML =
+      '<input type="text" placeholder="ex: Rhum blanc agricole, Jus d\'ananas…" data-field="nom">' +
+      '<input type="number" placeholder="Qté" min="0" step="0.5" data-field="quantite">' +
+      '<select data-field="unite">' +
+        unites.map(function(u) { return '<option value="' + u + '">' + u + '</option>'; }).join('') +
+      '</select>' +
+      '<button class="btn-suppr-ing" onclick="this.parentElement.remove()">×</button>';
     container.appendChild(div);
   }
  
   function lireIngredients(type) {
-    const container = document.getElementById(`${type}-ingredients`);
+    const container = document.getElementById(type + '-ingredients');
     const result = [];
-    container.querySelectorAll('.ingredient-ligne').forEach(ligne => {
+    container.querySelectorAll('.ingredient-ligne').forEach(function(ligne) {
       const nom = ligne.querySelector('[data-field="nom"]').value.trim();
       const quantite = ligne.querySelector('[data-field="quantite"]').value;
       const unite = ligne.querySelector('[data-field="unite"]').value;
-      if (nom) result.push({ nom, quantite: parseFloat(quantite) || null, unite });
+      if (nom) result.push({ nom: nom, quantite: parseFloat(quantite) || null, unite: unite });
     });
     return result;
   }
  
   // =============================================
-  // ÉTAPES (concoction seulement)
+  // ÉTAPES
   // =============================================
   const unitesTemps = ['heures', 'jours', 'semaines', 'mois'];
  
@@ -640,32 +614,27 @@
     const container = document.getElementById('concoction-etapes');
     const div = document.createElement('div');
     div.className = 'etape-bloc';
-    div.innerHTML = `
-      <textarea placeholder="Description de l'étape (ex: Faire macérer les poires dans le rhum)" rows="2" style="width:100%;margin-bottom:8px;background:var(--bg);border:1px solid var(--border-strong);border-radius:6px;padding:8px 10px;color:var(--text-primary);font-size:0.88rem;resize:vertical;outline:none;"></textarea>
-      <div class="etape-duree">
-        <label style="grid-column:1;align-self:center;color:var(--text-muted);font-size:0.78rem;">Durée</label>
-        <input type="number" placeholder="ex: 40" min="0" style="grid-column:2;">
-        <select style="grid-column:3;">
-          ${unitesTemps.map(u => `<option value="${u}">${u}</option>`).join('')}
-        </select>
-        <button class="btn-suppr-ing" style="grid-column:4;" onclick="this.closest('.etape-bloc').remove()">×</button>
-      </div>
-    `;
+    div.innerHTML =
+      '<textarea placeholder="ex: Faire macérer la vanille fendue dans le rhum, laisser les épices infuser…" rows="2" style="width:100%;margin-bottom:8px;background:var(--bg);border:1px solid var(--border-strong);border-radius:6px;padding:8px 10px;color:var(--text-primary);font-size:0.88rem;resize:vertical;outline:none;"></textarea>' +
+      '<div class="etape-duree">' +
+        '<span style="color:var(--text-muted);font-size:0.78rem;">Durée</span>' +
+        '<input type="number" placeholder="ex: 3" min="0">' +
+        '<select>' +
+          unitesTemps.map(function(u) { return '<option value="' + u + '">' + u + '</option>'; }).join('') +
+        '</select>' +
+        '<button class="btn-suppr-ing" onclick="this.closest(\'.etape-bloc\').remove()">×</button>' +
+      '</div>';
     container.appendChild(div);
   }
  
   function lireEtapes() {
     const container = document.getElementById('concoction-etapes');
     const result = [];
-    container.querySelectorAll('.etape-bloc').forEach(bloc => {
+    container.querySelectorAll('.etape-bloc').forEach(function(bloc) {
       const description = bloc.querySelector('textarea').value.trim();
       const dureeVal = bloc.querySelector('input[type="number"]').value;
       const unite = bloc.querySelector('select').value;
-      if (description) result.push({
-        description,
-        duree: parseFloat(dureeVal) || null,
-        unite
-      });
+      if (description) result.push({ description: description, duree: parseFloat(dureeVal) || null, unite: unite });
     });
     return result;
   }
@@ -683,7 +652,6 @@
       return;
     }
     erreurEl.style.display = 'none';
- 
     document.getElementById('loading').classList.add('active');
  
     const photoUrl = await uploaderPhoto(photoData.cocktail, 'cocktail');
@@ -692,7 +660,7 @@
  
     const { error } = await db.from('inspirations').insert({
       user_id: SEB_USER_ID,
-      nom,
+      nom: nom,
       source: 'tournee',
       source_detail: prenom || 'Anonyme',
       photo_url: photoUrl,
@@ -708,13 +676,13 @@
     document.getElementById('loading').classList.remove('active');
  
     if (error) {
-      document.getElementById('erreur-cocktail').textContent = 'Une erreur est survenue. Réessaie !';
-      document.getElementById('erreur-cocktail').style.display = 'block';
+      erreurEl.textContent = 'Une erreur est survenue. Réessaie !';
+      erreurEl.style.display = 'block';
       return;
     }
  
-    document.getElementById('confirmation-titre').textContent = `Merci ${prenom || ''} ! 🎉`.trim();
-    document.getElementById('confirmation-texte').textContent = `Ton cocktail "${nom}" a bien été envoyé à Seb.`;
+    document.getElementById('confirmation-titre').textContent = ('Merci ' + (prenom || '') + ' ! 🎉').trim();
+    document.getElementById('confirmation-texte').textContent = 'Ton cocktail "' + nom + '" a bien été envoyé à Seb.';
     allerVers('screen-confirmation');
   }
  
@@ -731,7 +699,6 @@
       return;
     }
     erreurEl.style.display = 'none';
- 
     document.getElementById('loading').classList.add('active');
  
     const photoUrl = await uploaderPhoto(photoData.concoction, 'concoction');
@@ -741,7 +708,7 @@
  
     const { error } = await db.from('inspirations').insert({
       user_id: SEB_USER_ID,
-      nom,
+      nom: nom,
       source: 'tournee',
       source_detail: prenom || 'Anonyme',
       photo_url: photoUrl,
@@ -758,18 +725,18 @@
     document.getElementById('loading').classList.remove('active');
  
     if (error) {
-      document.getElementById('erreur-concoction').textContent = 'Une erreur est survenue. Réessaie !';
-      document.getElementById('erreur-concoction').style.display = 'block';
+      erreurEl.textContent = 'Une erreur est survenue. Réessaie !';
+      erreurEl.style.display = 'block';
       return;
     }
  
-    document.getElementById('confirmation-titre').textContent = `Merci ${prenom || ''} ! 🎉`.trim();
-    document.getElementById('confirmation-texte').textContent = `Ta recette "${nom}" a bien été envoyée à Seb.`;
+    document.getElementById('confirmation-titre').textContent = ('Merci ' + (prenom || '') + ' ! 🎉').trim();
+    document.getElementById('confirmation-texte').textContent = 'Ta recette "' + nom + '" a bien été envoyée à Seb.';
     allerVers('screen-confirmation');
   }
  
-  // Ajouter un ingrédient par défaut au chargement
-  window.addEventListener('load', () => {
+  // Ingrédient par défaut au chargement
+  window.addEventListener('load', function() {
     ajouterIngredient('cocktail');
     ajouterIngredient('concoction');
   });
