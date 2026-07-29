@@ -954,13 +954,54 @@ ${(r.ingredients || []).filter(i => i.quantite && (i.unite === 'cl' || i.unite =
     </div>
 
     <!-- MATÉRIELS -->
-    ${r.materiels && r.materiels.length > 0 ? `
-    <div class="fiche-card">
-      <div class="fiche-card-titre">Matériels</div>
-      <div class="fiche-materiels">
-        ${r.materiels.map(m => `<span class="tag-materiel ${m.essentiel ? '' : 'materiel-optionnel'}">${m.nom}</span>`).join('')}
-      </div>
-    </div>` : ''}
+${r.materiels && r.materiels.length > 0 ? `
+<div class="fiche-card">
+  <div class="fiche-card-titre">Matériels</div>
+  <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+    ${r.materiels.map(m => {
+      const icones = {
+        'shaker': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M9 4h10M9 4v6h10V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10l1 14h8l1-14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="14" x2="19" y2="14" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1.5 1.5"/></svg>',
+        'verre à mélange': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M8 4h12M8 4v18q0 3 6 3t6-3V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="11" x2="20" y2="11" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1.5 1.5"/><line x1="20" y1="15" x2="24" y2="15" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+        'verre old fashioned': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M6 6h16L19 22H9L6 6z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+        'verre à martini': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6l9 10 9-10H5z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="14" y1="16" x2="14" y2="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="24" x2="18" y2="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+        'coupette': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 7 Q14 18 23 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/><line x1="5" y1="7" x2="23" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="14" y1="17" x2="14" y2="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="24" x2="18" y2="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+        'highball': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M9 4h10v20H9z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1.5 1.5"/></svg>',
+        'passoire julep': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 12 Q4 21 14 21 Q24 21 24 12Z" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="4" y1="12" x2="24" y2="12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="14" y1="21" x2="14" y2="26" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="10" cy="16" r="1" fill="currentColor"/><circle cx="14" cy="17.5" r="1" fill="currentColor"/><circle cx="18" cy="16" r="1" fill="currentColor"/></svg>',
+        'passoire fine': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 12 Q4 21 14 21 Q24 21 24 12Z" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="4" y1="12" x2="24" y2="12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="14" y1="21" x2="14" y2="26" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="9" cy="15" r="0.7" fill="currentColor"/><circle cx="12" cy="17" r="0.7" fill="currentColor"/><circle cx="15" cy="17.5" r="0.7" fill="currentColor"/><circle cx="18" cy="17" r="0.7" fill="currentColor"/><circle cx="21" cy="15" r="0.7" fill="currentColor"/></svg>',
+        'cuillère de bar': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><line x1="14" y1="25" x2="14" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><ellipse cx="14" cy="10" rx="3.5" ry="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="14" y1="7.5" x2="14" y2="4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+        'jigger': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M10 14h8M10 14l-2-8h12l-2 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 14l-1 6h10l-1-6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        'pilon': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="11" y="4" width="6" height="14" rx="3" stroke="currentColor" stroke-width="1.2"/><ellipse cx="14" cy="20" rx="5" ry="3" stroke="currentColor" stroke-width="1.2"/></svg>',
+        'blender': '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M9 6h10l-2 14H11L9 6z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="6" x2="19" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="10" y="20" width="8" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>',
+      };
+      const key = m.nom.toLowerCase();
+      const svg = Object.entries(icones).find(([k]) => key.includes(k))?.[1] 
+        || '<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="8" stroke="currentColor" stroke-width="1.2"/><line x1="14" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="14" cy="17" r="1" fill="currentColor"/></svg>';
+      const desc = {
+        'shaker': 'Shake vigoureusement avec glace',
+        'verre à mélange': 'Pour stirrer sans diluer trop vite',
+        'verre old fashioned': 'Service sur glaçon unique',
+        'verre à martini': 'Service sans glace, bien froid',
+        'coupette': 'Service sans glace, élégant',
+        'highball': 'Grand verre pour long drinks',
+        'passoire julep': 'Filtration depuis le verre à mélange',
+        'passoire fine': 'Double filtration pour un résultat limpide',
+        'cuillère de bar': 'Stirrer 30–45 secondes',
+        'jigger': 'Mesure précise des doses',
+        'pilon': 'Écraser herbes et agrumes délicatement',
+        'blender': 'Cocktails frozen, glace pilée',
+      };
+      const description = Object.entries(desc).find(([k]) => key.includes(k))?.[1] || '';
+      return `
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary)">
+          <div style="flex-shrink:0;opacity:0.7">${svg}</div>
+          <div>
+            <div style="font-size:0.85rem;font-weight:600">${m.nom}${!m.essentiel ? ' <span style="font-size:0.72rem;color:var(--text-muted);font-weight:400">optionnel</span>' : ''}</div>
+            ${description ? `<div style="font-size:0.75rem;color:var(--text-secondary)">${description}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('')}
+  </div>
+</div>` : ''}
 
     <!-- PRÉPARATION -->
     <div class="fiche-card">
