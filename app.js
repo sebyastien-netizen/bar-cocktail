@@ -2081,6 +2081,8 @@ function partagerListeAAcheter() {
     });
   }
 }
+let aacheterModeTri = 'impact'; // 'impact' ou 'budget'
+
 async function chargerAAcheter() {
   const container = document.getElementById('aacheter-container');
   if (!container) return;
@@ -2142,10 +2144,20 @@ chargerAAcheter
     });
   });
 
-  const allScored = Object.values(scoreMap)
+ const allScored = Object.values(scoreMap)
     .filter(i => i.recettesDetail.length > 0)
     .map(i => ({ ...i, score: calculerScoreItem(i) }))
     .sort((a, b) => b.score - a.score);
+
+  // Tri Budget : par prix croissant au sein de chaque groupe
+  const trierParBudget = (items) => {
+    if (aacheterModeTri !== 'budget') return items;
+    return [...items].sort((a, b) => {
+      const prixA = parseFloat(a.prix) || 9999;
+      const prixB = parseFloat(b.prix) || 9999;
+      return prixA - prixB;
+    });
+  };
 
   if (allScored.length === 0) {
     container.innerHTML = '<div class="empty-state">🎉 Tu as tous les ingrédients pour toutes tes recettes !</div>';
@@ -2188,6 +2200,21 @@ chargerAAcheter
     📤 Partager la liste
   </button>
 </div>
+container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+      <div style="display:flex;gap:6px;">
+        <button class="btn-outline ${aacheterModeTri === 'impact' ? 'active' : ''}" 
+          onclick="aacheterModeTri='impact'; chargerAAcheter()" 
+          style="font-size:0.8rem;padding:6px 12px;">🏆 Impact</button>
+        <button class="btn-outline ${aacheterModeTri === 'budget' ? 'active' : ''}" 
+          onclick="aacheterModeTri='budget'; chargerAAcheter()" 
+          style="font-size:0.8rem;padding:6px 12px;">💶 Budget</button>
+      </div>
+      <button class="btn-outline" onclick="partagerListeAAcheter()" style="font-size:0.85rem;">
+        📤 Partager
+      </button>
+    </div>
+
     <!-- FILTRES -->
     <div class="aacheter-filtres">
       <button class="aacheter-filtre-btn ${filtreActif === 'tout' ? 'active' : ''}"
@@ -2238,7 +2265,7 @@ chargerAAcheter
       return `
         <div class="aacheter-groupe">
           <div class="aacheter-groupe-titre">${groupe.label}</div>
-          ${items.map(item => renderItemAAcheter(item, false)).join('')}
+${trierParBudget(items).map(item => renderItemAAcheter(item, false)).join('')}
         </div>
       `;
     }).join('')}
@@ -2558,6 +2585,8 @@ function renderItemAAcheter(item, isTop) {
       <div class="aacheter-item-header">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <div class="aacheter-nom">${item.nom}</div>
+<span title="Débloque ${item.recettesDetail.length} recette${item.recettesDetail.length > 1 ? 's' : ''}${item.prix ? ' · ~' + item.prix + '€' : ''}${item.prix && item.recettesDetail.length ? ' · ' + (parseFloat(item.prix) / item.recettesDetail.length).toFixed(1) + '€/recette' : ''}" 
+  style="cursor:help;color:var(--text-muted);font-size:0.85rem;flex-shrink:0;">ℹ️</span>
           ${colorant ? '<span class="aacheter-colorant-badge">🎨</span>' : ''}
           ${item.stockBas ? `<span style="background:var(--bg-warning);color:var(--text-warning);border:1px solid var(--border-warning);border-radius:20px;font-size:0.72rem;padding:3px 8px;">⚠️ Stock bas · ${item.pctRestant}%</span>` : ''}
         </div>
@@ -4565,7 +4594,7 @@ function voirPreparationsGrimoire(btn) {
   fermerModal('modal-fiche-plante');
   if (categories && categories.length > 0) {
     filtreGrimoireCategorie = categories[0];
-    filtreGrimoireAlcool = null;
+     = null;
   }
   document.querySelector('nav button[data-tab="concoctions"]').click();
   const btnGrimoire = document.querySelectorAll('.conc-sous-onglet')[1];
