@@ -3442,33 +3442,41 @@ async function captureRapideBartender() {
   ouvrirQRBartender(data.id);
 }
 function ouvrirLaTournee() {
-  const url = `${window.location.origin}/tournee.html`;
+  const url = window.location.origin + '/tournee.html';
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
   modal.innerHTML = `
     <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:360px;width:100%;text-align:center;">
       <div style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">🍹 La Tournée</div>
       <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;">Partage ce lien ou ce QR code à tes amis pour qu'ils t'envoient leurs recettes.</div>
-      <canvas id="qr-tournee" style="border-radius:8px;margin-bottom:16px;"></canvas>
+      <div id="qr-tournee" style="display:inline-block;border-radius:8px;overflow:hidden;margin-bottom:16px;"></div>
       <div style="font-size:0.75rem;color:var(--text-muted);word-break:break-all;margin-bottom:16px;">${url}</div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="navigator.clipboard.writeText('${url}').then(()=>alert('✅ Lien copié !'))" 
-          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);cursor:pointer;font-size:0.85rem;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button id="btn-copier-tournee" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);cursor:pointer;font-size:0.85rem;">
           📋 Copier le lien
         </button>
-        ${navigator.share ? `<button onclick="navigator.share({title:'La Tournée',url:'${url}'})" 
-          style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#000;cursor:pointer;font-size:0.85rem;font-weight:600;">
+        <button id="btn-partager-tournee" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#000;cursor:pointer;font-size:0.85rem;font-weight:600;">
           📤 Partager
-        </button>` : ''}
+        </button>
       </div>
-      <button onclick="this.closest('[style*=\"position:fixed\"]').remove()" 
-        style="margin-top:12px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;">
+      <button id="btn-fermer-tournee" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;">
         Fermer
       </button>
     </div>
   `;
   document.body.appendChild(modal);
-  // Générer le QR code
+
+  // Events
+  document.getElementById('btn-copier-tournee').onclick = () => {
+    navigator.clipboard.writeText(url).then(() => alert('✅ Lien copié !'));
+  };
+  document.getElementById('btn-partager-tournee').onclick = () => {
+    if (navigator.share) navigator.share({ title: 'La Tournée', url });
+    else navigator.clipboard.writeText(url).then(() => alert('✅ Lien copié !'));
+  };
+  document.getElementById('btn-fermer-tournee').onclick = () => modal.remove();
+
+  // QR Code
   if (typeof QRCode !== 'undefined') {
     new QRCode(document.getElementById('qr-tournee'), {
       text: url, width: 200, height: 200,
