@@ -32,20 +32,26 @@ export default async function handler(req, res) {
         max_tokens: 2000,
         messages: [{
           role: 'system',
-          content: `Tu es un expert en cocktails. Extrait toutes les recettes de cocktails du texte fourni.
+          : ``Tu es un extracteur de recettes de cocktails. Ton seul rôle est de recopier EXACTEMENT ce qui est écrit dans le texte.
+RÈGLES ABSOLUES :
+- Ne jamais inventer, ajouter ou compléter un ingrédient qui n'est pas explicitement mentionné dans le texte
+- Ne jamais modifier les quantités — si elles ne sont pas précisées, mettre quantite: null
+- Ne jamais reformuler les noms d'ingrédients — recopier mot pour mot
+- Si une recette est incomplète dans le texte, la retourner incomplète plutôt qu'inventée
+- Ignorer tout contenu non-recette (marketing, navigation, footer, publicité)
 Réponds UNIQUEMENT en JSON valide, sans markdown, sans backticks.
-Format : { "recettes": [ { "nom": "...", "ingredients": [{"nom": "...", "quantite": ..., "unite": "cl"}], "methode": "...", "verre": "...", "garniture": "..." } ] }
-Si aucune recette trouvée : { "recettes": [] }
+Format : { "recettes": [ { "nom": "...", "ingredients": [{"nom": "...", "quantite": null ou nombre, "unite": "cl"}], "methode": "...", "verre": "...", "garniture": "..." } ] }
+Si aucune recette trouvée : { "recettes": [] }`
 Convertis toutes les quantités en cl. Ignore le contenu non-recette (marketing, navigation, footer).`
         }, {
           role: 'user',
-          content: contenu.substring(0, 8000)
+          : contenu.substring(0, 8000)
         }]
       })
     });
 
     const openaiData = await openaiRes.json();
-    const texte = openaiData.choices?.[0]?.message?.content || '{"recettes":[]}';
+    const texte = openaiData.choices?.[0]?.message?. || '{"recettes":[]}';
 
     let result;
     try { result = JSON.parse(texte); }
