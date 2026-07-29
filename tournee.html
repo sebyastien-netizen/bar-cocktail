@@ -659,7 +659,8 @@ const SEB_USER_ID = 'a2da3002-2fb8-4698-838d-35185f5fbe36';
     const prenom = document.getElementById('cocktail-prenom').value.trim();
     const origine = document.getElementById('cocktail-origine').value.trim();
  
-    const { error } = await db.from('inspirations').insert({
+const { error } = await db.from('inspirations').insert({
+      id: 'tournee-' + Date.now(),
       user_id: SEB_USER_ID,
       nom: nom,
       source: 'tournee',
@@ -707,7 +708,8 @@ const SEB_USER_ID = 'a2da3002-2fb8-4698-838d-35185f5fbe36';
     const origine = document.getElementById('concoction-origine').value.trim();
     const etapes = lireEtapes();
  
-    const { error } = await db.from('inspirations').insert({
+const { error } = await db.from('inspirations').insert({
+      id: 'tournee-' + Date.now(),
       user_id: SEB_USER_ID,
       nom: nom,
       source: 'tournee',
