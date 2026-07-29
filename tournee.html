@@ -400,7 +400,11 @@
     <label>Nom du cocktail</label>
     <input type="text" id="cocktail-nom" placeholder="ex: Mojito de plage, Punch du réveillon, Spritz surprise…">
   </div>
- 
+ <div class="form-group">
+  <label>Verre <span class="label-hint">optionnel</span></label>
+  <div id="cocktail-verres" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px"></div>
+  <input type="hidden" id="cocktail-verre-value" value="">
+</div>
   <div class="form-group">
     <label>Origine, anecdote, histoire <span class="label-hint">optionnel</span></label>
     <textarea id="cocktail-origine" placeholder="ex: Vu en vacances à Lisbonne, recette de ma mère, inventé ce soir…"></textarea>
@@ -488,7 +492,40 @@ const db = createClient(
 );
 
 const SEB_USER_ID = 'a2da3002-2fb8-4698-838d-35185f5fbe36';
+const VERRES = [
+  { value: 'Verre bas (Old Fashioned)', label: 'Bas', svg: '<path d="M6 9 L7 20 A1 1 0 0 0 8 21 H16 A1 1 0 0 0 17 20 L18 9 Z"/><line x1="5" y1="9" x2="19" y2="9"/>' },
+  { value: 'Verre haut (Highball)', label: 'Haut', svg: '<path d="M8 4 L8.5 20 A1 1 0 0 0 9.5 21 H14.5 A1 1 0 0 0 15.5 20 L16 4 Z"/><line x1="7.5" y1="4" x2="16.5" y2="4"/>' },
+  { value: 'Coupe / Nick & Nora', label: 'Coupe', svg: '<path d="M5 4 C5 9 9 11 12 11 C15 11 19 9 19 4 Z"/><line x1="12" y1="11" x2="12" y2="19"/><line x1="8" y1="20" x2="16" y2="20"/>' },
+  { value: 'Verre à pied (Martini)', label: 'Martini', svg: '<path d="M5 4 L12 12 L19 4 Z"/><line x1="12" y1="12" x2="12" y2="19"/><line x1="8" y1="20" x2="16" y2="20"/>' },
+  { value: 'Flûte', label: 'Flûte', svg: '<path d="M10 3 L10.7 14 C10.8 15 11.2 15.5 12 15.5 C12.8 15.5 13.2 15 13.3 14 L14 3 Z"/><line x1="12" y1="15.5" x2="12" y2="19"/><line x1="8.5" y1="20" x2="15.5" y2="20"/>' },
+  { value: 'Mug Tiki', label: 'Tiki', svg: '<path d="M6 6 L7 19 A1 1 0 0 0 8 20 H15 A1 1 0 0 0 16 19 L17 6 Z"/><path d="M16 9 C19 9 19 14 16 14"/>' },
+  { value: 'Julep cup', label: 'Julep', svg: '<path d="M7 5 L8 19 A1 1 0 0 0 9 20 H15 A1 1 0 0 0 16 19 L17 5 Z"/><line x1="6.5" y1="5" x2="17.5" y2="5"/>' },
+  { value: 'Je ne sais pas', label: '?', svg: '<circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="11" stroke="none" fill="currentColor">?</text>' }
+];
 
+function renderVerres() {
+  const container = document.getElementById('cocktail-verres');
+  if (!container) return;
+  container.innerHTML = VERRES.map(v => `
+    <div class="verre-btn" data-value="${v.value}" onclick="selectionnerVerre(this, '${v.value}')"
+      style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:10px;border:1.5px solid var(--border-strong);background:var(--bg-card);cursor:pointer;transition:border-color 0.15s;">
+      <svg viewBox="0 0 24 24" width="36" height="36" stroke="var(--text-secondary)" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round">${v.svg}</svg>
+      <span style="font-size:0.72rem;color:var(--text-secondary);text-align:center">${v.label}</span>
+    </div>
+  `).join('');
+}
+
+function selectionnerVerre(el, value) {
+  document.querySelectorAll('.verre-btn').forEach(b => {
+    b.style.borderColor = 'var(--border-strong)';
+    b.style.background = 'var(--bg-card)';
+    b.querySelector('svg').setAttribute('stroke', 'var(--text-secondary)');
+  });
+  el.style.borderColor = 'var(--accent)';
+  el.style.background = 'rgba(201,150,58,0.1)';
+  el.querySelector('svg').setAttribute('stroke', 'var(--accent)');
+  document.getElementById('cocktail-verre-value').value = value;
+}
  
   // =============================================
   // NAVIGATION + RETOUR MOBILE
@@ -659,21 +696,24 @@ const SEB_USER_ID = 'a2da3002-2fb8-4698-838d-35185f5fbe36';
     const prenom = document.getElementById('cocktail-prenom').value.trim();
     const origine = document.getElementById('cocktail-origine').value.trim();
  
+const verre = document.getElementById('cocktail-verre-value').value;
+
 const { error } = await db.from('inspirations').insert({
-      id: 'tournee-' + Date.now(),
-      user_id: SEB_USER_ID,
-      nom: nom,
-      source: 'tournee',
-      source_detail: prenom || 'Anonyme',
-      photo_url: photoUrl,
-      ingredients: ingredients,
-      statut: 'en_attente',
-      notes: JSON.stringify({
-        type: 'cocktail',
-        origine: origine || null,
-        prenom: prenom || 'Anonyme'
-      })
-    });
+  id: 'tournee-' + Date.now(),
+  user_id: SEB_USER_ID,
+  nom: nom,
+  source: 'tournee',
+  source_detail: prenom || 'Anonyme',
+  photo_url: photoUrl,
+  ingredients: ingredients,
+  statut: 'en_attente',
+  notes: JSON.stringify({
+    type: 'cocktail',
+    origine: origine || null,
+    verre: verre || null,
+    prenom: prenom || 'Anonyme'
+  })
+});
  
     document.getElementById('loading').classList.remove('active');
  
@@ -718,11 +758,11 @@ const { error } = await db.from('inspirations').insert({
       ingredients: ingredients,
       statut: 'en_attente',
       notes: JSON.stringify({
-        type: 'concoction',
-        origine: origine || null,
-        etapes: etapes.length > 0 ? etapes : null,
-        prenom: prenom || 'Anonyme'
-      })
+  type: 'cocktail',
+  origine: origine || null,
+  verre: verre || null,
+  prenom: prenom || 'Anonyme'
+})
     });
  
     document.getElementById('loading').classList.remove('active');
@@ -740,9 +780,10 @@ const { error } = await db.from('inspirations').insert({
  
   // Ingrédient par défaut au chargement
   window.addEventListener('load', function() {
-    ajouterIngredient('cocktail');
-    ajouterIngredient('concoction');
-  });
+  ajouterIngredient('cocktail');
+  ajouterIngredient('concoction');
+  renderVerres();
+});
 </script>
 </body>
 </html>
