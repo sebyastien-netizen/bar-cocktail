@@ -3610,11 +3610,18 @@ async function ouvrirFicheInspiration(id) {
       ${ings.map(ing => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.9rem">${typeof ing === 'string' ? ing : ing.nom}</div>`).join('')}
     </div>` : ''}
 
-    ${inspi.notes ? `
-    <div class="plante-section">
-      <h3>Notes</h3>
-      <p>${inspi.notes}</p>
-    </div>` : ''}
+${(() => {
+  if (!inspi.notes) return '';
+  let notes = inspi.notes;
+  try { notes = JSON.parse(inspi.notes); } catch(e) { return `<div class="plante-section"><h3>Notes</h3><p>${inspi.notes}</p></div>`; }
+  if (typeof notes !== 'object') return `<div class="plante-section"><h3>Notes</h3><p>${inspi.notes}</p></div>`;
+  const lignes = [];
+  if (notes.prenom) lignes.push(`<div style="font-size:0.85rem">👤 Partagé par <strong>${notes.prenom}</strong></div>`);
+  if (notes.type) lignes.push(`<div style="font-size:0.85rem">📌 Type : <strong>${notes.type === 'cocktail' ? 'Cocktail' : 'Concoction/Recette'}</strong></div>`);
+  if (notes.origine) lignes.push(`<div style="font-size:0.85rem;font-style:italic;color:var(--text-secondary)">💬 "${notes.origine}"</div>`);
+  if (notes.etapes?.length) lignes.push(`<div style="font-size:0.85rem;margin-top:4px"><strong>Étapes :</strong><br>${notes.etapes.map((e,i) => `${i+1}. ${e.description}${e.duree ? ' — ' + e.duree + ' ' + e.unite : ''}`).join('<br>')}</div>`);
+  return lignes.length ? `<div class="plante-section" style="display:flex;flex-direction:column;gap:8px;background:var(--bg-accent);border-radius:10px;padding:12px;border:1px solid var(--border-accent)">${lignes.join('')}</div>` : '';
+})()}
 
     ${tags.length > 0 ? `
     <div class="plante-section">
