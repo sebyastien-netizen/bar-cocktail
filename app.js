@@ -3661,7 +3661,8 @@ ${(() => {
       <button class="btn-outline" onclick="ouvrirCompleterDepuisFiche('${inspi.id}')">✨ Compléter et valider</button>
       <button class="btn-outline" onclick="ouvrirQRDepuisFiche('${inspi.id}')">📱 Dévoile ton cocktail</button>
       <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
-      ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
+${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
+      <button class="btn-outline" style="color:var(--text-danger);border-color:var(--border-danger);margin-top:8px" onclick="supprimerInspiration('${inspi.id}')">🗑 Supprimer cette inspiration</button>
     </div>
   `;
 
@@ -3913,7 +3914,14 @@ function ouvrirCompleterDepuisFiche(id) {
   document.getElementById('modal-fiche-inspiration').classList.remove('visible');
   ouvrirModalCompleter(id);
 }
-
+async function supprimerInspiration(id) {
+  if (!confirm('Supprimer définitivement cette inspiration ? Cette action est irréversible.')) return;
+  const { error } = await db.from('inspirations').delete().eq('id', id).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+  inspirationsList = inspirationsList.filter(x => x.id !== id);
+  fermerModal('modal-fiche-inspiration');
+  renderInspirations();
+}
 function ouvrirQRDepuisFiche(id) {
   document.getElementById('modal-fiche-inspiration').classList.remove('visible');
   ouvrirQRBartender(id);
