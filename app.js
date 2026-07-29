@@ -2194,12 +2194,6 @@ chargerAAcheter
   // Filtre actif
   const filtreActif = window.aacheterFiltreActif || 'tout';
 
-  container.innerHTML = `
-<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-  <button class="btn-outline" onclick="partagerListeAAcheter()" style="font-size:0.85rem;">
-    📤 Partager la liste
-  </button>
-</div>
 container.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
       <div style="display:flex;gap:6px;">
