@@ -51,6 +51,7 @@ function afficherApp() {
   chargerEquipements();
   chargerConcoctions();
   chargerDashboard();
+ chargerEcoleData();
 
   const ongletRestaure = sessionStorage.getItem('ongletActif') || 'dashboard';
   const btnRestaure = document.querySelector(`nav button[data-tab="${ongletRestaure}"]`);
@@ -2579,6 +2580,16 @@ function renderItemAAcheter(item, isTop) {
       <div class="aacheter-item-header">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <div class="aacheter-nom">${item.nom}</div>
+          ${(() => {
+  const ficheEcole = ecoleData.alcools.find(e => 
+    item.nom.toLowerCase().includes(e.famille?.toLowerCase() || '') ||
+    e.nom.toLowerCase().includes(item.nom.toLowerCase().split(' ')[0])
+  );
+  return ficheEcole ? `<a style="font-size:0.72rem;color:var(--text-accent);text-decoration:none;white-space:nowrap;" 
+    onclick="event.stopPropagation();ouvrirFicheEcole('alcools','${ficheEcole.id}')" href="#">
+    🎓 En savoir plus
+  </a>` : '';
+})()}
 <span title="Débloque ${item.recettesDetail.length} recette${item.recettesDetail.length > 1 ? 's' : ''}${item.prix ? ' · ~' + item.prix + '€' : ''}${item.prix && item.recettesDetail.length ? ' · ' + (parseFloat(item.prix) / item.recettesDetail.length).toFixed(1) + '€/recette' : ''}" 
   style="cursor:help;color:var(--text-muted);font-size:0.85rem;flex-shrink:0;">ℹ️</span>
           ${colorant ? '<span class="aacheter-colorant-badge">🎨</span>' : ''}
@@ -4601,7 +4612,11 @@ let ecoleSection = 'alcools';
 // =============================================
 // CHARGEMENT
 // =============================================
- 
+ async function chargerEcoleData() {
+  if (ecoleData.alcools.length > 0) return; // déjà chargé
+  const { data } = await db.from('ecole_alcools').select('id, nom, famille').order('ordre');
+  if (data) ecoleData.alcools = data;
+}
 async function chargerEcole() {
   const container = document.getElementById('ecole-container');
   if (!container) return;
@@ -4627,7 +4642,17 @@ async function chargerEcole() {
 // =============================================
 // RENDU PRINCIPAL
 // =============================================
- 
+ function ouvrirFicheEcole(section, id) {
+  // Naviguer vers l'onglet École
+  const btnEcole = document.querySelector('nav button[data-tab="ecole"]');
+  if (btnEcole) btnEcole.click();
+  // Attendre le chargement puis ouvrir la fiche
+  setTimeout(() => {
+    ecoleSection = section;
+    renderEcole();
+    setTimeout(() => ouvrirFicheAlcool(id), 100);
+  }, 300);
+}
 function renderEcole() {
   const container = document.getElementById('ecole-container');
   if (!container) return;
