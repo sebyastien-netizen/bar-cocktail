@@ -2194,7 +2194,19 @@ chargerAAcheter
 
   // Filtre actif
   const filtreActif = window.aacheterFiltreActif || 'tout';
-
+// Items masqués (ne_pas_reapprovisionner = true)
+const itemsMasques = (allItems || []).filter(i =>
+  i.detenu === true &&
+  i.cl_total > 0 &&
+  i.cl_restants !== null &&
+  (i.cl_restants / i.cl_total) <= 0.10 &&
+  !categoriesExclues.includes(i.category_id) &&
+  i.ne_pas_reapprovisionner === true
+).map(i => ({
+  id: i.id,
+  nom: i.nom,
+  pctRestant: Math.round((i.cl_restants / i.cl_total) * 100)
+}));
 container.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
       <div style="display:flex;gap:6px;">
@@ -2265,7 +2277,7 @@ ${stockBas.length > 0 || itemsMasques.length > 0 ? `
     </div>
   </div>` : ''}
 </div>` : ''}
-</div>` : ''}
+
   <!-- MEILLEUR ACHAT -->
     ${filtreActif === 'tout' ? `
     <div class="aacheter-top-card">
