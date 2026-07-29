@@ -3532,10 +3532,10 @@ function ouvrirModalImportRecettes(recettes, urlSource) {
           <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
               <div style="font-weight:600;font-size:0.9rem">${r.nom}</div>
-              <button onclick="importerRecette(${i})" 
-                style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:8px">
-                + Importer
-              </button>
+             <button onclick="importerRecette(${i}, this)" 
+  style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:8px">
+  + Importer
+</button>
             </div>
             <div style="font-size:0.78rem;color:var(--text-secondary)">
               ${r.ingredients?.slice(0,4).map(ing => `${ing.quantite || ''}${ing.unite || ''} ${ing.nom}`).join(' · ')}${r.ingredients?.length > 4 ? ` +${r.ingredients.length - 4}` : ''}
