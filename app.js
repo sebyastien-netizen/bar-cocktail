@@ -4086,7 +4086,16 @@ async function validerAvecDosages(id) {
   const result = completerInspirationData.result;
   const dosages = completerInspirationData.dosages;
 
-  const recetteId = 'inspi-' + Date.now();
+ const recetteId = 'inspi-' + Date.now();
+
+  // Parser les notes La Tournée
+  let notesTournee = {};
+  try { notesTournee = JSON.parse(inspi.notes || '{}'); } catch(e) {}
+
+  const anecdoteFinale = [
+    notesTournee.origine || null,
+    notesTournee.prenom ? `Partagé par ${notesTournee.prenom} via La Tournée.` : null
+  ].filter(Boolean).join(' — ') || null;
 
   const { data: recette } = await db.from('recettes').insert({
     id: recetteId,
@@ -4096,7 +4105,8 @@ async function validerAvecDosages(id) {
     difficulte: result.difficulte || 'moyen',
     base_alcool: result.base_alcool || null,
     verre_type: result.verre || null,
-    description_courte: inspi.notes || null,
+    description_courte: result.explication || null,
+    anecdote: anecdoteFinale,
     photo_url: inspi.photo_url || null,
     ...completerInspirationData.profil
   }).select().single();
