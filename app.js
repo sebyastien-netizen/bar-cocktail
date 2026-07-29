@@ -2239,10 +2239,32 @@ container.innerHTML = `
       </button>
       <div id="analyser-result"></div>
     </div>
-    ${stockBas.length > 0 ? `
+${stockBas.length > 0 || itemsMasques.length > 0 ? `
 <div class="aacheter-groupe">
   <div class="aacheter-groupe-titre">⚠️ Stock bas — à racheter bientôt</div>
   ${stockBas.map(item => renderItemAAcheter(item, false)).join('')}
+  ${itemsMasques.length > 0 ? `
+  <div style="margin-top:8px;">
+    <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.textContent.includes('▶')?'▼ Masqués (${itemsMasques.length})':'▶ Masqués (${itemsMasques.length})';"
+      style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;padding:4px 0;">
+      ▶ Masqués (${itemsMasques.length})
+    </button>
+    <div style="display:none;margin-top:6px;">
+      ${itemsMasques.map(i => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;">
+          <div>
+            <span style="font-size:0.85rem;color:var(--text-secondary);">${i.nom}</span>
+            <span style="font-size:0.72rem;color:var(--text-muted);margin-left:6px;">${i.pctRestant}% restant</span>
+          </div>
+          <button onclick="toggleReapprovisionner('${i.id}', false)" 
+            style="background:var(--bg-success);color:var(--text-success);border:1px solid var(--border-success);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">
+            🔔 Réactiver
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  </div>` : ''}
+</div>` : ''}
 </div>` : ''}
   <!-- MEILLEUR ACHAT -->
     ${filtreActif === 'tout' ? `
