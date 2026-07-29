@@ -2597,7 +2597,7 @@ function renderItemAAcheter(item, isTop) {
   const ficheEcole = ecoleId ? ecoleData.alcools.find(e => e.id === ecoleId) : null;
   return ficheEcole ? `<a style="font-size:0.72rem;color:var(--text-accent);text-decoration:none;white-space:nowrap;" 
     onclick="event.stopPropagation();ouvrirFicheEcole('alcools','${ficheEcole.id}')" href="#">
-    🎓 En savoir plus
+🎓 ${ficheEcole.nom}
   </a>` : '';
 })()}
 <span title="Débloque ${item.recettesDetail.length} recette${item.recettesDetail.length > 1 ? 's' : ''}${item.prix ? ' · ~' + item.prix + '€' : ''}${item.prix && item.recettesDetail.length ? ' · ' + (parseFloat(item.prix) / item.recettesDetail.length).toFixed(1) + '€/recette' : ''}" 
