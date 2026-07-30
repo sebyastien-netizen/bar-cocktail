@@ -816,6 +816,16 @@ if (cible) cible.innerHTML = renderJournalRecette(journalData);
 
   afficherModal('modal-realisation');
 }
+async function partagerRecette(id, nom) {
+  const url = `${window.location.origin}/recette.html?id=${id}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: nom, text: `Découvre la recette : ${nom}`, url }); }
+    catch (e) { /* annulé par l'utilisateur */ }
+  } else {
+    await navigator.clipboard.writeText(url);
+    alert('Lien copié ! ' + url);
+  }
+}
 function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
@@ -843,7 +853,8 @@ function renderFiche(portions) {
           </div>
         </div>
         ${r.base_alcool ? `<div class="fiche-base">🥃 ${r.base_alcool}</div>` : ''}
-        <div class="fiche-gouts">${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}</div>
+      <div class="fiche-gouts">${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}</div>
+        <button class="btn-outline" style="margin-top:8px;padding:6px 12px;font-size:0.78rem" onclick="partagerRecette('${r.id}', '${r.nom.replace(/'/g, "\\'")}')">🔗 Partager</button>
         ${estAjuste ? `
         <div class="fiche-bandeau-ajuste">
           <span>✦ Version ajustée active</span>
