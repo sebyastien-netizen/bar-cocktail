@@ -3,14 +3,15 @@ export default async function handler(req, res) {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL manquante' });
   try {
-    const tavilyRes = await fetch('https://api.tavily.com/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: process.env.TAVILY_API_KEY,
-        urls: [url]
-      })
-    });
+const tavilyRes = await fetch('https://api.tavily.com/extract', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    api_key: process.env.TAVILY_API_KEY,
+    urls: [url],
+    extract_depth: 'advanced'
+  })
+});
     const tavilyData = await tavilyRes.json();
     const contenu = tavilyData?.results?.[0]?.raw_content || '';
     if (!contenu) return res.status(400).json({ error: 'Impossible de lire la page. Essaie une autre URL.' });
