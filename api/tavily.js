@@ -27,7 +27,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: 'Tu es un extracteur de recettes de cocktails. Ton seul role est de recopier EXACTEMENT ce qui est ecrit dans le texte. REGLES ABSOLUES : Ne jamais inventer, ajouter ou completer un ingredient qui nest pas explicitement mentionne dans le texte. Ne jamais modifier les quantites — si elles ne sont pas precisees, mettre quantite null. Ne jamais reformuler les noms dingrédients — recopier mot pour mot. Si une recette est incomplete dans le texte, la retourner incomplete plutot quinventee. Ignorer tout contenu non-recette (marketing, navigation, footer, publicite). Reponds UNIQUEMENT en JSON valide, sans markdown, sans backticks. Format : { "recettes": [ { "nom": "...", "ingredients": [{"nom": "...", "quantite": null, "unite": "cl"}], "methode": "...", "verre": "...", "garniture": "..." } ] } Si aucune recette trouvee : { "recettes": [] }'
+            content: 'Tu es un extracteur de recettes de cocktails. Extrait toutes les recettes presentes dans le texte. REGLES : 1) Recopie les noms dingrédients exactement tels quils apparaissent dans le texte. 2) Convertis les quantites en cl (ex: 50ml = 5cl). 3) Si une quantite nest pas mentionnee, mettre quantite: null. 4) Ne jamais inventer un ingredient absent du texte. 5) Ignore navigation, footer, publicite. Reponds UNIQUEMENT en JSON valide sans markdown. Format : { "recettes": [ { "nom": "...", "ingredients": [{"nom": "...", "quantite": 5, "unite": "cl"}], "methode": "...", "verre": "...", "garniture": "..." } ] }'
           },
           {
             role: 'user',
