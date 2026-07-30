@@ -4,7 +4,9 @@ export default async function handler(req, res) {
   if (!url) return res.status(400).json({ error: 'URL manquante' });
 
   try {
-    // ---- Extraction Tavily : 'basic' d'abord (moins de crédits), 'advanced' si insuffisant ----
+    // ---- Extraction Tavily en 'advanced' systématique ----
+    // (testé avec 'basic' d'abord pour économiser des crédits, mais ça a fait perdre
+    // les quantités sur au moins un site — la fiabilité prime, le volume d'usage est faible)
     async function extraire(depth) {
       const r = await fetch('https://api.tavily.com/extract', {
         method: 'POST',
@@ -23,15 +25,8 @@ export default async function handler(req, res) {
       return data?.results?.[0]?.raw_content || '';
     }
 
-    let contenu = await extraire('basic');
-    let depthUtilisee = 'basic';
-
-    // Seuil empirique : en dessous de 500 caractères, la page est probablement
-    // chargée en JS (contenu vide/squelette) — on retente en advanced.
-    if (contenu.length < 500) {
-      contenu = await extraire('advanced');
-      depthUtilisee = 'advanced';
-    }
+    let contenu = await extraire('advanced');
+    let depthUtilisee = 'advanced';
 
     if (!contenu) {
       return res.status(400).json({
