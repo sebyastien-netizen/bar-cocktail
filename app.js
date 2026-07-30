@@ -4612,7 +4612,8 @@ ${ingredients && ingredients.length > 0 ? (() => {
           </div>` : ''}
         </div>`;
     })() : ''}
-    <div class="plante-section" style="margin-top:20px">
+   <div class="plante-section" style="margin-top:20px">
+      <button class="btn-outline" style="width:100%;margin-bottom:8px" onclick="partagerGrimoire('${r.id}', '${r.nom.replace(/'/g, "\\'")}')">🔗 Partager</button>
       <button class="btn-primary" style="width:100%" onclick="lancerConcoction('${r.id}')">
         ⚗️ Lancer cette recette → Concoctions
       </button>
@@ -4620,6 +4621,17 @@ ${ingredients && ingredients.length > 0 ? (() => {
   `;
 
   afficherModal('modal-fiche-grimoire');
+}
+
+async function partagerGrimoire(id, nom) {
+  const url = `${window.location.origin}/grimoire-recette.html?id=${id}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: nom, url }); }
+    catch (e) { /* annulé par l'utilisateur */ }
+  } else {
+    await navigator.clipboard.writeText(url);
+    alert('Lien copié ! ' + url);
+  }
 }
 
 let configGrimoireCourant = null;
