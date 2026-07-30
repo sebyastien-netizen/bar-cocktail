@@ -3124,12 +3124,6 @@ function renderSessions(sessions) {
     ` : ''}
   `;
 }
-// =============================================
-// MODE FIN DU MONDE — cave d'opportunité
-// =============================================
-
-let finDuMondeSession = null;
-let finDuMondeBouteilles = [];
 
 // =============================================
 
