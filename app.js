@@ -5210,11 +5210,12 @@ function ouvrirFicheMateriel(id) {
   const m = ecoleData.materiels.find(x => x.id === id);
   if (!m) return;
  
-  document.querySelector('.ecole-fiche-contenu').innerHTML = `
+ document.querySelector('.ecole-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2.5rem">${m.emoji}</span>
       <div><h2 class="fiche-titre">${m.nom}</h2></div>
     </div>
+    ${m.photo_url ? `<div class="plante-section"><img src="${m.photo_url}" alt="${m.nom}" style="width:100%;border-radius:10px;border:1px solid var(--border);"></div>` : ''}
     ${m.description ? `<div class="plante-section"><h3>Description</h3><p>${m.description}</p></div>` : ''}
     ${m.pourquoi ? `<div class="plante-section"><h3>Pourquoi c'est important</h3><p class="plante-notes-bar">${m.pourquoi}</p></div>` : ''}
     ${m.prix_estime ? `<div class="plante-section"><h3>Prix indicatif</h3><p>${m.prix_estime}</p></div>` : ''}
