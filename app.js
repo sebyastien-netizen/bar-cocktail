@@ -3387,6 +3387,8 @@ async function chargerInspirations() {
   renderInspirations();
 }
 
+let inspirationsSelectionRejetees = new Set();
+
 function renderInspirations() {
   const container = document.getElementById('inspirations-container');
   if (!container) return;
@@ -3421,9 +3423,15 @@ container.innerHTML = `
 
     ${rejetees.length > 0 ? `
     <div class="conc-section">
-      <h3 class="conc-section-titre">❌ Rejetées (${rejetees.length})</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h3 class="conc-section-titre">❌ Rejetées (${rejetees.length})</h3>
+        ${inspirationsSelectionRejetees.size > 0 ? `
+        <button class="btn-outline" style="color:var(--text-danger);border-color:var(--border-danger)" onclick="supprimerInspirationsSelectionnees()">
+          🗑 Supprimer la sélection (${inspirationsSelectionRejetees.size})
+        </button>` : ''}
+      </div>
       <div class="herbo-grille">
-        ${rejetees.map(i => renderCarteInspiration(i)).join('')}
+        ${rejetees.map(i => renderCarteInspiration(i, true)).join('')}
       </div>
     </div>` : ''}
 
@@ -3434,6 +3442,26 @@ container.innerHTML = `
       <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:6px">Ajoutez des recettes croisées en déplacement.</div>
     </div>` : ''}
   `;
+}
+
+function toggleSelectionInspirationRejetee(id, event) {
+  event.stopPropagation();
+  if (inspirationsSelectionRejetees.has(id)) inspirationsSelectionRejetees.delete(id);
+  else inspirationsSelectionRejetees.add(id);
+  renderInspirations();
+}
+
+async function supprimerInspirationsSelectionnees() {
+  const ids = Array.from(inspirationsSelectionRejetees);
+  if (!ids.length) return;
+  if (!confirm(`Supprimer définitivement ${ids.length} inspiration${ids.length > 1 ? 's' : ''} rejetée${ids.length > 1 ? 's' : ''} ? Cette action est irréversible.`)) return;
+
+  const { error } = await db.from('inspirations').delete().in('id', ids).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  inspirationsList = inspirationsList.filter(x => !ids.includes(x.id));
+  inspirationsSelectionRejetees.clear();
+  renderInspirations();
 }
 async function captureRapideBartender() {
   const now = new Date();
@@ -3606,7 +3634,7 @@ async function _creerInspirationDepuisImport(r) {
     })
   });
 }
-function renderCarteInspiration(inspi) {
+function renderCarteInspiration(inspi, avecCheckbox = false) {
   const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
   const tags = inspi.tags || [];
   const dateStr = new Date(inspi.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -3618,8 +3646,13 @@ function renderCarteInspiration(inspi) {
     try { notesTournee = JSON.parse(inspi.notes); } catch(e) {}
   }
 
+const coche = inspirationsSelectionRejetees.has(inspi.id);
   return `
-    <div class="herbo-carte" onclick="ouvrirFicheInspiration('${inspi.id}')">
+    <div class="herbo-carte" style="position:relative" onclick="ouvrirFicheInspiration('${inspi.id}')">
+      ${avecCheckbox ? `
+      <input type="checkbox" ${coche ? 'checked' : ''} onclick="toggleSelectionInspirationRejetee('${inspi.id}', event)"
+        style="position:absolute;top:8px;right:8px;width:20px;height:20px;z-index:2;cursor:pointer">
+      ` : ''}
       ${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px">` : ''}
       <div class="herbo-carte-top">
         <span class="herbo-emoji">${sourceIcon[inspi.source] || '💡'}</span>
