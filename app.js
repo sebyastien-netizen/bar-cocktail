@@ -344,8 +344,8 @@ function getItemsCave() {
   return ids;
 }
  
-function calculerDisponibilite(recette) {
-  const caveIds = getItemsCave();
+function calculerDisponibilite(recette, caveIdsOverride) {
+  const caveIds = caveIdsOverride || getItemsCave();
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
   const manquants = ingredientsRequis.filter(i => !caveIds.has(i.item_cave_id));
   return manquants.length;
@@ -3033,6 +3033,7 @@ function renderSessions(sessions) {
       <h2>🎉 Sessions cocktail</h2>
       <div style="display:flex;gap:8px">
         ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
+        <button class="btn-outline" onclick="ouvrirFinDuMonde()">🆘 Fin du monde</button>
         <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
       </div>
     </div>
@@ -3053,7 +3054,223 @@ function renderSessions(sessions) {
     ` : ''}
   `;
 }
+// =============================================
+// MODE FIN DU MONDE — cave d'opportunité
+// =============================================
 
+let finDuMondeSession = null;
+let finDuMondeBouteilles = [];
+
+const CUISINE_COMMUNE = [
+  'Sucre', 'Citron', 'Glaçons', 'Eau gazeuse', 'Miel',
+  'Sel', 'Poivre', 'Œufs', 'Lait', 'Orange', 'Menthe', 'Cannelle'
+];
+
+function ouvrirFinDuMonde() {
+  finDuMondeSession = null;
+  finDuMondeBouteilles = [];
+  if (!document.getElementById('modal-fin-du-monde')) creerModalFinDuMonde();
+  renderFinDuMondeAccueil();
+  afficherModal('modal-fin-du-monde');
+}
+
+function creerModalFinDuMonde() {
+  const div = document.createElement('div');
+  div.className = 'modal-overlay';
+  div.id = 'modal-fin-du-monde';
+  div.innerHTML = `
+    <div class="modal modal-large">
+      <button class="modal-close" onclick="fermerModal('modal-fin-du-monde')">✕</button>
+      <div class="modal-contenu" id="fin-du-monde-contenu"></div>
+    </div>
+  `;
+  document.body.appendChild(div);
+}
+
+function renderFinDuMondeAccueil() {
+  const zone = document.getElementById('fin-du-monde-contenu');
+  zone.innerHTML = `
+    <h2 style="margin-bottom:4px">🆘 Session Fin du monde</h2>
+    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">
+      Tu n'as pas ta cave sous la main — dis-nous ce qu'il y a, on te dit ce que tu peux faire.
+    </p>
+    <label style="display:block;font-size:0.78rem;color:var(--text-secondary);margin-bottom:6px">Nom de la soirée</label>
+    <input type="text" id="fdm-nom" placeholder="Ex : Chez Marc, improvisé" style="margin-bottom:12px">
+    <label style="display:block;font-size:0.78rem;color:var(--text-secondary);margin-bottom:6px">Date</label>
+    <input type="date" id="fdm-date" value="${new Date().toISOString().split('T')[0]}" style="margin-bottom:16px">
+    <button class="btn-primary" style="width:100%" onclick="creerSessionOpportunite()">Continuer →</button>
+  `;
+}
+
+async function creerSessionOpportunite() {
+  const nom = document.getElementById('fdm-nom')?.value?.trim() || 'Session improvisée';
+  const date = document.getElementById('fdm-date')?.value || null;
+  const id = 'fdm-' + Date.now();
+
+  const { data, error } = await db.from('sessions_opportunite').insert({
+    id, user_id: currentUser.id, nom, date_soiree: date, ingredients_cuisine: []
+  }).select().single();
+
+  if (error || !data) { alert('Erreur : ' + (error?.message || 'inconnue')); return; }
+
+  finDuMondeSession = data;
+  finDuMondeBouteilles = [];
+  renderFinDuMondeBouteilles();
+}
+
+function renderFinDuMondeBouteilles() {
+  const zone = document.getElementById('fin-du-monde-contenu');
+  const cuisine = finDuMondeSession.ingredients_cuisine || [];
+  zone.innerHTML = `
+    <h2 style="margin-bottom:4px">🆘 ${finDuMondeSession.nom}</h2>
+    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">Ajoute les bouteilles trouvées sur place, une par une.</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="text" id="fdm-bouteille-input" placeholder="Ex : Log Cabin whisky" style="flex:1"
+        onkeydown="if(event.key==='Enter') identifierBouteilleOpportunite()">
+      <button class="btn-primary" id="fdm-identifier-btn" onclick="identifierBouteilleOpportunite()">🔍 Identifier</button>
+    </div>
+    <div id="fdm-identif-result"></div>
+
+    <div id="fdm-liste-bouteilles" style="margin-top:16px">
+      ${renderListeBouteillesOpportunite()}
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px">Dans la cuisine, tu as aussi :</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${CUISINE_COMMUNE.map(item => `
+          <button onclick="toggleCuisineOpportunite('${item}')"
+            style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${cuisine.includes(item) ? 'var(--bg-accent)' : 'var(--bg-card)'};color:${cuisine.includes(item) ? 'var(--text-accent)' : 'var(--text-secondary)'};font-size:0.78rem;cursor:pointer">
+            ${cuisine.includes(item) ? '✓ ' : ''}${item}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <button class="btn-primary" style="width:100%;margin-top:20px" onclick="voirRecettesOpportunite()">
+      🍸 Voir ce que je peux faire (${finDuMondeBouteilles.length} bouteille${finDuMondeBouteilles.length > 1 ? 's' : ''})
+    </button>
+  `;
+}
+
+function renderListeBouteillesOpportunite() {
+  if (!finDuMondeBouteilles.length) return '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille ajoutée pour l\'instant.</div>';
+  return finDuMondeBouteilles.map((b, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+      <div>
+        <div style="font-size:0.85rem;font-weight:600">${b.nom}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted)">${b.categorie_id || '?'}${b.degre ? ' · ' + b.degre + '°' : ''}</div>
+      </div>
+      <button class="btn-icon" onclick="retirerBouteilleOpportunite(${i})" title="Retirer">🗑</button>
+    </div>
+  `).join('');
+}
+
+async function identifierBouteilleOpportunite() {
+  const input = document.getElementById('fdm-bouteille-input');
+  const nom = input?.value?.trim();
+  if (!nom) return;
+
+  const btn = document.getElementById('fdm-identifier-btn');
+  const result = document.getElementById('fdm-identif-result');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  result.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/identifier', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom })
+    });
+    const info = await res.json();
+
+    let bouteille;
+    if (!info.identifie) {
+      result.innerHTML = `<div style="font-size:0.8rem;color:var(--text-warning);margin-bottom:8px">❓ Non identifié précisément — ajouté tel quel.</div>`;
+      bouteille = { nom, categorie_id: null, degre: null, description: null };
+    } else {
+      bouteille = { nom, categorie_id: info.categorie_id || null, degre: info.degre || null, description: info.description || null };
+    }
+    finDuMondeBouteilles.push(bouteille);
+
+    await db.from('opportunite_bouteilles').insert({
+      session_id: finDuMondeSession.id,
+      user_id: currentUser.id,
+      nom: bouteille.nom,
+      categorie_id: bouteille.categorie_id,
+      degre: bouteille.degre,
+      description: bouteille.description,
+      ordre: finDuMondeBouteilles.length
+    });
+
+    input.value = '';
+    renderFinDuMondeBouteilles();
+  } catch (e) {
+    result.innerHTML = `<div style="font-size:0.8rem;color:var(--text-danger)">Erreur réseau, réessaie.</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Identifier';
+}
+
+function retirerBouteilleOpportunite(index) {
+  finDuMondeBouteilles.splice(index, 1);
+  renderFinDuMondeBouteilles();
+  db.from('opportunite_bouteilles').delete().eq('session_id', finDuMondeSession.id).then(() => {
+    if (finDuMondeBouteilles.length) {
+      db.from('opportunite_bouteilles').insert(
+        finDuMondeBouteilles.map((b, i) => ({
+          session_id: finDuMondeSession.id, user_id: currentUser.id,
+          nom: b.nom, categorie_id: b.categorie_id, degre: b.degre, description: b.description, ordre: i + 1
+        }))
+      );
+    }
+  });
+}
+
+async function toggleCuisineOpportunite(item) {
+  const liste = finDuMondeSession.ingredients_cuisine || [];
+  const idx = liste.indexOf(item);
+  if (idx === -1) liste.push(item); else liste.splice(idx, 1);
+  finDuMondeSession.ingredients_cuisine = liste;
+
+  await db.from('sessions_opportunite').update({ ingredients_cuisine: liste }).eq('id', finDuMondeSession.id);
+  renderFinDuMondeBouteilles();
+}
+
+function voirRecettesOpportunite() {
+  const dispoTextes = [
+    ...finDuMondeBouteilles.map(b => (b.nom || '').toLowerCase()),
+    ...finDuMondeBouteilles.map(b => (b.categorie_id || '').toLowerCase()),
+    ...(finDuMondeSession.ingredients_cuisine || []).map(c => c.toLowerCase())
+  ].filter(Boolean);
+
+  const realisables = recettes
+    .filter(r => r.type === 'cocktail')
+    .map(r => ({ r, manquants: calculerDisponibiliteOpportunite(r, dispoTextes) }))
+    .sort((a, b) => a.manquants - b.manquants)
+    .slice(0, 20);
+
+  const zone = document.getElementById('fin-du-monde-contenu');
+  zone.innerHTML = `
+    <h2 style="margin-bottom:4px">🍸 ${finDuMondeSession.nom} — ce que tu peux faire</h2>
+    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">Classé par nombre d'ingrédients manquants — le matching est approximatif, à vérifier au moment de préparer.</p>
+
+    <button class="btn-outline" style="margin-bottom:16px" onclick="renderFinDuMondeBouteilles()">← Retour aux bouteilles</button>
+
+    ${realisables.map(({ r, manquants }) => `
+      <div class="dash-stat" style="margin-bottom:0.6rem;padding:0.85rem 1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600;font-size:0.9rem">${r.nom}</div>
+          ${badgeDisponibilite(manquants)}
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">${(r.ingredients || []).map(i => i.nom).join(' · ')}</div>
+      </div>
+    `).join('')}
+  `;
+}
 function renderCarteSession(s, passee = false) {
   const nbInvites = 0; // sera enrichi avec invités réels
   const expires = new Date(s.expires_at);
