@@ -1,3 +1,6 @@
+const SUPABASE_URL = 'https://wqsprjlocuhandhvpytx.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_g4pDtkemUi-6VUG6qgVJWw_PAy5YibN';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { url } = req.body;
@@ -79,6 +82,29 @@ export default async function handler(req, res) {
         etape: 'parsing_json',
         reponse_brute: texte.slice(0, 500)
       });
+    }
+
+    // ---- Renormalisation FR via le lexique ingredients_traductions ----
+    // (utile quand le site source sert du contenu en anglais par défaut aux robots,
+    // indépendamment de notre consigne "ne pas traduire" — voir table dédiée)
+    try {
+      const lexiqueRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/ingredients_traductions?select=nom_en,nom_fr`,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      if (lexiqueRes.ok) {
+        const lexique = await lexiqueRes.json();
+        const dico = new Map(lexique.map(l => [l.nom_en.toLowerCase().trim(), l.nom_fr]));
+
+        for (const recette of (result.recettes || [])) {
+          for (const ing of (recette.ingredients || [])) {
+            const cle = (ing.nom || '').toLowerCase().trim();
+            if (dico.has(cle)) ing.nom = dico.get(cle);
+          }
+        }
+      }
+    } catch (e) {
+      // Le lexique est un plus, pas un bloquant — on continue même s'il échoue
     }
 
     // Contexte utile pour comprendre ce qui a été utilisé, sans bloquer l'usage normal côté app
