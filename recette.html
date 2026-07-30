@@ -156,7 +156,7 @@ async function chargerRecette() {
 async function partager(nom) {
   const url = window.location.href;
   if (navigator.share) {
-    try { await navigator.share({ title: nom, text: `Découvre la recette : ${nom}`, url }); }
+    try { await navigator.share({ title: nom, url }); }
     catch (e) { /* annulé par l'utilisateur, rien à faire */ }
   } else {
     await navigator.clipboard.writeText(url);
