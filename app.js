@@ -3131,6 +3131,11 @@ function renderSessions(sessions) {
 let finDuMondeSession = null;
 let finDuMondeBouteilles = [];
 
+// =============================================
+
+let finDuMondeSession = null;
+let finDuMondeBouteilles = [];
+
 const CUISINE_COMMUNE = [
   'Sucre', 'Citron jaune', 'Citron vert', 'Glaçons', 'Eau gazeuse', 'Tonic',
   'Miel', 'Sel', 'Poivre', 'Œufs', 'Lait', 'Orange', 'Menthe', 'Cannelle'
@@ -3140,46 +3145,8 @@ function ouvrirFinDuMonde() {
   finDuMondeSession = null;
   finDuMondeBouteilles = [];
   if (!document.getElementById('modal-fin-du-monde')) creerModalFinDuMonde();
-  chargerSessionsOpportunite();
+  renderFinDuMondeAccueil();
   afficherModal('modal-fin-du-monde');
-}
-
-async function chargerSessionsOpportunite() {
-  const zone = document.getElementById('fin-du-monde-contenu');
-  zone.innerHTML = '<div class="loading-state">Chargement…</div>';
-
-  const { data } = await db.from('sessions_opportunite')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false });
-
-  renderListeSessionsOpportunite(data || []);
-}
-
-function renderListeSessionsOpportunite(sessions) {
-  const zone = document.getElementById('fin-du-monde-contenu');
-  zone.innerHTML = `
-    <h2 style="margin-bottom:4px">🆘 Sessions Fin du monde</h2>
-    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">
-      Reprends une session en cours, ou lance-en une nouvelle.
-    </p>
-
-    <button class="btn-primary" style="width:100%;margin-bottom:16px" onclick="renderFinDuMondeAccueil()">+ Nouvelle session</button>
-
-    ${sessions.length === 0 ? `
-    <div class="empty-state">
-      <p>Aucune session Fin du monde pour l'instant.</p>
-    </div>` : sessions.map(s => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer"
-        onclick="reprendreSessionOpportunite('${s.id}')">
-        <div>
-          <div style="font-weight:600;font-size:0.9rem">${s.nom}</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">${s.date_soiree ? formatDate(s.date_soiree) : ''}</div>
-        </div>
-        <button class="btn-icon" onclick="event.stopPropagation(); supprimerSessionOpportunite('${s.id}')" title="Supprimer">🗑</button>
-      </div>
-    `).join('')}
-  `;
 }
 
 async function reprendreSessionOpportunite(id) {
@@ -3200,7 +3167,7 @@ async function reprendreSessionOpportunite(id) {
 async function supprimerSessionOpportunite(id) {
   if (!confirm('Supprimer définitivement cette session et ses bouteilles ?')) return;
   await db.from('sessions_opportunite').delete().eq('id', id).eq('user_id', currentUser.id);
-  chargerSessionsOpportunite();
+  chargerSessions();
 }
 
 function creerModalFinDuMonde() {
@@ -3219,7 +3186,7 @@ function creerModalFinDuMonde() {
 function renderFinDuMondeAccueil() {
   const zone = document.getElementById('fin-du-monde-contenu');
   zone.innerHTML = `
-    <button class="btn-outline" style="margin-bottom:16px" onclick="chargerSessionsOpportunite()">← Mes sessions</button>
+    <button class="btn-outline" style="margin-bottom:16px" onclick="fermerModal('modal-fin-du-monde')">← Fermer</button>
     <h2 style="margin-bottom:4px">🆘 Session Fin du monde</h2>
     <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">
       Tu n'as pas ta cave sous la main — dis-nous ce qu'il y a, on te dit ce que tu peux faire.
@@ -3252,7 +3219,7 @@ function renderFinDuMondeBouteilles() {
   const zone = document.getElementById('fin-du-monde-contenu');
   const cuisine = finDuMondeSession.ingredients_cuisine || [];
   zone.innerHTML = `
-    <button class="btn-outline" style="margin-bottom:16px" onclick="chargerSessionsOpportunite()">← Mes sessions</button>
+    <button class="btn-outline" style="margin-bottom:16px" onclick="fermerModal('modal-fin-du-monde')">← Fermer</button>
     <h2 style="margin-bottom:4px">🆘 ${finDuMondeSession.nom}</h2>
     <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">Ajoute les bouteilles trouvées sur place, une par une.</p>
 
