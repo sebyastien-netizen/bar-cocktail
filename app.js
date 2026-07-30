@@ -3759,19 +3759,22 @@ ${(() => {
     </div>` : ''}
 
 <div class="plante-section" style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
-        ✨ Analyser avec Claude
-      </button>
-     ${inspi.statut === 'en_attente' ? `
-      <button class="btn-outline" onclick="ouvrirCompleterDepuisFiche('${inspi.id}')">✨ Compléter et valider</button>
-      <button class="btn-outline" onclick="ouvrirQRDepuisFiche('${inspi.id}')">📱 Dévoile ton cocktail</button>
-      <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
-${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
-      <button class="btn-outline" style="color:var(--text-danger);border-color:var(--border-danger);margin-top:8px" onclick="supprimerInspiration('${inspi.id}')">🗑 Supprimer cette inspiration</button>
-    </div>
-  `;
-
-  afficherModal('modal-fiche-inspiration');
+  <button class="btn-primary" onclick="analyserInspiration('${inspi.id}')">
+    ✨ Analyser avec Claude
+  </button>
+  ${inspi.statut === 'en_attente' ? `
+  ${ings.length > 0 ? `
+  <button class="btn-outline" style="border-color:var(--border-success);color:var(--text-success)" onclick="validerDirectement('${inspi.id}')">
+    ✅ Créer la recette avec ces ingrédients
+  </button>` : ''}
+  <button class="btn-outline" onclick="ouvrirCompleterDepuisFiche('${inspi.id}')">✨ Compléter et valider</button>
+  <button class="btn-outline" onclick="ouvrirQRDepuisFiche('${inspi.id}')">📱 Dévoile ton cocktail</button>
+  <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
+  ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
+  <button class="btn-outline" style="color:var(--text-danger);border-color:var(--border-danger);margin-top:8px" onclick="supprimerInspiration('${inspi.id}')">🗑 Supprimer cette inspiration</button>
+</div>
+`;
+afficherModal('modal-fiche-inspiration');
 }
 
 function renderReponseBartender(r) {
@@ -4026,6 +4029,63 @@ async function supprimerInspiration(id) {
   inspirationsList = inspirationsList.filter(x => x.id !== id);
   fermerModal('modal-fiche-inspiration');
   renderInspirations();
+}
+async function validerDirectement(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi) return;
+  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
+  
+  let notesTournee = {};
+  try { notesTournee = JSON.parse(inspi.notes || '{}'); } catch(e) {}
+
+  const recetteId = 'inspi-' + Date.now();
+  const anecdote = [
+    notesTournee.origine || null,
+    notesTournee.prenom ? `Partagé par ${notesTournee.prenom} via La Tournée.` : null,
+    inspi.source === 'url' ? `Source : ${inspi.source_detail}` : null
+  ].filter(Boolean).join(' — ') || null;
+
+  const { data: recette, error } = await db.from('recettes').insert({
+    id: recetteId,
+    user_id: currentUser.id,
+    type: 'cocktail',
+    nom: inspi.nom,
+    difficulte: 'moyen',
+    photo_url: inspi.photo_url || null,
+    anecdote,
+    source_marque: inspi.source === 'url' ? inspi.source_detail : null
+  }).select().single();
+
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  if (recette && ings.length > 0) {
+    await db.from('recette_ingredients').insert(
+      ings.map((ing, i) => ({
+        recette_id: recetteId,
+        user_id: currentUser.id,
+        nom: typeof ing === 'string' ? ing : ing.nom,
+        quantite: ing.quantite || null,
+        unite: ing.unite || 'cl',
+        ordre: i + 1
+      }))
+    );
+  }
+
+  await db.from('inspirations').update({
+    statut: 'validee',
+    recette_liee_id: recetteId
+  }).eq('id', id);
+
+  const idx = inspirationsList.findIndex(x => x.id === id);
+  if (idx !== -1) {
+    inspirationsList[idx].statut = 'validee';
+    inspirationsList[idx].recette_liee_id = recetteId;
+  }
+
+  fermerModal('modal-fiche-inspiration');
+  renderInspirations();
+  await chargerRecettes();
+  alert(`✅ "${inspi.nom}" créée dans vos recettes !`);
 }
 function ouvrirQRDepuisFiche(id) {
   document.getElementById('modal-fiche-inspiration').classList.remove('visible');
