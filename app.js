@@ -3093,31 +3093,6 @@ async function ouvrirSessionOpportuniteDepuisListe(id) {
   await reprendreSessionOpportunite(id);
 }
 
-function renderSessions(sessions) {
-  const container = document.getElementById('sessions-container');
-  const actives = sessions.filter(s => new Date(s.expires_at) > new Date());
-  const passees = sessions.filter(s => new Date(s.expires_at) <= new Date());
-
-  container.innerHTML = `
-    <div class="cave-header">
-      <h2>🎉 Sessions cocktail</h2>
-      <div style="display:flex;gap:8px">
-        ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
-        <button class="btn-outline" onclick="ouvrirFinDuMonde()">🆘 Fin du monde</button>
-        <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
-      </div>
-    </div>
-
-    ${actives.length > 0 ? `
-    <div class="section-label">EN COURS</div>
-    ${actives.map(s => renderCarteSession(s)).join('')}
-    ` : `
-    <div class="empty-state">
-      <p>Aucune session active</p>
-      <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">Lancer une soirée</button>
-    </div>
-    `}
-
     ${passees.length > 0 ? `
     <div class="section-label" style="margin-top:1.5rem">PASSÉES</div>
     ${passees.slice(0, 5).map(s => renderCarteSession(s, true)).join('')}
