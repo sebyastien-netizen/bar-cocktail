@@ -3779,8 +3779,8 @@ async function ouvrirFicheInspiration(id) {
     <div class="plante-section">
       <h3>Ingrédients</h3>
       ${ings.map(ing => {
-  if (typeof ing === 'string') return `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.9rem">${ing}</div>`;
-  const dosage = ing.quantite ? `<span style="color:var(--text-accent);font-weight:600;margin-left:8px">${ing.quantite}${ing.unite || 'cl'}</span>` : '';
+ const uniteValide = (ing.unite && ing.unite !== 'null') ? ing.unite : '';
+  const dosage = ing.quantite ? `<span style="color:var(--text-accent);font-weight:600;margin-left:8px">${ing.quantite}${uniteValide ? ' ' + uniteValide : ''}</span>` : '';
   return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.9rem"><span>${ing.nom}</span>${dosage}</div>`;
 }).join('')}
     </div>` : ''}
