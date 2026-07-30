@@ -3826,7 +3826,7 @@ ${(() => {
     ✅ Créer la recette avec ces ingrédients
   </button>` : ''}
   <button class="btn-outline" onclick="ouvrirCompleterDepuisFiche('${inspi.id}')">✨ Compléter et valider</button>
-  <button class="btn-outline" onclick="ouvrirQRDepuisFiche('${inspi.id}')">📱 Dévoile ton cocktail</button>
+${inspi.source !== 'url' ? `<button class="btn-outline" onclick="ouvrirQRDepuisFiche('${inspi.id}')">📱 Dévoile ton cocktail</button>` : ''}
   <button class="btn-outline" onclick="rejeterInspiration('${inspi.id}')">❌ Rejeter</button>` : ''}
   ${inspi.statut === 'validee' ? `<div style="color:var(--text-success);font-size:0.85rem;text-align:center">✅ Déjà validée</div>` : ''}
   <button class="btn-outline" style="color:var(--text-danger);border-color:var(--border-danger);margin-top:8px" onclick="supprimerInspiration('${inspi.id}')">🗑 Supprimer cette inspiration</button>
