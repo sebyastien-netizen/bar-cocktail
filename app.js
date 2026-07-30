@@ -1803,12 +1803,32 @@ ${phases.map((p, i) => `<div style="flex:${p.duree};background:${p.faite ? coule
           <button class="btn btn-outline btn-sm" onclick="marquerEnCours('${c.id}')">↩ Remettre en cours</button>
           <button class="btn-primary btn-sm" onclick="ouvrirModalArchiver('${c.id}')">🏁 Archiver</button>
         ` : ''}
+        <button class="btn btn-outline btn-sm" onclick="partagerConcoction('${c.id}', '${c.nom.replace(/'/g, "\\'")}')">🔗 Partager</button>
         <button class="btn-icon btn-supprimer" onclick="supprimerConcoction('${c.id}')" title="Supprimer définitivement">🗑</button>
       </div>
     </div>
   `;
 }
- 
+ async function partagerConcoction(id, nom) {
+  let conc = concoctions.find(c => c.id === id);
+  let token = conc?.share_token;
+
+  if (!token) {
+    token = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+    const { error } = await db.from('concoctions').update({ share_token: token }).eq('id', id).eq('user_id', currentUser.id);
+    if (error) { alert('Erreur : ' + error.message); return; }
+    if (conc) conc.share_token = token;
+  }
+
+  const url = `${window.location.origin}/concoction.html?token=${token}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: nom, url }); }
+    catch (e) { /* annulé par l'utilisateur */ }
+  } else {
+    await navigator.clipboard.writeText(url);
+    alert('Lien copié ! ' + url);
+  }
+}
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
