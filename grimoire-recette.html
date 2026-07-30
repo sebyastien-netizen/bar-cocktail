@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grimoire — Bar de Seb</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0d0d1a; color: #e8d5a8; min-height: 100vh; padding: 24px 16px 60px; }
+    .logo { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #c8a96e; }
+    .logo-text { font-size: 13px; font-weight: 500; color: #c8a96e; letter-spacing: 0.08em; }
+    .card { background: rgba(200,169,110,0.06); border: 0.5px solid rgba(200,169,110,0.2); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .titre { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .tag { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.06); color: rgba(232,213,168,0.7); border: 0.5px solid rgba(255,255,255,0.1); }
+    .description { font-size: 14px; color: rgba(232,213,168,0.75); line-height: 1.5; margin-top: 8px; }
+    .section-titre { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: rgba(232,213,168,0.5); text-transform: uppercase; margin-bottom: 12px; }
+    .avertissement { background: rgba(224,90,78,0.12); border-left: 3px solid #e05a4e; color: #f0a89e; border-radius: 0 8px 8px 0; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; margin-bottom: 16px; }
+    .ing-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 14.5px; }
+    .ing-row:last-child { border-bottom: none; }
+    .ing-dose { font-weight: 600; color: #c8a96e; }
+    .etape-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); }
+    .etape-row:last-child { border-bottom: none; }
+    .etape-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(200,169,110,0.15); color: #c8a96e; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .etape-texte { font-size: 14.5px; line-height: 1.5; padding-top: 2px; }
+    .infos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .infos-item { }
+    .infos-label { font-size: 11px; color: rgba(232,213,168,0.4); text-transform: uppercase; letter-spacing: 0.03em; }
+    .infos-val { font-size: 15px; font-weight: 600; margin-top: 2px; }
+    .btn { width: 100%; background: #c8a96e; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 600; color: #1a1206; cursor: pointer; margin-top: 8px; }
+    .footer-credit { text-align: center; font-size: 12px; color: rgba(232,213,168,0.35); margin-top: 28px; }
+    .loading, .erreur { text-align: center; padding: 60px 20px; color: rgba(232,213,168,0.5); font-size: 14px; }
+    .notes-bar { font-size: 13.5px; font-style: italic; color: rgba(232,213,168,0.6); line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<div class="logo"><div class="logo-dot"></div><div class="logo-text">BAR DE SEB</div></div>
+
+<div id="contenu">
+  <div class="loading">Chargement…</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wqsprjlocuhandhvpytx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_g4pDtkemUi-6VUG6qgVJWw_PAy5YibN';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const catLabels = {
+  'maceration': 'Macération', 'infusion': 'Infusion', 'liqueur': 'Liqueur',
+  'creme-de': 'Crème de...', 'sirop': 'Sirop', 'cordial': 'Cordial',
+  'shrub': 'Shrub', 'teinture': 'Teinture', 'oleosaccharum': 'Oléosaccharum',
+  'kefir-de-fruits': 'Kéfir de fruits', 'bitter-maison': 'Bitter maison'
+};
+
+async function chargerGrimoire() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const zone = document.getElementById('contenu');
+
+  if (!id) {
+    zone.innerHTML = '<div class="erreur">Lien invalide — identifiant manquant.</div>';
+    return;
+  }
+
+  const [{ data: recette }, { data: ingredients }, { data: etapes }] = await Promise.all([
+    db.from('grimoire').select('*').eq('id', id).single(),
+    db.from('grimoire_ingredients').select('*').eq('grimoire_id', id).order('ordre'),
+    db.from('grimoire_etapes').select('*').eq('grimoire_id', id).order('ordre')
+  ]);
+
+  if (!recette) {
+    zone.innerHTML = '<div class="erreur">📖 Cette recette est introuvable ou a été supprimée.</div>';
+    return;
+  }
+
+  document.title = recette.nom + ' — Bar de Seb';
+
+  zone.innerHTML = `
+    <div class="titre">${recette.nom}</div>
+    <div class="meta-row">
+      <span class="tag">${catLabels[recette.categorie] || recette.categorie}</span>
+      <span class="tag">${recette.avec_alcool ? '🍶 Avec alcool' : '🌿 Sans alcool'}</span>
+    </div>
+
+    ${recette.avertissement ? `<div class="avertissement">⚠️ ${recette.avertissement}</div>` : ''}
+
+    ${recette.description ? `<div class="description">${recette.description}</div>` : ''}
+
+    <div class="card">
+      <div class="section-titre">Informations pratiques</div>
+      <div class="infos-grid">
+        ${recette.duree_jours ? `<div class="infos-item"><div class="infos-label">Durée</div><div class="infos-val">⏱ ${recette.duree_jours}j</div></div>` : ''}
+        ${recette.rendement_cl ? `<div class="infos-item"><div class="infos-label">Rendement</div><div class="infos-val">🧪 ${recette.rendement_cl}cl</div></div>` : ''}
+        ${recette.base_volume_cl ? `<div class="infos-item"><div class="infos-label">Volume base</div><div class="infos-val">🍾 ${recette.base_volume_cl}cl</div></div>` : ''}
+        ${recette.conservation_duree ? `<div class="infos-item"><div class="infos-label">Conservation</div><div class="infos-val">${recette.conservation_duree}</div></div>` : ''}
+      </div>
+      ${recette.conservation_type ? `<div style="font-size:12.5px;color:rgba(232,213,168,0.5);margin-top:10px">${recette.conservation_type}</div>` : ''}
+      ${recette.ratio_sucre ? `<div style="font-size:13px;margin-top:10px"><strong>Ratio sucre :</strong> ${recette.ratio_sucre}</div>` : ''}
+      ${recette.saison_ideale ? `<div style="font-size:13px;margin-top:6px"><strong>📅 Saison idéale :</strong> ${recette.saison_ideale}</div>` : ''}
+    </div>
+
+    ${ingredients && ingredients.length ? `
+    <div class="card">
+      <div class="section-titre">Ingrédients</div>
+      ${ingredients.map(ing => `
+        <div class="ing-row">
+          <span>${ing.nom}</span>
+          ${ing.quantite ? `<span class="ing-dose">${ing.quantite}${ing.unite ? ' ' + ing.unite : ''}</span>` : ''}
+        </div>
+      `).join('')}
+    </div>` : ''}
+
+    ${etapes && etapes.length ? `
+    <div class="card">
+      <div class="section-titre">Préparation</div>
+      ${etapes.map((e, i) => `
+        <div class="etape-row">
+          <div class="etape-num">${i + 1}</div>
+          <div class="etape-texte">
+            <strong>${e.titre ? e.titre + ' — ' : ''}</strong>${e.description || ''}
+            ${e.duree_heures ? `<div style="font-size:12px;color:rgba(232,213,168,0.4);margin-top:2px">⏱ ${e.duree_heures}h</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>` : ''}
+
+    ${recette.notes_bartender ? `
+    <div class="card">
+      <div class="section-titre">🍸 Notes bartender</div>
+      <div class="notes-bar">${recette.notes_bartender}</div>
+    </div>` : ''}
+
+    <button class="btn" onclick="partager('${recette.nom.replace(/'/g, "\\'")}')">🔗 Partager cette recette</button>
+
+    <div class="footer-credit">🍸 Bar à Cocktail de Seb</div>
+  `;
+}
+
+async function partager(nom) {
+  const url = window.location.href;
+  if (navigator.share) {
+    try { await navigator.share({ title: nom, url }); }
+    catch (e) { /* annulé par l'utilisateur */ }
+  } else {
+    await navigator.clipboard.writeText(url);
+    alert('Lien copié !');
+  }
+}
+
+chargerGrimoire();
+</script>
+
+</body>
+</html>
