@@ -350,7 +350,16 @@ function calculerDisponibilite(recette, caveIdsOverride) {
   const manquants = ingredientsRequis.filter(i => !caveIds.has(i.item_cave_id));
   return manquants.length;
 }
- 
+ // Mode Fin du monde : matching par texte (nom/catégorie), pas par item_cave_id —
+// les bouteilles d'opportunité ne sont jamais dans la cave cataloguée de Seb.
+function calculerDisponibiliteOpportunite(recette, dispoTextes) {
+  const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel);
+  const manquants = ingredientsRequis.filter(ing => {
+    const key = (ing.nom || '').toLowerCase();
+    return !dispoTextes.some(d => key.includes(d) || d.includes(key));
+  });
+  return manquants.length;
+}
 function badgeDisponibilite(nbManquants) {
   if (nbManquants === 0) return '<span class="badge-dispo badge-ok">✅ Réalisable</span>';
   if (nbManquants === 1) return '<span class="badge-dispo badge-1">1 manquant</span>';
