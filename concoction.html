@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concoction — Bar de Seb</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0d0d1a; color: #e8d5a8; min-height: 100vh; padding: 24px 16px 60px; }
+    .logo { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #c8a96e; }
+    .logo-text { font-size: 13px; font-weight: 500; color: #c8a96e; letter-spacing: 0.08em; }
+    .card { background: rgba(200,169,110,0.06); border: 0.5px solid rgba(200,169,110,0.2); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .titre { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .tag { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.06); color: rgba(232,213,168,0.7); border: 0.5px solid rgba(255,255,255,0.1); }
+    .description { font-size: 14px; color: rgba(232,213,168,0.75); line-height: 1.5; margin-top: 8px; }
+    .section-titre { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: rgba(232,213,168,0.5); text-transform: uppercase; margin-bottom: 12px; }
+    .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+    .progress-fill { height: 100%; background: #c8a96e; }
+    .progress-label { font-size: 12px; color: rgba(232,213,168,0.5); }
+    .etape-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); }
+    .etape-row:last-child { border-bottom: none; }
+    .etape-check { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+    .etape-check.faite { background: rgba(200,169,110,0.2); color: #c8a96e; }
+    .etape-check.attente { border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.3); }
+    .etape-texte { font-size: 14.5px; line-height: 1.5; }
+    .etape-titre { font-weight: 600; }
+    .etape-photo { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+    .footer-credit { text-align: center; font-size: 12px; color: rgba(232,213,168,0.35); margin-top: 28px; }
+    .loading, .erreur { text-align: center; padding: 60px 20px; color: rgba(232,213,168,0.5); font-size: 14px; }
+    .btn { width: 100%; background: #c8a96e; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 600; color: #1a1206; cursor: pointer; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="logo"><div class="logo-dot"></div><div class="logo-text">BAR DE SEB</div></div>
+
+<div id="contenu">
+  <div class="loading">Chargement…</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wqsprjlocuhandhvpytx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_g4pDtkemUi-6VUG6qgVJWw_PAy5YibN';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const typeLabels = { macération: 'Macération', infusion: 'Infusion', liqueur: 'Liqueur', sirop: 'Sirop' };
+const statutLabels = { en_cours: 'En cours', pret: 'Prête', termine: 'Terminée' };
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+async function chargerConcoction() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  const zone = document.getElementById('contenu');
+
+  if (!token) {
+    zone.innerHTML = '<div class="erreur">Lien invalide — jeton manquant.</div>';
+    return;
+  }
+
+  const { data, error } = await db.rpc('get_concoction_partagee', { p_token: token });
+
+  if (error || !data || !data.length) {
+    zone.innerHTML = '<div class="erreur">🧪 Cette concoction est introuvable, ou le lien a expiré.</div>';
+    return;
+  }
+
+  const c = data[0];
+  document.title = c.nom + ' — Bar de Seb';
+
+  const etapes = c.etapes || [];
+  const etapesFaites = etapes.filter(e => e.faite).length;
+  const pct = etapes.length ? Math.round((etapesFaites / etapes.length) * 100) : 0;
+
+  zone.innerHTML = `
+    <div class="titre">${c.nom}</div>
+    <div class="meta-row">
+      ${c.type ? `<span class="tag">${typeLabels[c.type] || c.type}</span>` : ''}
+      ${c.contenance_cl ? `<span class="tag">${c.contenance_cl}cl</span>` : ''}
+      ${c.statut ? `<span class="tag">${statutLabels[c.statut] || c.statut}</span>` : ''}
+    </div>
+    ${c.description ? `<div class="description">${c.description}</div>` : ''}
+
+    ${c.date_creation && c.date_fin ? `
+    <div class="card">
+      <div class="section-titre">Avancement</div>
+      <div style="font-size:13px;color:rgba(232,213,168,0.6)">Démarrée le ${formatDate(c.date_creation)} · Prête le ${formatDate(c.date_fin)}</div>
+    </div>` : ''}
+
+    ${etapes.length ? `
+    <div class="card">
+      <div class="section-titre">Étapes</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-label">${etapesFaites}/${etapes.length} étapes réalisées</div>
+      <div style="margin-top:12px">
+        ${etapes.map(e => `
+          <div class="etape-row">
+            <div class="etape-check ${e.faite ? 'faite' : 'attente'}">${e.faite ? '✓' : '○'}</div>
+            <div class="etape-texte">
+              <div class="etape-titre">${e.titre}</div>
+              <div>${e.description || ''}</div>
+              ${e.date_etape ? `<div style="font-size:12px;color:rgba(232,213,168,0.4);margin-top:2px">${formatDate(e.date_etape)}</div>` : ''}
+              ${e.photo_url ? `<img class="etape-photo" src="${e.photo_url}" alt="${e.titre}">` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
+
+    <button class="btn" onclick="partager('${c.nom.replace(/'/g, "\\'")}')">🔗 Partager cette concoction</button>
+
+    <div class="footer-credit">🍸 Bar à Cocktail de Seb</div>
+  `;
+}
+
+async function partager(nom) {
+  const url = window.location.href;
+  if (navigator.share) {
+    try { await navigator.share({ title: nom, url }); }
+    catch (e) { /* annulé par l'utilisateur */ }
+  } else {
+    await navigator.clipboard.writeText(url);
+    alert('Lien copié !');
+  }
+}
+
+chargerConcoction();
+</script>
+
+</body>
+</html>
