@@ -3317,8 +3317,8 @@ function voirRecettesOpportunite() {
     ...(finDuMondeSession.ingredients_cuisine || []).map(c => c.toLowerCase())
   ].filter(Boolean);
 
-  const realisables = recettes
-    .filter(r => r.type === 'cocktail')
+const realisables = recettes
+    .filter(r => r.type === 'cocktail' && (r.ingredients || []).length > 0)
     .map(r => ({ r, manquants: calculerDisponibiliteOpportunite(r, dispoTextes) }))
     .sort((a, b) => a.manquants - b.manquants)
     .slice(0, 20);
