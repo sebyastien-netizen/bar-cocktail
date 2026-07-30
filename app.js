@@ -3317,26 +3317,33 @@ function voirRecettesOpportunite() {
     ...(finDuMondeSession.ingredients_cuisine || []).map(c => c.toLowerCase())
   ].filter(Boolean);
 
-const realisables = recettes
+  const realisables = recettes
     .filter(r => r.type === 'cocktail' && (r.ingredients || []).length > 0)
-    .map(r => ({ r, manquants: calculerDisponibiliteOpportunite(r, dispoTextes) }))
+    .map(r => {
+      const ingredientsRequis = (r.ingredients || []).filter(i => !i.optionnel);
+      const manquantsListe = ingredientsRequis.filter(ing => {
+        const key = (ing.nom || '').toLowerCase();
+        return !dispoTextes.some(d => key.includes(d) || d.includes(key));
+      });
+      return { r, manquants: manquantsListe.length, nomsManquants: manquantsListe.map(i => i.nom) };
+    })
     .sort((a, b) => a.manquants - b.manquants)
     .slice(0, 20);
 
   const zone = document.getElementById('fin-du-monde-contenu');
   zone.innerHTML = `
     <h2 style="margin-bottom:4px">🍸 ${finDuMondeSession.nom} — ce que tu peux faire</h2>
-    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">Classé par nombre d'ingrédients manquants — le matching est approximatif, à vérifier au moment de préparer.</p>
+    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">Classé par nombre d'ingrédients manquants — le matching est approximatif (texte), à vérifier au moment de préparer.</p>
 
     <button class="btn-outline" style="margin-bottom:16px" onclick="renderFinDuMondeBouteilles()">← Retour aux bouteilles</button>
 
-    ${realisables.map(({ r, manquants }) => `
+    ${realisables.map(({ r, manquants, nomsManquants }) => `
       <div class="dash-stat" style="margin-bottom:0.6rem;padding:0.85rem 1rem">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-weight:600;font-size:0.9rem">${r.nom}</div>
           ${badgeDisponibilite(manquants)}
         </div>
-        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">${(r.ingredients || []).map(i => i.nom).join(' · ')}</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">${(r.ingredients || []).map(i => `<span style="${nomsManquants.includes(i.nom) ? 'color:var(--text-danger);font-weight:600' : ''}">${i.nom}</span>`).join(' · ')}</div>
       </div>
     `).join('')}
   `;
