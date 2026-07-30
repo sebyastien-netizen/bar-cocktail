@@ -77,7 +77,7 @@ async function associerEnBase(id, photoUrl) {
 }
 
 async function traiterUnMateriel({ id, nom, requete }) {
-  const q = requete || `${nom} bartending tool product photo white background`;
+ const q = requete || `${nom} bartending tool in use dark background`;
   const imageUrl = await chercherImage(q);
   if (!imageUrl) return { id, nom, statut: 'echec', raison: 'Aucune image trouvée' };
 
