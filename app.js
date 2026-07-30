@@ -18,6 +18,7 @@ let ongletActif = 'cave';
 // Section recettes
 let sectionRecette  = 'cocktail';
 let filtreBase      = '';
+let rechercheRecette = '';
 let filtreGout      = '';
 let filtreDiff      = '';
 let filtreDisponible = false;
@@ -392,6 +393,10 @@ function renderRecettes() {
   if (filtreDisponible) {
     liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
   }
+ if (rechercheRecette) liste = liste.filter(r => 
+  r.nom.toLowerCase().includes(rechercheRecette.toLowerCase()) ||
+  (r.base_alcool && r.base_alcool.toLowerCase().includes(rechercheRecette.toLowerCase()))
+);
  
   const bases = [...new Set(recettes.filter(r => r.type === sectionRecette && r.base_alcool).map(r => r.base_alcool))].sort();
   const gouts = [...new Set(recettes.filter(r => r.type === sectionRecette).flatMap(r => r.gouts || []))].sort();
@@ -409,7 +414,14 @@ function renderRecettes() {
       </button>
     </div>
  
-    <div class="recettes-filtres">
+<div style="padding:0 0 10px 0;">
+  <input type="text" 
+    placeholder="🔍 Rechercher une recette…" 
+    value="${rechercheRecette}"
+    oninput="rechercheRecette=this.value; renderRecettes(); this.focus()"
+    style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.95rem;outline:none;">
+</div>
+<div class="recettes-filtres">
       <select onchange="filtreBase=this.value; renderRecettes()">
         <option value="">Toutes les bases</option>
         ${bases.map(b => `<option value="${b}" ${filtreBase===b?'selected':''}>${b}</option>`).join('')}
@@ -1468,15 +1480,18 @@ let modalHistoryOuvert = false;
 
 function afficherModal(id) {
   document.getElementById(id).classList.add('visible');
+  document.body.style.overflow = 'hidden';
   if (!modalHistoryOuvert) {
     modalHistoryOuvert = true;
     history.pushState({ modalOuvert: true }, '', location.href);
   }
 }
-
 function fermerModal(id) {
   document.getElementById(id).classList.remove('visible');
   const encoreUnModalOuvert = document.querySelector('.modal-overlay.visible');
+  if (!encoreUnModalOuvert) {
+    document.body.style.overflow = '';
+  }
   if (modalHistoryOuvert && !encoreUnModalOuvert) {
     modalHistoryOuvert = false;
     history.back();
