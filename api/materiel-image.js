@@ -1,18 +1,23 @@
 // =============================================
-// Vercel Function — Image matériel (réutilisable)
-// Recherche via Tavily, réhéberge sur Supabase Storage,
-// associe le résultat à la fiche ecole_materiels.
+// Vercel Function — Image matériel (réutilisable, avec validation manuelle)
 // Chemin : api/materiel-image.js
 //
-// Usage :
-//   POST { id: 'hawthorne', nom: 'Passoire Hawthorne', requete: '...' (optionnel) }
-//   POST { ids: [{id:'hawthorne', nom:'Passoire Hawthorne'}, {...}] }  // traitement séquentiel
+// Deux actions, distinctes exprès pour permettre une validation humaine
+// avant tout téléchargement/stockage définitif :
+//
+// 1) Chercher des candidats (rien n'est sauvegardé) :
+//    POST { action: 'chercher', items: [{id, nom, requete}, ...] }
+//    → { resultats: [{id, nom, images: ['url1','url2',...]}, ...] }
+//
+// 2) Valider un choix précis (téléchargement + stockage + BDD) :
+//    POST { action: 'valider', id, nom, image_url }
+//    → { id, nom, statut: 'ok', photo_url }
 // =============================================
 
 const SUPABASE_URL = 'https://wqsprjlocuhandhvpytx.supabase.co';
 const BUCKET = 'photos-materiels';
 
-async function chercherImage(requete) {
+async function chercherImages(requete, n = 5) {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -20,14 +25,16 @@ async function chercherImage(requete) {
       api_key: process.env.TAVILY_API_KEY,
       query: requete,
       include_images: true,
-      max_results: 3
+      max_results: n
     })
   });
   const data = await tavilyRes.json();
   const images = data?.images || [];
-  if (!images.length) return null;
   // Tavily renvoie soit des strings, soit des objets {url, description}
-  return typeof images[0] === 'string' ? images[0] : images[0].url;
+  return images
+    .map(img => (typeof img === 'string' ? img : img?.url))
+    .filter(Boolean)
+    .slice(0, n);
 }
 
 async function rehebergerImage(imageUrl, chemin) {
@@ -76,20 +83,6 @@ async function associerEnBase(id, photoUrl) {
   }
 }
 
-async function traiterUnMateriel({ id, nom, requete }) {
- const q = requete || `${nom} bartending tool in use dark background`;
-  const imageUrl = await chercherImage(q);
-  if (!imageUrl) return { id, nom, statut: 'echec', raison: 'Aucune image trouvée' };
-
-  const extension = (imageUrl.split('.').pop() || 'jpg').split('?')[0].slice(0, 4);
-  const chemin = `${id}.${extension}`;
-
-  const photoUrlFinale = await rehebergerImage(imageUrl, chemin);
-  await associerEnBase(id, photoUrlFinale);
-
-  return { id, nom, statut: 'ok', photo_url: photoUrlFinale, source: imageUrl };
-}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -112,22 +105,43 @@ export default async function handler(req, res) {
     }
     body = body || {};
 
-    const items = Array.isArray(body.ids) ? body.ids : (body.id ? [body] : []);
-    if (!items.length) {
-      return res.status(400).json({ error: 'Corps de requête invalide. Attendu : {id, nom} ou {ids: [{id, nom}]}', body_recu: body });
-    }
-
-    const resultats = [];
-    // Séquentiel volontairement — évite de saturer Tavily/Supabase et permet de couper à tout moment
-    for (const item of items) {
-      try {
-        resultats.push(await traiterUnMateriel(item));
-      } catch (e) {
-        resultats.push({ id: item.id, nom: item.nom, statut: 'erreur', raison: e.message });
+    // ---- Action 1 : CHERCHER (candidats multiples, rien n'est sauvegardé) ----
+    if (body.action === 'chercher') {
+      const items = Array.isArray(body.items) ? body.items : [];
+      if (!items.length) {
+        return res.status(400).json({ error: 'items requis : [{id, nom, requete}]' });
       }
+
+      const resultats = [];
+      for (const item of items) {
+        try {
+          const q = item.requete || `${item.nom} bartending tool in use dark background`;
+          const images = await chercherImages(q, 5);
+          resultats.push({ id: item.id, nom: item.nom, images });
+        } catch (e) {
+          resultats.push({ id: item.id, nom: item.nom, images: [], erreur: e.message });
+        }
+      }
+      return res.status(200).json({ resultats });
     }
 
-    return res.status(200).json({ resultats });
+    // ---- Action 2 : VALIDER (téléchargement + stockage + BDD, un seul item) ----
+    if (body.action === 'valider') {
+      const { id, nom, image_url } = body;
+      if (!id || !image_url) {
+        return res.status(400).json({ error: 'id et image_url requis pour valider' });
+      }
+      const extension = (image_url.split('.').pop() || 'jpg').split('?')[0].slice(0, 4);
+      const chemin = `${id}.${extension}`;
+
+      const photoUrlFinale = await rehebergerImage(image_url, chemin);
+      await associerEnBase(id, photoUrlFinale);
+
+      return res.status(200).json({ id, nom, statut: 'ok', photo_url: photoUrlFinale });
+    }
+
+    return res.status(400).json({ error: "action requise : 'chercher' ou 'valider'" });
+
   } catch (e) {
     return res.status(500).json({ error: 'Erreur interne', detail: e.message });
   }
