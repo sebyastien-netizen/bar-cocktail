@@ -3102,7 +3102,7 @@ let finDuMondeBouteilles = [];
 
 const CUISINE_COMMUNE = [
   'Sucre', 'Sirop simple (maison)', 'Citron jaune', 'Citron vert', 'Glaçons', 'Eau gazeuse', 'Tonic',
-  'Miel', 'Sel', 'Poivre', 'Œufs', 'Lait', 'Orange', 'Menthe', 'Cannelle'
+  'Miel', 'Sel', 'Poivre', 'Œuf', 'Lait', 'Orange', 'Menthe', 'Cannelle'
 ];
 
 function ouvrirFinDuMonde() {
