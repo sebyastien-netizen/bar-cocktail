@@ -3101,7 +3101,7 @@ let finDuMondeSession = null;
 let finDuMondeBouteilles = [];
 
 const CUISINE_COMMUNE = [
-  'Sucre', 'Citron jaune', 'Citron vert', 'Glaçons', 'Eau gazeuse', 'Tonic',
+  'Sucre', 'Sirop simple (maison)', 'Citron jaune', 'Citron vert', 'Glaçons', 'Eau gazeuse', 'Tonic',
   'Miel', 'Sel', 'Poivre', 'Œufs', 'Lait', 'Orange', 'Menthe', 'Cannelle'
 ];
 
@@ -3308,6 +3308,11 @@ function voirRecettesOpportunite() {
     ...finDuMondeBouteilles.map(b => (b.categorie_id || '').toLowerCase()),
     ...(finDuMondeSession.ingredients_cuisine || []).map(c => c.toLowerCase())
   ].filter(Boolean);
+
+  // Synonymes connus : plusieurs recettes désignent le même ingrédient avec des mots différents.
+  if (dispoTextes.some(d => d.includes('sirop simple') || d.includes('sirop de sucre'))) {
+    dispoTextes.push('sirop simple', 'sirop de sucre');
+  }
 
   const realisables = recettes
     .filter(r => r.type === 'cocktail' && (r.ingredients || []).length > 0)
