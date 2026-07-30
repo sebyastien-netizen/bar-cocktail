@@ -1136,15 +1136,15 @@ function hasVariantes(r) {
  
 function renderBarre(label, valeur) {
   if (!valeur) return '';
-  const pct = Math.round((valeur / 10) * 100);
-  const couleur = valeur >= 7 ? 'var(--accent)' : valeur >= 4 ? 'var(--accent-light)' : 'var(--text-muted)';
+  const pct = Math.round((valeur / 5) * 100);
+  const couleur = valeur >= 4 ? 'var(--accent)' : valeur >= 2 ? 'var(--accent-light)' : 'var(--text-muted)';
   return `
     <div class="barre-row">
       <span class="barre-label">${label}</span>
       <div class="barre-track">
         <div class="barre-fill" style="width:${pct}%; background:${couleur}"></div>
       </div>
-      <span class="barre-val">${valeur}/10</span>
+      <span class="barre-val">${valeur}/5</span>
     </div>
   `;
 }
