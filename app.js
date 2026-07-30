@@ -3093,12 +3093,7 @@ async function ouvrirSessionOpportuniteDepuisListe(id) {
   await reprendreSessionOpportunite(id);
 }
 
-    ${passees.length > 0 ? `
-    <div class="section-label" style="margin-top:1.5rem">PASSÉES</div>
-    ${passees.slice(0, 5).map(s => renderCarteSession(s, true)).join('')}
-    ` : ''}
-  `;
-}
+
 
 // =============================================
 
