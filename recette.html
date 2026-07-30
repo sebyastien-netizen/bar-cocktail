@@ -16,6 +16,7 @@
     .titre { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
     .meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
     .tag { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.06); color: rgba(232,213,168,0.7); border: 0.5px solid rgba(255,255,255,0.1); }
+    .tag-gout { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(200,169,110,0.12); color: #c8a96e; border: 0.5px solid rgba(200,169,110,0.25); margin-right: 6px; }
     .description { font-size: 14px; color: rgba(232,213,168,0.75); line-height: 1.5; margin-top: 8px; }
     .section-titre { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: rgba(232,213,168,0.5); text-transform: uppercase; margin-bottom: 12px; }
     .ing-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 14.5px; }
@@ -76,10 +77,11 @@ async function chargerRecette() {
     return;
   }
 
-  const [{ data: recette }, { data: ingredients }, { data: etapes }] = await Promise.all([
+  const [{ data: recette }, { data: ingredients }, { data: etapes }, { data: materiels }] = await Promise.all([
     db.from('recettes').select('*').eq('id', id).single(),
     db.from('recette_ingredients').select('*').eq('recette_id', id).order('ordre'),
-    db.from('recette_etapes').select('*').eq('recette_id', id).order('ordre')
+    db.from('recette_etapes').select('*').eq('recette_id', id).order('ordre'),
+    db.from('recette_materiels').select('*').eq('recette_id', id)
   ]);
 
   if (!recette) {
@@ -97,7 +99,19 @@ async function chargerRecette() {
       ${recette.base_alcool ? `<span class="tag">🍶 ${recette.base_alcool}</span>` : ''}
       ${recette.verre_type ? `<span class="tag">🥃 ${recette.verre_type}</span>` : ''}
     </div>
+    ${recette.gouts && recette.gouts.length ? `<div class="meta-row">${recette.gouts.map(g => `<span class="tag-gout">${g}</span>`).join('')}</div>` : ''}
     ${recette.description_courte ? `<div class="description">${recette.description_courte}</div>` : ''}
+
+    ${materiels && materiels.length ? `
+    <div class="card">
+      <div class="section-titre">Matériels nécessaires</div>
+      ${materiels.map(m => `
+        <div class="ing-row">
+          <span>${m.nom}</span>
+        </div>
+        ${m.description ? `<div style="font-size:12.5px;color:rgba(232,213,168,0.5);margin:-4px 0 6px">${m.description}</div>` : ''}
+      `).join('')}
+    </div>` : ''}
 
     ${ingredients && ingredients.length ? `
     <div class="card">
@@ -139,6 +153,12 @@ async function chargerRecette() {
           ${renderBarre('Crémeux', recette.gout_cremeux)}
         </div>
       </div>
+    </div>` : ''}
+
+    ${recette.degustation_defi ? `
+    <div class="card">
+      <div class="section-titre">🎯 Défi dégustation</div>
+      <div class="description">${recette.degustation_defi}</div>
     </div>` : ''}
 
     ${recette.anecdote ? `
