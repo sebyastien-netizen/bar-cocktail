@@ -19,6 +19,33 @@
   --shadow:         0 4px 20px rgba(0,0,0,0.4);
   --font-display:   'Playfair Display', Georgia, serif;
   --font-body:      'Inter', system-ui, sans-serif;
+
+  /* --- Alias manquants, ajoutés pour faire fonctionner les variables
+         déjà utilisées dans app.js (39 occurrences) et documentées
+         dans charte_design_ui.md, mais jamais réellement déclarées --- */
+  --bg:             var(--bg-base);
+  --accent-hover:   var(--accent-light);
+  --border-strong:  rgba(201,150,58,0.4);
+  --text-secondary: var(--text-detail);
+
+  --danger:         var(--rouge);
+  --success:        var(--vert);
+  --warning:        var(--orange);
+
+  --text-danger:    var(--rouge);
+  --text-success:   var(--vert);
+  --text-warning:   var(--orange);
+  --text-accent:    var(--accent);
+
+  --bg-danger:      rgba(224,90,78,0.12);
+  --bg-success:     rgba(76,175,125,0.12);
+  --bg-warning:     rgba(245,166,35,0.12);
+  --bg-accent:      rgba(201,150,58,0.12);
+
+  --border-danger:  rgba(224,90,78,0.3);
+  --border-success: rgba(76,175,125,0.3);
+  --border-warning: rgba(245,166,35,0.3);
+  --border-accent:  rgba(201,150,58,0.3);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
