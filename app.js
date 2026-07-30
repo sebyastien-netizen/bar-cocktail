@@ -5075,8 +5075,11 @@ function renderMateriels() {
       <div class="ecole-groupe">
         <div class="ecole-groupe-titre">${label}</div>
         ${items.map(m => `
-          <div class="ecole-materiel-item" onclick="ouvrirFicheMateriel('${m.id}')">
-            <span class="ecole-emoji" style="font-size:1.2rem">${m.emoji}</span>
+<div class="ecole-materiel-item" onclick="ouvrirFicheMateriel('${m.id}')">
+            ${m.photo_url
+              ? `<img src="${m.photo_url}" alt="${m.nom}" class="ecole-materiel-thumb">`
+              : `<span class="ecole-emoji" style="font-size:1.2rem">${m.emoji}</span>`
+            }
             <div class="ecole-materiel-info">
               <div class="ecole-nom" style="font-size:0.88rem">${m.nom}</div>
               <div class="ecole-sous-types">${m.description || ''}</div>
