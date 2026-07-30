@@ -3557,9 +3557,11 @@ function ouvrirModalImportRecettes(recettes, urlSource) {
   window._urlImport = urlSource;
 }
 
-async function importerRecette(index) {
-  const r = window._recettesImport[index];
-  await _creerInspirationDepuisImport(r);
+async function importerRecette(index, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  await _creerInspirationDepuisImport(window._recettesImport[index]);
+  if (btn) { btn.textContent = '✅'; btn.style.background = 'var(--bg-success)'; btn.style.color = 'var(--text-success)'; }
+  await chargerInspirations();
 }
 
 async function importerToutesRecettes(total) {
@@ -3622,7 +3624,11 @@ function renderCarteInspiration(inspi) {
       </div>` : ''}
       ${ings.length > 0 ? `
       <div class="herbo-profil" style="margin-top:6px">
-        ${ings.slice(0, 3).map(ing => typeof ing === 'string' ? ing : ing.nom).join(' · ')}${ings.length > 3 ? ` +${ings.length - 3}` : ''}
+       ${ings.slice(0, 3).map(ing => {
+  if (typeof ing === 'string') return ing;
+  const q = ing.quantite ? ing.quantite + (ing.unite || 'cl') + ' ' : '';
+  return q + ing.nom;
+}).join(' · ')}
       </div>` : ''}
       <div class="herbo-usages" style="margin-top:6px">
         ${tags.map(t => `<span class="herbo-usage-tag">${t}</span>`).join('')}
