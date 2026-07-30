@@ -3023,13 +3023,74 @@ async function chargerSessions() {
   const container = document.getElementById('sessions-container');
   if (!container) return;
 
-const { data: sessions } = await db.from('sessions_invites')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .eq('is_master', true)
-    .order('created_at', { ascending: false });
+  const [{ data: sessions }, { data: sessionsOpp }] = await Promise.all([
+    db.from('sessions_invites')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('is_master', true)
+      .order('created_at', { ascending: false }),
+    db.from('sessions_opportunite')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+  ]);
 
-  renderSessions(sessions || []);
+  renderSessions(sessions || [], sessionsOpp || []);
+}
+
+function renderSessions(sessions, sessionsOpp = []) {
+  const container = document.getElementById('sessions-container');
+  const actives = sessions.filter(s => new Date(s.expires_at) > new Date());
+  const passees = sessions.filter(s => new Date(s.expires_at) <= new Date());
+
+  container.innerHTML = `
+    <div class="cave-header">
+      <h2>🎉 Sessions cocktail</h2>
+      <div style="display:flex;gap:8px">
+        ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
+        <button class="btn-outline" onclick="ouvrirFinDuMonde()">🆘 Fin du monde</button>
+        <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
+      </div>
+    </div>
+
+    ${sessionsOpp.length > 0 ? `
+    <div class="section-label">🆘 FIN DU MONDE</div>
+    ${sessionsOpp.map(s => renderCarteSessionOpportunite(s)).join('')}
+    ` : ''}
+
+    ${actives.length > 0 ? `
+    <div class="section-label" style="margin-top:1.5rem">EN COURS</div>
+    ${actives.map(s => renderCarteSession(s)).join('')}
+    ` : `
+    <div class="empty-state">
+      <p>Aucune session active</p>
+      <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">Lancer une soirée</button>
+    </div>
+    `}
+
+    ${passees.length > 0 ? `
+    <div class="section-label" style="margin-top:1.5rem">PASSÉES</div>
+    ${passees.slice(0, 5).map(s => renderCarteSession(s, true)).join('')}
+    ` : ''}
+  `;
+}
+
+function renderCarteSessionOpportunite(s) {
+  return `
+    <div class="dash-stat" style="margin-bottom:0.75rem;padding:1rem 1.25rem;cursor:pointer;position:relative"
+         onclick="ouvrirSessionOpportuniteDepuisListe('${s.id}')">
+      <button style="position:absolute;top:0.75rem;right:0.75rem;width:28px;height:28px;border-radius:8px;background:var(--bg-danger);color:var(--text-danger);border:1px solid var(--border-danger);font-size:0.75rem;cursor:pointer"
+        onclick="event.stopPropagation(); supprimerSessionOpportunite('${s.id}')">🗑</button>
+      <div style="font-weight:600;font-size:0.9rem">🆘 ${s.nom}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${s.date_soiree ? formatDate(s.date_soiree) : 'sans date'}</div>
+    </div>
+  `;
+}
+
+async function ouvrirSessionOpportuniteDepuisListe(id) {
+  if (!document.getElementById('modal-fin-du-monde')) creerModalFinDuMonde();
+  afficherModal('modal-fin-du-monde');
+  await reprendreSessionOpportunite(id);
 }
 
 function renderSessions(sessions) {
