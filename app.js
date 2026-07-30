@@ -819,7 +819,7 @@ if (cible) cible.innerHTML = renderJournalRecette(journalData);
 async function partagerRecette(id, nom) {
   const url = `${window.location.origin}/recette.html?id=${id}`;
   if (navigator.share) {
-    try { await navigator.share({ title: nom, text: `Découvre la recette : ${nom}`, url }); }
+    try { await navigator.share({ title: nom, url }); }
     catch (e) { /* annulé par l'utilisateur */ }
   } else {
     await navigator.clipboard.writeText(url);
