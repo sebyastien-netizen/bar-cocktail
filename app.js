@@ -4195,7 +4195,20 @@ async function sauverInspiration() {
     renderInspirations();
   }
 }
+async function associerPhotoInspiration(id) {
+  const input = document.getElementById(`inspi-photo-manuelle-${id}`);
+  const url = input?.value?.trim();
+  if (!url) { alert('Colle une URL de photo d\'abord.'); return; }
 
+  const { error } = await db.from('inspirations').update({ photo_url: url }).eq('id', id).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  const idx = inspirationsList.findIndex(x => x.id === id);
+  if (idx !== -1) inspirationsList[idx].photo_url = url;
+
+  renderInspirations();
+  await ouvrirFicheInspiration(id);
+}
 async function ouvrirFicheInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
   if (!inspi) return;
@@ -4216,7 +4229,12 @@ async function ouvrirFicheInspiration(id) {
       </div>
     </div>
 
-    ${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
+${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
+
+<div class="plante-section" style="display:flex;gap:8px;align-items:center">
+  <input type="text" id="inspi-photo-manuelle-${inspi.id}" placeholder="Coller une URL de photo…" style="flex:1;font-size:0.8rem">
+  <button class="btn-outline" style="white-space:nowrap;padding:8px 12px;font-size:0.78rem" onclick="associerPhotoInspiration('${inspi.id}')">${inspi.photo_url ? '🔄 Changer' : '📷 Ajouter'}</button>
+</div>
 
     ${(reponsesBartender && reponsesBartender.length > 0) ? `
     <div class="plante-section">
@@ -4244,7 +4262,7 @@ ${(() => {
   if (notes.type) lignes.push(`<div style="font-size:0.85rem">📌 Type : <strong>${notes.type === 'cocktail' ? 'Cocktail' : 'Concoction/Recette'}</strong></div>`);
   if (notes.origine) lignes.push(`<div style="font-size:0.85rem;font-style:italic;color:var(--text-secondary)">💬 "${notes.origine}"</div>`);
  if (notes.methode) lignes.push(`<div style="font-size:0.85rem">🔧 <strong>Préparation :</strong> ${notes.methode}${notes.methode_source ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-style:italic">(${notes.methode_source})</span>` : ''}</div>`);
-  if (notes.garniture) lignes.push(`<div style="font-size:0.85rem">🍋 <strong>Garniture :</strong> ${notes.garniture}</div>`);
+  if (notes.garniture && notes.garniture !== 'null') lignes.push(`<div style="font-size:0.85rem">🍋 <strong>Garniture :</strong> ${notes.garniture}</div>`);
   if (notes.etapes?.length) lignes.push(`<div style="font-size:0.85rem;margin-top:4px"><strong>Étapes :</strong><br>${notes.etapes.map((e,i) => `${i+1}. ${e.description}${e.duree ? ' — ' + e.duree + ' ' + e.unite : ''}`).join('<br>')}</div>`);
   return lignes.length ? `<div class="plante-section" style="display:flex;flex-direction:column;gap:8px;background:var(--bg-accent);border-radius:10px;padding:12px;border:1px solid var(--border-accent)">${lignes.join('')}</div>` : '';
 })()}
