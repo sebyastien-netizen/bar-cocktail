@@ -3964,7 +3964,7 @@ async function ouvrirImportURL() {
     if (!data.recettes || data.recettes.length === 0) { alert('Aucune recette détectée sur cette page.'); return; }
 
     // Afficher les recettes détectées dans un modal
-    ouvrirModalImportRecettes(data.recettes, url);
+   ouvrirModalImportRecettes(data.recettes, url, data._meta?.images || []);
 
   } catch(e) {
     alert('Erreur réseau : ' + e.message);
@@ -3973,10 +3973,9 @@ async function ouvrirImportURL() {
   }
 }
 
-function ouvrirModalImportRecettes(recettes, urlSource) {
+function ouvrirModalImportRecettes(recettes, urlSource, images = []) {
   const existing = document.getElementById('modal-import-recettes');
   if (existing) existing.remove();
-
   const modal = document.createElement('div');
   modal.id = 'modal-import-recettes';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;';
