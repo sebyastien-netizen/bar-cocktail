@@ -922,15 +922,15 @@ function renderFiche(portions) {
     <div class="fiche-card">
       <div class="fiche-card-titre">Ingrédients <span class="fiche-portion-label">— ${portions} verre${portions > 1 ? 's' : ''}</span></div>
       <div class="fiche-ing-liste">
-        ${ingsEffectifs.map(ing => {
-          const enCave = ing.item_cave_id ? caveIds.has(ing.item_cave_id) : true;
+${ingsEffectifs.map(ing => {
+          const enCave = ing.item_cave_id ? caveIds.has(ing.item_cave_id) : null; // null = non lié à Ma Cave, statut inconnu
           const qteBase = ing.cl_ajuste !== undefined ? ing.cl_ajuste : ing.quantite;
           const qte = qteBase ? Math.round(qteBase * portions * 10) / 10 : null;
           const qteModif = ing.cl_ajuste !== undefined && Math.abs((ing.cl_ajuste || 0) - (ing.quantite || 0)) > 0.05;
           const pct = ing.quantite && r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0) > 0
             ? Math.round((ing.quantite / r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0)) * 100)
             : 0;
-          const couleur = !enCave ? 'danger' : (ing.optionnel ? 'success' : (qteModif ? 'warning' : 'accent'));
+          const couleur = enCave === false ? 'danger' : (enCave === null ? 'muted' : (ing.optionnel ? 'success' : (qteModif ? 'warning' : 'accent')));
           return `
             <div class="fiche-ing-item">
               <div class="fiche-ing-icon fiche-ing-icon--${couleur}">
@@ -938,11 +938,12 @@ function renderFiche(portions) {
               </div>
               <div class="fiche-ing-body">
                 <div class="fiche-ing-header">
-                  <span class="fiche-ing-nom ${!enCave && !ing.optionnel ? 'fiche-ing-nom--manquant' : ''}">${ing.nom}${ing.optionnel ? ' <span class="fiche-ing-opt">optionnel</span>' : ''}</span>
+                  <span class="fiche-ing-nom ${enCave === false && !ing.optionnel ? 'fiche-ing-nom--manquant' : ''}">${ing.nom}${ing.optionnel ? ' <span class="fiche-ing-opt">optionnel</span>' : ''}</span>
                   <span class="fiche-ing-qte">${qte ? qte + ' ' + (ing.unite || '') : ''}</span>
                 </div>
                 ${pct > 0 ? `<div class="fiche-ing-barre"><div class="fiche-ing-barre-fill fiche-ing-barre-fill--${couleur}" style="width:${pct}%"></div></div>` : ''}
-                ${!enCave && !ing.optionnel ? `<div class="fiche-ing-warn">Manquant — voir À acheter</div>` : ''}
+                ${enCave === false && !ing.optionnel ? `<div class="fiche-ing-warn">Manquant — voir À acheter</div>` : ''}
+                ${enCave === null && !ing.optionnel ? `<div class="fiche-ing-warn" style="color:var(--text-muted)">Non lié à Ma Cave — statut inconnu</div>` : ''}
               </div>
             </div>`;
         }).join('')}
@@ -4580,6 +4581,8 @@ async function validerDirectement(id) {
     inspi.source === 'url' ? `Source : ${inspi.source_detail}` : null
   ].filter(Boolean).join(' — ') || null;
 
+  const complementsTexte = (notesTournee.complements && notesTournee.complements !== 'null') ? notesTournee.complements : null;
+
   const { data: recette, error } = await db.from('recettes').insert({
     id: recetteId,
     user_id: currentUser.id,
@@ -4588,6 +4591,7 @@ async function validerDirectement(id) {
     difficulte: 'moyen',
     photo_url: inspi.photo_url || null,
     anecdote,
+    variante_notes: complementsTexte,
     source_marque: inspi.source === 'url' ? inspi.source_detail : null
   }).select().single();
 
@@ -4602,6 +4606,19 @@ async function validerDirectement(id) {
         quantite: ing.quantite || null,
         unite: ing.unite || 'cl',
         ordre: i + 1
+      }))
+    );
+  }
+
+  const etapesMethode = Array.isArray(notesTournee.methode) ? notesTournee.methode : (notesTournee.methode && notesTournee.methode !== 'null' ? [notesTournee.methode] : []);
+  if (recette && etapesMethode.length > 0) {
+    await db.from('recette_etapes').insert(
+      etapesMethode.map((texte, i) => ({
+        recette_id: recetteId,
+        user_id: currentUser.id,
+        ordre: i + 1,
+        titre: `Étape ${i + 1}`,
+        description: texte
       }))
     );
   }
