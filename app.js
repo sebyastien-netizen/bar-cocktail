@@ -3699,6 +3699,17 @@ function switchSousOngletConc(panel, btn) {
 
 let inspirationsList = [];
 let inspiSourceActive = 'manuel';
+// Technique suggérée par défaut quand rien n'est visible sur le screenshot —
+// même logique qu'Alexis applique ailleurs : shake si agrumes/œuf/lactés, sinon stir.
+function suggererTechniqueParDefaut(ingredients) {
+  const noms = (ingredients || []).map(i => (i.nom || '').toLowerCase()).join(' ');
+  const aAgrumesOuTexture = /citron|lime|orange|pamplemousse|œuf|oeuf|creme|cream|lait|milk|ananas|pineapple/.test(noms);
+  const aSodaOuTonic = /soda|tonic|ginger|eau gazeuse|champagne|prosecco|club soda/.test(noms);
+
+  if (aSodaOuTonic) return 'Suggestion : construction directe dans le verre, sur glace (à vérifier — non lu sur l\'image).';
+  if (aAgrumesOuTexture) return 'Suggestion : shaker avec glace 10-15 secondes, puis filtrer (à vérifier — non lu sur l\'image).';
+  return 'Suggestion : mélanger au verre à mélange (stir) 30 secondes, puis filtrer (à vérifier — non lu sur l\'image).';
+}
 async function analyserScreenshot(input) {
   const file = input.files[0];
   if (!file) return;
@@ -3761,9 +3772,11 @@ async function analyserScreenshot(input) {
       photo_url,
       ingredients: data.ingredients || [],
       statut: 'en_attente',
-      notes: JSON.stringify({
+notes: JSON.stringify({
         type: 'cocktail',
         garniture: data.garniture || null,
+        methode: data.methode || suggererTechniqueParDefaut(data.ingredients),
+        methode_source: data.methode ? 'lue sur l\'image' : 'suggérée par défaut',
         origine: 'Importé via screenshot'
       })
     });
@@ -4198,6 +4211,8 @@ ${(() => {
   if (notes.prenom) lignes.push(`<div style="font-size:0.85rem">👤 Partagé par <strong>${notes.prenom}</strong></div>`);
   if (notes.type) lignes.push(`<div style="font-size:0.85rem">📌 Type : <strong>${notes.type === 'cocktail' ? 'Cocktail' : 'Concoction/Recette'}</strong></div>`);
   if (notes.origine) lignes.push(`<div style="font-size:0.85rem;font-style:italic;color:var(--text-secondary)">💬 "${notes.origine}"</div>`);
+ if (notes.methode) lignes.push(`<div style="font-size:0.85rem">🔧 <strong>Préparation :</strong> ${notes.methode}${notes.methode_source ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-style:italic">(${notes.methode_source})</span>` : ''}</div>`);
+  if (notes.garniture) lignes.push(`<div style="font-size:0.85rem">🍋 <strong>Garniture :</strong> ${notes.garniture}</div>`);
   if (notes.etapes?.length) lignes.push(`<div style="font-size:0.85rem;margin-top:4px"><strong>Étapes :</strong><br>${notes.etapes.map((e,i) => `${i+1}. ${e.description}${e.duree ? ' — ' + e.duree + ' ' + e.unite : ''}`).join('<br>')}</div>`);
   return lignes.length ? `<div class="plante-section" style="display:flex;flex-direction:column;gap:8px;background:var(--bg-accent);border-radius:10px;padding:12px;border:1px solid var(--border-accent)">${lignes.join('')}</div>` : '';
 })()}
