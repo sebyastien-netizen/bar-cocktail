@@ -4080,6 +4080,7 @@ async function _creerInspirationDepuisImport(r) {
       verre: r.verre || null,
       garniture: r.garniture || null,
       methode: r.methode || null
+     complements: r.complements || null
     })
   });
 }
@@ -4263,6 +4264,7 @@ ${(() => {
   if (notes.origine) lignes.push(`<div style="font-size:0.85rem;font-style:italic;color:var(--text-secondary)">💬 "${notes.origine}"</div>`);
  if (notes.methode) lignes.push(`<div style="font-size:0.85rem">🔧 <strong>Préparation :</strong> ${notes.methode}${notes.methode_source ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-style:italic">(${notes.methode_source})</span>` : ''}</div>`);
   if (notes.garniture && notes.garniture !== 'null') lignes.push(`<div style="font-size:0.85rem">🍋 <strong>Garniture :</strong> ${notes.garniture}</div>`);
+ if (notes.complements && notes.complements !== 'null') lignes.push(`<div style="font-size:0.82rem;color:var(--text-secondary);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">💡 ${notes.complements}</div>`);
   if (notes.etapes?.length) lignes.push(`<div style="font-size:0.85rem;margin-top:4px"><strong>Étapes :</strong><br>${notes.etapes.map((e,i) => `${i+1}. ${e.description}${e.duree ? ' — ' + e.duree + ' ' + e.unite : ''}`).join('<br>')}</div>`);
   return lignes.length ? `<div class="plante-section" style="display:flex;flex-direction:column;gap:8px;background:var(--bg-accent);border-radius:10px;padding:12px;border:1px solid var(--border-accent)">${lignes.join('')}</div>` : '';
 })()}
