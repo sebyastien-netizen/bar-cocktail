@@ -393,22 +393,20 @@ async function chargerRecettes() {
 
   renderRecettes();
 }
- async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
-  const caveItems = cave?.categories?.flatMap(c => c.items.filter(i => i.detenu !== false)) || [];
+async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
+  const caveItems = (cave?.categories?.flatMap(c => c.items.filter(i => i.detenu !== false)) || [])
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
   const alias = ingredientsAlias[nomIng.toLowerCase()];
-  
-  const select = document.createElement('select');
-  select.style.cssText = 'width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.9rem;margin-top:8px;';
-  select.innerHTML = '<option value="">-- Choisir un item cave --</option>' +
-    caveItems.map(i => `<option value="${i.id}" ${alias === i.id ? 'selected' : ''}>${i.nom}</option>`).join('');
+  let itemSelectionne = alias || null;
 
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
   modal.innerHTML = `
-    <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:400px;width:100%;">
+    <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:400px;width:100%;max-height:80vh;display:flex;flex-direction:column;">
       <div style="font-size:1rem;font-weight:700;margin-bottom:4px;">🔗 Lier un ingrédient</div>
       <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">"${nomIng}"</div>
-      <div id="alias-select-container"></div>
+      <input type="text" id="recherche-alias-cave" placeholder="Rechercher une bouteille..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem;margin-bottom:10px;">
+      <div id="liste-alias-cave" style="overflow-y:auto;flex:1;min-height:0;border:1px solid var(--border);border-radius:8px;"></div>
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button id="btn-alias-annuler" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;">Annuler</button>
         <button id="btn-alias-valider" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:700;cursor:pointer;">✅ Lier</button>
@@ -416,27 +414,47 @@ async function chargerRecettes() {
     </div>
   `;
   document.body.appendChild(modal);
-  document.getElementById('alias-select-container').appendChild(select);
+
+  const listeContainer = document.getElementById('liste-alias-cave');
+  const inputRecherche = document.getElementById('recherche-alias-cave');
+
+  function renderListe(filtre = '') {
+    const filtreLower = filtre.toLowerCase();
+    const items = caveItems.filter(i => i.nom.toLowerCase().includes(filtreLower));
+    if (items.length === 0) {
+      listeContainer.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:0.85rem;text-align:center;">Aucune bouteille trouvée</div>';
+      return;
+    }
+    listeContainer.innerHTML = items.map(i => `
+      <div class="item-alias-choix" data-id="${i.id}" style="padding:10px 12px;cursor:pointer;font-size:0.9rem;border-bottom:1px solid var(--border);${itemSelectionne === i.id ? 'background:var(--bg-accent);color:var(--text-accent);font-weight:600;' : ''}">
+        ${i.nom}
+      </div>
+    `).join('');
+    listeContainer.querySelectorAll('.item-alias-choix').forEach(el => {
+      el.onclick = () => {
+        itemSelectionne = el.dataset.id;
+        renderListe(inputRecherche.value);
+      };
+    });
+  }
+
+  renderListe();
+  inputRecherche.oninput = () => renderListe(inputRecherche.value);
+  setTimeout(() => inputRecherche.focus(), 50);
 
   document.getElementById('btn-alias-annuler').onclick = () => modal.remove();
   document.getElementById('btn-alias-valider').onclick = async () => {
-    const itemCaveId = select.value;
+    const itemCaveId = itemSelectionne;
     if (!itemCaveId) { modal.remove(); return; }
-
-    // Sauvegarder l'alias global
     await db.from('ingredients_alias').upsert({
       user_id: currentUser.id,
       nom_ingredient: nomIng.toLowerCase(),
       item_cave_id: itemCaveId
     }, { onConflict: 'user_id,nom_ingredient' });
-
-    // Mettre à jour toutes les recettes avec ce nom d'ingrédient
     await db.from('recette_ingredients')
       .update({ item_cave_id: itemCaveId })
       .eq('user_id', currentUser.id)
       .ilike('nom', nomIng);
-
-    // Mettre à jour localement
     ingredientsAlias[nomIng.toLowerCase()] = itemCaveId;
     recettes.forEach(r => {
       r.ingredients?.forEach(ing => {
@@ -445,7 +463,6 @@ async function chargerRecettes() {
         }
       });
     });
-
     modal.remove();
     ouvrirFicheRecette(recetteOuverte?.id);
     alert(`✅ "${nomIng}" lié à "${(cave?.categories?.flatMap(c=>c.items).find(i=>i.id===itemCaveId))?.nom || itemCaveId}" sur toutes vos recettes.`);
