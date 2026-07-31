@@ -3789,7 +3789,8 @@ notes: JSON.stringify({
         type: 'cocktail',
         garniture: data.garniture || null,
 methode: (data.methode && data.methode.length) ? data.methode : suggererTechniqueParDefaut(data.ingredients),
-        methode_source: (data.methode && data.methode.length) ? 'lue sur l\'image' : 'suggérée par défaut',
+methode_source: (data.methode && data.methode.length) ? 'lue sur l\'image' : 'suggérée par défaut',
+        base_alcool: data.base_alcool || null,
         origine: 'Importé via screenshot'
       })
     });
@@ -4095,6 +4096,7 @@ async function _creerInspirationDepuisImport(r) {
       garniture: r.garniture || null,
       methode: r.methode || null,
       complements: r.complements || null
+     base_alcool: r.base_alcool || null
     })
   });
 }
@@ -4641,6 +4643,7 @@ async function validerDirectement(id) {
     type: 'cocktail',
     nom: inspi.nom,
     difficulte: 'moyen',
+   base_alcool: (notesTournee.base_alcool && notesTournee.base_alcool !== 'null') ? notesTournee.base_alcool : null,
     photo_url: inspi.photo_url || null,
     anecdote,
     variante_notes: complementsTexte,
