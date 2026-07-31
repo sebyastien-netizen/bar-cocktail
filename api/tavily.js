@@ -51,15 +51,15 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        max_tokens: 2000,
+        max_tokens: 2800,
         messages: [
           {
             role: 'system',
-            content: 'Tu es un extracteur de recettes de cocktails. Extrait toutes les recettes presentes dans le texte. REGLES : 1) Traduis TOUT en francais (noms d\'ingredients, methode, verre, garniture) meme si le texte source est dans une autre langue — mais traduis fidelement, sans changer le sens ni inventer. 2) Convertis TOUTE mesure de volume en cl et mets unite a "cl" : ml (50ml = 5cl), oz (1oz = 3cl), cuillere a cafe / c. a cafe / tsp (1 = 0,5cl), cuillere a soupe / c. a soupe / tbsp (1 = 1,5cl). 3) Si la quantite nest PAS un volume (ex: 1/2 citron, 3 feuilles de menthe, 1 zeste), recopie le nombre dans quantite et lunite reelle (traduite en francais) dans unite (ex: "citron", "feuilles", "zeste") — ne force jamais "cl" sur quelque chose qui ne se mesure pas en volume. 4) Si aucune quantite, garniture, methode ou verre nest mentionne ou visible, mets la valeur JSON null (jamais le texte "null" entre guillemets, jamais une chaine vide). 5) Ne jamais inventer un ingredient absent du texte. 6) Ignore navigation, footer, publicite. Reponds UNIQUEMENT en JSON valide sans markdown. Format : { "recettes": [ { "nom": "...", "ingredients": [{"nom": "...", "quantite": 5, "unite": "cl"}], "methode": "...", "verre": "...", "garniture": "..." } ] }'
+            content: 'Tu es un extracteur de recettes de cocktails. Extrait toutes les recettes presentes dans le texte. REGLES : 1) Traduis TOUT en francais (noms d\'ingredients, methode, verre, garniture) meme si le texte source est dans une autre langue — mais traduis fidelement, sans changer le sens ni inventer. 2) NE CONVERTIS JAMAIS TOI-MEME les unites — recopie le nombre et lunite EXACTEMENT tels quils apparaissent dans le texte source (ex: "2 oz" reste quantite:2, unite:"oz" ; "50 ml" reste quantite:50, unite:"ml" ; "1 cuillere a cafe" reste quantite:1, unite:"cuillere a cafe"). La conversion en cl est faite par un autre systeme, pas par toi. 3) PRIORITE ABSOLUE au bloc structure "Ingredients"/"Instructions" ou equivalent (souvent situe pres dun bouton "Print Recipe" ou en fin de page) sil existe — cest la recette de reference pour 1 verre. IGNORE completement les quantites mentionnees dans des sections "Batch for X cocktails" ou equivalent (ce sont des multiples, pas la recette de base) — ne les utilise jamais pour remplir les quantites de la recette principale. Fais particulierement attention a ne pas confondre les quantites de deux ingredients differents lorsque plusieurs valeurs identiques ou proches apparaissent proches dans le texte (ex: deux ingredients a .75oz) — verifie bien lassociation exacte nom-quantite avant de repondre. 4) Si aucune quantite, garniture, methode ou verre nest mentionne ou visible, mets la valeur JSON null (jamais le texte "null" entre guillemets, jamais une chaine vide). 5) Ne jamais inventer un ingredient absent du texte. 6) Si la page contient des conseils utiles autres que la recette de base (pro tips, variantes, accords mets, conseils de batch), resume-les en 2-3 phrases maximum en francais dans un champ "complements" (paraphrase, jamais de copie mot pour mot de plus de quelques mots) — sinon mets complements: null. 7) Ignore navigation, footer, publicite. Reponds UNIQUEMENT en JSON valide sans markdown. Format : { "recettes": [ { "nom": "...", "ingredients": [{"nom": "...", "quantite": 2, "unite": "oz"}], "methode": "...", "verre": "...", "garniture": "...", "complements": "..." } ] }'
           },
           {
             role: 'user',
-            content: contenu.substring(0, 8000)
+            content: contenu.substring(0, 20000)
           }
         ]
       })
@@ -86,6 +86,34 @@ export default async function handler(req, res) {
         etape: 'parsing_json',
         reponse_brute: texte.slice(0, 500)
       });
+    }
+
+    // ---- Conversion déterministe des unités de volume en cl ----
+    // L'IA ne fait plus aucun calcul — ce tableau ne se trompe jamais.
+    const CONVERSIONS_CL = {
+      'oz': 3, 'ounce': 3, 'ounces': 3, 'fl oz': 3,
+      'ml': 0.1, 'millilitre': 0.1, 'millilitres': 0.1,
+      'cl': 1, 'centilitre': 1, 'centilitres': 1,
+      'l': 100, 'litre': 100, 'litres': 100,
+      'tsp': 0.5, 'teaspoon': 0.5, 'cuillere a cafe': 0.5, 'cuillère à café': 0.5, 'c. a cafe': 0.5, 'c. à café': 0.5,
+      'tbsp': 1.5, 'tablespoon': 1.5, 'cuillere a soupe': 1.5, 'cuillère à soupe': 1.5, 'c. a soupe': 1.5, 'c. à soupe': 1.5,
+      'dash': 0.1, 'trait': 0.1, 'traits': 0.1
+    };
+
+    function convertirEnCl(quantite, unite) {
+      if (quantite == null || !unite) return { quantite, unite };
+      const cle = unite.toString().toLowerCase().trim();
+      const facteur = CONVERSIONS_CL[cle];
+      if (facteur == null) return { quantite, unite }; // pas un volume connu, on laisse tel quel (citron, feuilles, zeste...)
+      return { quantite: Math.round(quantite * facteur * 100) / 100, unite: 'cl' };
+    }
+
+    for (const recette of (result.recettes || [])) {
+      for (const ing of (recette.ingredients || [])) {
+        const conv = convertirEnCl(ing.quantite, ing.unite);
+        ing.quantite = conv.quantite;
+        ing.unite = conv.unite;
+      }
     }
 
     // ---- Renormalisation FR via le lexique ingredients_traductions ----
