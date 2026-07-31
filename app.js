@@ -3699,7 +3699,87 @@ function switchSousOngletConc(panel, btn) {
 
 let inspirationsList = [];
 let inspiSourceActive = 'manuel';
+async function analyserScreenshot(input) {
+  const file = input.files[0];
+  if (!file) return;
 
+  const btn = document.querySelector('[onclick*="screenshot-input"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyse…'; }
+
+  try {
+    // Compression côté client (même pattern que réalisations/concoctions)
+    const blob = await new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const max = 1280;
+        let w = img.width, h = img.height;
+        if (w > max) { h = Math.round(h * max / w); w = max; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(b => { resolve(b); URL.revokeObjectURL(url); }, 'image/jpeg', 0.85);
+      };
+      img.src = url;
+    });
+
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result.split(',')[1]);
+      reader.readAsDataURL(blob);
+    });
+
+    // Upload du screenshot dans le même bucket que les autres photos d'inspiration —
+    // permet de revérifier visuellement ce que l'IA a lu, en cas de doute.
+    let photo_url = null;
+    const path = `inspirations/${currentUser.id}/${Date.now()}.jpg`;
+    const { error: uploadError } = await db.storage.from('photos-inspirations').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+    if (!uploadError) {
+      const { data: urlData } = db.storage.from('photos-inspirations').getPublicUrl(path);
+      photo_url = urlData.publicUrl;
+    }
+
+    const res = await fetch('/api/lire-recette', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: base64 })
+    });
+    const data = await res.json();
+
+    if (data.error) { alert('Erreur : ' + data.error); return; }
+    if (!data.nom && (!data.ingredients || data.ingredients.length === 0)) {
+      alert('Aucune recette lisible sur ce screenshot.');
+      return;
+    }
+
+    const { error } = await db.from('inspirations').insert({
+      id: 'screenshot-' + Date.now(),
+      user_id: currentUser.id,
+      nom: data.nom || 'Cocktail screenshot',
+      source: 'photo',
+      source_detail: data.source || 'Screenshot réseau social',
+      photo_url,
+      ingredients: data.ingredients || [],
+      statut: 'en_attente',
+      notes: JSON.stringify({
+        type: 'cocktail',
+        garniture: data.garniture || null,
+        origine: 'Importé via screenshot'
+      })
+    });
+
+    if (error) { alert('Erreur : ' + error.message); return; }
+
+    await chargerInspirations();
+    alert('✅ Recette "' + (data.nom || 'Cocktail') + '" ajoutée dans Inspirations !');
+
+  } catch (e) {
+    alert('Erreur réseau : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📷 Screenshot recette'; }
+    input.value = '';
+  }
+}
 async function chargerInspirations() {
   const container = document.getElementById('inspirations-container');
   if (!container) return;
@@ -3723,7 +3803,9 @@ container.innerHTML = `
 <div style="padding:1rem;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
   <button class="btn-outline" onclick="captureRapideBartender()">📱 Dévoile ton cocktail</button>
   <button class="btn-outline" onclick="ouvrirLaTournee()">🍹 La Tournée</button>
-  <button class="btn-outline" onclick="ouvrirImportURL()">🔗 Importer URL</button>
+<button class="btn-outline" onclick="ouvrirImportURL()">🔗 Importer URL</button>
+  <button class="btn-outline" onclick="document.getElementById('screenshot-input').click()">📷 Screenshot recette</button>
+  <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="analyserScreenshot(this)">
   <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
 </div>
 
