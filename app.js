@@ -222,7 +222,35 @@ container.appendChild(searchBar);
     container.appendChild(div);
   });
 }
- 
+ async function supprimerItemCave(itemId, catId) {
+  const cat = cave.categories.find(c => c.id === catId);
+  const item = cat?.items.find(i => i.id === itemId);
+  if (!item) return;
+  if (!confirm(`Supprimer "${item.nom}" de Ma Cave ? Les recettes liées repasseront en "Non lié".`)) return;
+
+  await db.from('items').delete().eq('id', itemId).eq('user_id', currentUser.id);
+
+  // Nettoyage des références qui pointaient vers cet item
+  await db.from('recette_ingredients').update({ item_cave_id: null }).eq('user_id', currentUser.id).eq('item_cave_id', itemId);
+  await db.from('ingredients_alias').delete().eq('user_id', currentUser.id).eq('item_cave_id', itemId);
+  await db.from('ingredients_glossaire').update({ item_cave_id: null }).eq('user_id', currentUser.id).eq('item_cave_id', itemId);
+
+  // Mise à jour locale
+  cat.items = cat.items.filter(i => i.id !== itemId);
+  recettes.forEach(r => {
+    r.ingredients?.forEach(ing => {
+      if (ing.item_cave_id === itemId) ing.item_cave_id = null;
+    });
+  });
+  Object.keys(ingredientsAlias).forEach(k => {
+    if (ingredientsAlias[k] === itemId) delete ingredientsAlias[k];
+  });
+  glossaireIngredients.forEach(g => {
+    if (g.item_cave_id === itemId) g.item_cave_id = null;
+  });
+
+  renderCave();
+}
 function renderItem(item, catId) {
   const detenu = item.detenu !== false;
   const statutLabel = !detenu ? 'Non détenu'
@@ -248,8 +276,9 @@ function renderItem(item, catId) {
       <span class="item-statut ${statutClass}">${statutLabel}</span>
       ${detenu && item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
       <div class="item-actions">
-        <button class="btn-icon" title="Infos" onclick="event.stopPropagation(); ouvrirModalInfo('${item.id}', '${catId}')">ℹ</button>
+       <button class="btn-icon" title="Infos" onclick="event.stopPropagation(); ouvrirModalInfo('${item.id}', '${catId}')">ℹ</button>
         ${detenu ? `<button class="btn-icon" title="Contenance" onclick="event.stopPropagation(); ouvrirModalContenance('${item.id}', '${catId}')">📊</button>` : ''}
+        <button class="btn-icon" title="Supprimer" onclick="event.stopPropagation(); supprimerItemCave('${item.id}', '${catId}')">🗑</button>
         <button class="btn-icon btn-toggle-detenu" title="${detenu ? 'Marquer non détenu' : 'Marquer détenu'}"
           onclick="event.stopPropagation(); toggleDetenu('${item.id}', '${catId}')">
           ${detenu ? '✓' : '+'}
