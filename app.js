@@ -20,6 +20,7 @@ let sectionRecette  = 'cocktail';
 let filtreBase      = '';
 let rechercheRecette = '';
 let ingredientsAlias = {};
+let glossaireIngredients = [];
 let filtreGout      = '';
 let filtreDiff      = '';
 let filtreDisponible = false;
@@ -373,16 +374,19 @@ function badgeDisponibilite(nbManquants) {
 // =============================================
  
 async function chargerRecettes() {
-  const [{ data: recs }, { data: ings }, { data: etapes }, { data: mats }, { data: aliases }] = await Promise.all([
+  const [{ data: recs }, { data: ings }, { data: etapes }, { data: mats }, { data: aliases }, { data: glossaire }] = await Promise.all([
     db.from('recettes').select('*, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi, variante_alcool, variante_prestige, variante_mocktail_id, variante_notes, prix_portion, kit_portable, photo_url'),
     db.from('recette_ingredients').select('*').order('ordre'),
     db.from('recette_etapes').select('*').order('ordre'),
     db.from('recette_materiels').select('*'),
-    db.from('ingredients_alias').select('*').eq('user_id', currentUser.id)
+    db.from('ingredients_alias').select('*').eq('user_id', currentUser.id),
+    db.from('ingredients_glossaire').select('*').eq('user_id', currentUser.id)
   ]);
 
   ingredientsAlias = {};
   (aliases || []).forEach(a => { ingredientsAlias[a.nom_ingredient.toLowerCase()] = a.item_cave_id; });
+
+  glossaireIngredients = glossaire || [];
 
   recettes = (recs || []).map(r => ({
     ...r,
@@ -399,6 +403,23 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
   const alias = ingredientsAlias[nomIng.toLowerCase()];
   let itemSelectionne = alias || null;
 
+  const typeVersCategorie = {
+    sirop: 'sirops', cordial: 'sirops', liqueur: 'liqueurs', creme: 'liqueurs',
+    bitter: 'bitters', sucrant: 'garde-manger', jus: 'ingredients-frais', mixer: 'garde-manger'
+  };
+
+  const nomLower = nomIng.toLowerCase();
+  const matchGlossaire = glossaireIngredients.find(g =>
+    !g.item_cave_id && (
+      g.nom_canonique.toLowerCase() === nomLower ||
+      (g.alias || []).some(a => a.toLowerCase() === nomLower)
+    )
+  );
+
+  const categoriesOptions = (cave?.categories || [])
+    .filter(c => c.id !== 'a-acheter' && !c.id.startsWith('a-acheter'))
+    .map(c => `<option value="${c.id}" ${matchGlossaire && typeVersCategorie[matchGlossaire.type] === c.id ? 'selected' : ''}>${c.icon || ''} ${c.label}</option>`).join('');
+
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
   modal.innerHTML = `
@@ -407,6 +428,31 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
       <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">"${nomIng}"</div>
       <input type="text" id="recherche-alias-cave" placeholder="Rechercher une bouteille..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem;margin-bottom:10px;">
       <div id="liste-alias-cave" style="overflow-y:auto;flex:1;min-height:0;border:1px solid var(--border);border-radius:8px;"></div>
+
+      ${matchGlossaire ? `
+      <div style="margin-top:10px;padding:10px 12px;background:var(--bg-accent);border:1px solid var(--border-accent);border-radius:8px;font-size:0.82rem;color:var(--text-accent);">
+        🧪 Reconnu dans le glossaire : <strong>${matchGlossaire.nom_canonique}</strong> (${matchGlossaire.type}). Pas encore dans Ma Cave — catégorie pré-sélectionnée ci-dessous.
+      </div>` : ''}
+
+      <div id="bloc-nouvel-ingredient" style="margin-top:10px;">
+        <button id="btn-toggle-nouvel" style="width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:none;color:var(--text-secondary);cursor:pointer;font-size:0.85rem;">
+          + "${nomIng}" n'existe pas encore — le créer dans Ma Cave
+        </button>
+        <div id="form-nouvel-ingredient" style="display:${matchGlossaire ? 'block' : 'none'};margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+          <label style="font-size:0.78rem;color:var(--text-muted);">Catégorie</label>
+          <select id="select-nouvelle-categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.9rem;margin:4px 0 8px;">
+            ${categoriesOptions}
+          </select>
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;cursor:pointer;">
+            <input type="checkbox" id="check-nouvel-detenu" checked style="width:16px;height:16px;accent-color:var(--accent);">
+            Je le possède déjà
+          </label>
+          <button id="btn-creer-ingredient" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:600;cursor:pointer;font-size:0.85rem;">
+            ✅ Créer "${nomIng}"
+          </button>
+        </div>
+      </div>
+
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button id="btn-alias-annuler" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;">Annuler</button>
         <button id="btn-alias-valider" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:700;cursor:pointer;">✅ Lier</button>
@@ -414,6 +460,8 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
     </div>
   `;
   document.body.appendChild(modal);
+
+  if (matchGlossaire) document.getElementById('btn-toggle-nouvel').style.display = 'none';
 
   const listeContainer = document.getElementById('liste-alias-cave');
   const inputRecherche = document.getElementById('recherche-alias-cave');
@@ -441,6 +489,56 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
   renderListe();
   inputRecherche.oninput = () => renderListe(inputRecherche.value);
   setTimeout(() => inputRecherche.focus(), 50);
+
+  document.getElementById('btn-toggle-nouvel').onclick = () => {
+    document.getElementById('form-nouvel-ingredient').style.display = 'block';
+    document.getElementById('btn-toggle-nouvel').style.display = 'none';
+  };
+
+  document.getElementById('btn-creer-ingredient').onclick = async () => {
+    const catId = document.getElementById('select-nouvelle-categorie').value;
+    const possede = document.getElementById('check-nouvel-detenu').checked;
+    const btn = document.getElementById('btn-creer-ingredient');
+    btn.disabled = true;
+    btn.textContent = 'Création...';
+
+    const { data: nouvelItem, error } = await db.from('items').insert({
+      id: 'custom-' + Date.now(),
+      user_id: currentUser.id,
+      category_id: catId,
+      nom: nomIng,
+      detenu: possede
+    }).select().single();
+
+    if (error) {
+      alert('Erreur : ' + error.message);
+      btn.disabled = false;
+      btn.textContent = `✅ Créer "${nomIng}"`;
+      return;
+    }
+
+    const cat = cave.categories.find(c => c.id === catId);
+    if (cat) cat.items.push(nouvelItem);
+    if (possede) {
+      caveItems.push(nouvelItem);
+      caveItems.sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    }
+
+    // Si ça correspond à une entrée glossaire, on la lie définitivement pour la prochaine fois
+    if (matchGlossaire) {
+      await db.from('ingredients_glossaire')
+        .update({ item_cave_id: nouvelItem.id })
+        .eq('id', matchGlossaire.id);
+      matchGlossaire.item_cave_id = nouvelItem.id;
+    }
+
+    itemSelectionne = nouvelItem.id;
+    await autoLierIngredientParNom(nouvelItem.nom, nouvelItem.id);
+
+    document.getElementById('form-nouvel-ingredient').style.display = 'none';
+    inputRecherche.value = '';
+    renderListe();
+  };
 
   document.getElementById('btn-alias-annuler').onclick = () => modal.remove();
   document.getElementById('btn-alias-valider').onclick = async () => {
