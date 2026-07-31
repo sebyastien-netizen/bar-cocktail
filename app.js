@@ -1450,13 +1450,18 @@ function ouvrirModalAjout() {
       info_anecdote:    anecdote || null
     };
 
-    const { data, error } = await db.from('items').insert(newItem).select().single();
-    if (!error && data) {
+const { data, error } = await db.from('items').insert(newItem).select().single();
+    if (error) {
+      alert('Erreur lors de l\'ajout : ' + error.message);
+      return;
+    }
+    if (data) {
       window._sousTypeIdentifie = null;
       window._tourbeIdentifie = false;
       const cat = cave.categories.find(c => c.id === catId);
       if (cat) cat.items.push(data);
     }
+
     fermerModal('modal-ajout');
     renderCave();
   };
