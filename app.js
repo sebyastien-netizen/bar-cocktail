@@ -1554,7 +1554,45 @@ const { data, error } = await db.from('items').insert(newItem).select().single()
  
   afficherModal('modal-ajout');
 }
- 
+ // Auto-liaison : si un item ajouté à Ma Cave porte exactement le même nom
+// qu'un ingrédient de recette non lié, on fait le lien automatiquement.
+// Comparaison texte pure (ilike), aucune IA, même mécanique que le bouton 🔗.
+async function autoLierIngredientParNom(nomItem, itemCaveId) {
+  const { data: ingsCorrespondants } = await db.from('recette_ingredients')
+    .select('id, nom')
+    .eq('user_id', currentUser.id)
+    .ilike('nom', nomItem)
+    .is('item_cave_id', null);
+
+  if (!ingsCorrespondants || ingsCorrespondants.length === 0) return;
+
+  await db.from('ingredients_alias').upsert({
+    user_id: currentUser.id,
+    nom_ingredient: nomItem.toLowerCase(),
+    item_cave_id: itemCaveId
+  }, { onConflict: 'user_id,nom_ingredient' });
+
+  await db.from('recette_ingredients')
+    .update({ item_cave_id: itemCaveId })
+    .eq('user_id', currentUser.id)
+    .ilike('nom', nomItem);
+
+  ingredientsAlias[nomItem.toLowerCase()] = itemCaveId;
+  recettes.forEach(r => {
+    r.ingredients?.forEach(ing => {
+      if (ing.nom?.toLowerCase() === nomItem.toLowerCase()) {
+        ing.item_cave_id = itemCaveId;
+      }
+    });
+  });
+
+  const feedback = document.createElement('div');
+  feedback.className = 'toast-feedback';
+  feedback.textContent = `🔗 "${nomItem}" auto-lié à ${ingsCorrespondants.length} recette${ingsCorrespondants.length > 1 ? 's' : ''}`;
+  document.body.appendChild(feedback);
+  setTimeout(() => feedback.classList.add('visible'), 50);
+  setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 2500);
+}
 function onTabChange(tab) {
   if (tab === 'aacheter') chargerAAcheter();
   if (tab === 'concoctions') chargerConcoctions();
