@@ -17,7 +17,8 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           api_key: process.env.TAVILY_API_KEY,
           urls: [url],
-          extract_depth: depth
+          extract_depth: depth,
+          include_images: true
         })
       });
       if (!r.ok) {
@@ -25,10 +26,13 @@ export default async function handler(req, res) {
         throw new Error(`Tavily a répondu une erreur (${r.status}) : ${errTxt}`);
       }
       const data = await r.json();
-      return data?.results?.[0]?.raw_content || '';
+      return {
+        contenu: data?.results?.[0]?.raw_content || '',
+        images: data?.results?.[0]?.images || []
+      };
     }
 
-    let contenu = await extraire('advanced');
+    let { contenu, images } = await extraire('advanced');
     let depthUtilisee = 'advanced';
 
     if (!contenu) {
@@ -108,7 +112,7 @@ export default async function handler(req, res) {
     }
 
     // Contexte utile pour comprendre ce qui a été utilisé, sans bloquer l'usage normal côté app
-    result._meta = { extract_depth_utilisee: depthUtilisee, longueur_contenu: contenu.length };
+    result._meta = { extract_depth_utilisee: depthUtilisee, longueur_contenu: contenu.length, images: images.slice(0, 6) };
 
     return res.status(200).json(result);
 
