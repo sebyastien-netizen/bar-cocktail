@@ -424,11 +424,11 @@ function renderRecettes() {
     </div>
  
 <div style="padding:0 0 10px 0;">
-  <input type="text" 
-    placeholder="🔍 Rechercher une recette…" 
+<input type="text" id="recherche-recettes"
+placeholder="🔍 Rechercher une recette…" 
     value="${rechercheRecette}"
-    oninput="rechercheRecette=this.value; renderRecettes(); this.focus()"
-    style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.95rem;outline:none;">
+oninput="rechercheRecette=this.value; renderRecettes(); setTimeout(()=>{const i=document.querySelector('#recherche-recettes');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},0)"    
+style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.95rem;outline:none;">
 </div>
 <div class="recettes-filtres">
       <select onchange="filtreBase=this.value; renderRecettes()">
