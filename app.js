@@ -4649,16 +4649,20 @@ async function validerDirectement(id) {
 
   if (error) { alert('Erreur : ' + error.message); return; }
 
-  if (recette && ings.length > 0) {
+if (recette && ings.length > 0) {
     await db.from('recette_ingredients').insert(
-      ings.map((ing, i) => ({
-        recette_id: recetteId,
-        user_id: currentUser.id,
-        nom: typeof ing === 'string' ? ing : ing.nom,
-        quantite: ing.quantite || null,
-        unite: ing.unite || 'cl',
-        ordre: i + 1
-      }))
+      ings.map((ing, i) => {
+        const nomIng = typeof ing === 'string' ? ing : ing.nom;
+        return {
+          recette_id: recetteId,
+          user_id: currentUser.id,
+          nom: nomIng,
+          quantite: ing.quantite || null,
+          unite: ing.unite || 'cl',
+          item_cave_id: trouverItemCaveCorrespondant(nomIng),
+          ordre: i + 1
+        };
+      })
     );
   }
 
