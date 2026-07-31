@@ -3976,6 +3976,7 @@ async function ouvrirImportURL() {
 function ouvrirModalImportRecettes(recettes, urlSource, images = []) {
   const existing = document.getElementById('modal-import-recettes');
   if (existing) existing.remove();
+
   const modal = document.createElement('div');
   modal.id = 'modal-import-recettes';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;';
@@ -3986,6 +3987,23 @@ function ouvrirModalImportRecettes(recettes, urlSource, images = []) {
         <button onclick="document.getElementById('modal-import-recettes').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
       </div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px;word-break:break-all">${urlSource}</div>
+
+      ${images.length > 0 ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px">📷 Choisis une photo pour ces recettes (optionnel) :</div>
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+          ${images.map((img, i) => `
+            <img src="${img}" id="import-img-${i}" onclick="choisirPhotoImport('${img.replace(/'/g, "\\'")}', ${i})"
+              style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--border);cursor:pointer;flex-shrink:0">
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">${images.length > 0 ? 'Pas la bonne photo ?' : 'Aucune photo détectée automatiquement.'} Colle une URL d'image à la place :</div>
+        <input type="text" id="import-photo-manuelle" placeholder="https://..." style="width:100%;font-size:0.8rem" onchange="majPhotoManuelle(this)">
+      </div>
+
       <div style="display:flex;flex-direction:column;gap:10px">
         ${recettes.map((r, i) => `
           <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;">
@@ -4014,6 +4032,21 @@ function ouvrirModalImportRecettes(recettes, urlSource, images = []) {
   // Stocker les recettes pour l'import
   window._recettesImport = recettes;
   window._urlImport = urlSource;
+  window._photoImportChoisie = null;
+}
+
+function choisirPhotoImport(url, index) {
+  window._photoImportChoisie = (window._photoImportChoisie === url) ? null : url;
+  document.querySelectorAll('[id^="import-img-"]').forEach((el, i) => {
+    el.style.borderColor = (window._photoImportChoisie && i === index) ? 'var(--accent)' : 'var(--border)';
+  });
+  const champManuel = document.getElementById('import-photo-manuelle');
+  if (champManuel) champManuel.value = '';
+}
+
+function majPhotoManuelle(input) {
+  window._photoImportChoisie = input.value.trim() || null;
+  document.querySelectorAll('[id^="import-img-"]').forEach(el => { el.style.borderColor = 'var(--border)'; });
 }
 
 async function importerRecette(index, btn) {
