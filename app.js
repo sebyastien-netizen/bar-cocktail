@@ -434,6 +434,13 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
         🧪 Reconnu dans le glossaire : <strong>${matchGlossaire.nom_canonique}</strong> (${matchGlossaire.type}). Pas encore dans Ma Cave — catégorie pré-sélectionnée ci-dessous.
       </div>` : ''}
 
+      ${(!matchGlossaire && !alias) ? `
+      <button id="btn-identifier-marque" style="width:100%;padding:8px;margin-top:8px;border-radius:8px;border:1px dashed var(--border-accent);background:none;color:var(--text-accent);cursor:pointer;font-size:0.85rem;">
+        ✨ Identifier "${nomIng}" (marque d'alcool ?)
+      </button>
+      <div id="resultat-identification" style="display:none;margin-top:8px;padding:10px;background:var(--bg-accent);border-radius:8px;font-size:0.82rem;color:var(--text-accent);"></div>
+      ` : ''}
+
       <div id="bloc-nouvel-ingredient" style="margin-top:10px;">
         <button id="btn-toggle-nouvel" style="width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:none;color:var(--text-secondary);cursor:pointer;font-size:0.85rem;">
           + "${nomIng}" n'existe pas encore — le créer dans Ma Cave
@@ -466,6 +473,19 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
   const listeContainer = document.getElementById('liste-alias-cave');
   const inputRecherche = document.getElementById('recherche-alias-cave');
 
+  const STYLES_PAR_CATEGORIE = {
+    'rhum': ['Blanc/Silver', 'Ambré/Doré', 'Brun/Vieux', 'Agricole'],
+    'gin': ['London Dry', 'Old Tom', 'Contemporain/Floral'],
+    'mezcal-tequila': ['Tequila Blanco', 'Tequila Reposado', 'Tequila Añejo', 'Mezcal']
+  };
+
+  function categorieDeItem(itemId) {
+    for (const cat of (cave?.categories || [])) {
+      if (cat.items.some(i => i.id === itemId)) return cat.id;
+    }
+    return null;
+  }
+
   function renderListe(filtre = '') {
     const filtreLower = filtre.toLowerCase();
     const items = caveItems.filter(i => i.nom.toLowerCase().includes(filtreLower));
@@ -473,15 +493,59 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
       listeContainer.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:0.85rem;text-align:center;">Aucune bouteille trouvée</div>';
       return;
     }
-    listeContainer.innerHTML = items.map(i => `
+    listeContainer.innerHTML = items.map(i => {
+      const catId = categorieDeItem(i.id);
+      const stylesDispo = STYLES_PAR_CATEGORIE[catId];
+      let styleHtml = '';
+      if (i.sous_type_alcool) {
+        styleHtml = `<div style="font-size:0.75rem;color:var(--text-accent);margin-top:2px;">🏷️ ${i.sous_type_alcool}</div>`;
+      } else if (stylesDispo) {
+        styleHtml = `<button class="btn-tag-style" data-id="${i.id}" data-styles="${stylesDispo.join(',')}" style="font-size:0.72rem;color:var(--text-muted);background:none;border:1px dashed var(--border);border-radius:12px;padding:1px 8px;margin-top:3px;cursor:pointer;">+ style</button>`;
+      }
+      return `
       <div class="item-alias-choix" data-id="${i.id}" style="padding:10px 12px;cursor:pointer;font-size:0.9rem;border-bottom:1px solid var(--border);${itemSelectionne === i.id ? 'background:var(--bg-accent);color:var(--text-accent);font-weight:600;' : ''}">
         ${i.nom}
-      </div>
-    `).join('');
+        ${styleHtml}
+      </div>`;
+    }).join('');
+
     listeContainer.querySelectorAll('.item-alias-choix').forEach(el => {
-      el.onclick = () => {
+      el.onclick = (e) => {
+        if (e.target.classList.contains('btn-tag-style')) return;
         itemSelectionne = el.dataset.id;
         renderListe(inputRecherche.value);
+      };
+    });
+
+    listeContainer.querySelectorAll('.btn-tag-style').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const styles = btn.dataset.styles.split(',');
+        const menu = document.createElement('div');
+        menu.style.cssText = 'position:absolute;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);z-index:10001;overflow:hidden;';
+        const rect = btn.getBoundingClientRect();
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.innerHTML = styles.map(s => `<div class="opt-style" data-style="${s}" style="padding:8px 14px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">${s}</div>`).join('');
+        document.body.appendChild(menu);
+        menu.querySelectorAll('.opt-style').forEach(opt => {
+          opt.onclick = async (ev) => {
+            ev.stopPropagation();
+            const itemId = btn.dataset.id;
+            const sousType = opt.dataset.style;
+            await db.from('items').update({ sous_type_alcool: sousType }).eq('id', itemId).eq('user_id', currentUser.id);
+            const item = caveItems.find(x => x.id === itemId);
+            if (item) item.sous_type_alcool = sousType;
+            menu.remove();
+            renderListe(inputRecherche.value);
+          };
+        });
+        setTimeout(() => {
+          document.addEventListener('click', function fermer() {
+            menu.remove();
+            document.removeEventListener('click', fermer);
+          }, { once: true });
+        }, 0);
       };
     });
   }
@@ -494,6 +558,57 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
     document.getElementById('form-nouvel-ingredient').style.display = 'block';
     document.getElementById('btn-toggle-nouvel').style.display = 'none';
   };
+
+  const btnIdentifier = document.getElementById('btn-identifier-marque');
+  if (btnIdentifier) {
+    btnIdentifier.onclick = async () => {
+      btnIdentifier.disabled = true;
+      btnIdentifier.textContent = '⏳ Identification...';
+      try {
+        const res = await fetch('/api/identifier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nom: nomIng })
+        });
+        const info = await res.json();
+        const resultDiv = document.getElementById('resultat-identification');
+        resultDiv.style.display = 'block';
+
+        if (!info.identifie) {
+          resultDiv.innerHTML = info.trop_vague
+            ? '⚠️ Nom trop vague pour identifier — précisez la marque complète.'
+            : '❓ Non identifié — créez l\'ingrédient manuellement ci-dessous.';
+          btnIdentifier.style.display = 'none';
+          document.getElementById('form-nouvel-ingredient').style.display = 'block';
+          btnIdentifier.disabled = false;
+          return;
+        }
+
+        const recommandations = caveItems.filter(i => i.sous_type_alcool === info.sous_type_alcool);
+
+        let recoHtml = '';
+        if (recommandations.length > 0) {
+          recoHtml = `<div style="margin-top:6px;">Vous avez déjà : ${recommandations.map(r => `<strong>${r.nom}</strong>`).join(', ')}</div>`;
+        }
+
+        resultDiv.innerHTML = `🏷️ ${info.categorie_id} — style : ${info.sous_type_alcool || 'non déterminé'}${info.tourbe ? ' (tourbé)' : ''}${recoHtml}`;
+
+        if (recommandations.length === 1) {
+          itemSelectionne = recommandations[0].id;
+          renderListe();
+        } else {
+          document.getElementById('select-nouvelle-categorie').value = info.categorie_id;
+          document.getElementById('form-nouvel-ingredient').style.display = 'block';
+          btnIdentifier.style.display = 'none';
+        }
+      } catch (e) {
+        document.getElementById('resultat-identification').style.display = 'block';
+        document.getElementById('resultat-identification').textContent = 'Erreur d\'identification.';
+      }
+      btnIdentifier.disabled = false;
+      btnIdentifier.textContent = `✨ Identifier "${nomIng}"`;
+    };
+  }
 
   document.getElementById('btn-creer-ingredient').onclick = async () => {
     const catId = document.getElementById('select-nouvelle-categorie').value;
@@ -524,7 +639,6 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
       caveItems.sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
     }
 
-    // Si ça correspond à une entrée glossaire, on la lie définitivement pour la prochaine fois
     if (matchGlossaire) {
       await db.from('ingredients_glossaire')
         .update({ item_cave_id: nouvelItem.id })
