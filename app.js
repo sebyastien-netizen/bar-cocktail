@@ -4095,7 +4095,7 @@ async function _creerInspirationDepuisImport(r) {
       verre: r.verre || null,
       garniture: r.garniture || null,
       methode: r.methode || null,
-      complements: r.complements || null
+      complements: r.complements || null,
      base_alcool: r.base_alcool || null
     })
   });
