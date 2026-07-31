@@ -4808,41 +4808,26 @@ async function supprimerInspiration(id) {
 // 1) match direct si la marque est citée dans l'ingrédient
 // 2) sinon, category_id réel de la bouteille (fiable — pas de devinette sur son nom)
 // Les ingrédients frais/périssables ne sont jamais catalogués dans Ma Cave, on ne tente pas.
+// Matching sûr uniquement — jamais de déduction par catégorie/mots-clés.
+// Ne relie que ce qui est déjà confirmé : alias exact validé via 🔗,
+// ou entrée du glossaire déjà rattachée à une bouteille de Ma Cave.
 function trouverItemCaveCorrespondant(nomIngredient) {
   const nom = (nomIngredient || '').toLowerCase().trim();
   if (!nom) return null;
-  if (/citron|lime|orange|pamplemousse|menthe|basilic|glaçon|glace|eau gazeuse|tonic|sucre|sirop|blanc d.œuf|œuf|ananas|fraise|framboise/.test(nom)) return null;
 
-  let candidat = null;
-  (cave?.categories || []).forEach(cat => {
-    (cat.items || []).forEach(item => {
-      const itemNom = (item.nom || '').toLowerCase();
-      if (itemNom && (nom.includes(itemNom) || itemNom.includes(nom)) && item.detenu !== false) {
-        if (!candidat) candidat = item;
-      }
-    });
-  });
-  if (candidat) return candidat.id;
+  // 1. Alias déjà confirmé par l'utilisateur (nom exact)
+  if (ingredientsAlias[nom]) return ingredientsAlias[nom];
 
-  const motsCategorie = {
-    'gin': 'gin', 'vodka': 'vodka', 'rhum': 'rhum', 'rum': 'rhum',
-    'whisky': 'whisky', 'whiskey': 'whisky', 'bourbon': 'whisky', 'scotch': 'whisky', 'rye': 'whisky',
-    'tequila': 'mezcal-tequila', 'mezcal': 'mezcal-tequila',
-    'cognac': 'eaux-de-vie', 'brandy': 'eaux-de-vie', 'calvados': 'eaux-de-vie', 'armagnac': 'eaux-de-vie', 'pisco': 'eaux-de-vie',
-    'vermouth': 'vermouth',
-    'triple sec': 'triples-secs', 'cointreau': 'triples-secs', 'curacao': 'triples-secs',
-    'champagne': 'bulles', 'prosecco': 'bulles',
-    'campari': 'liqueurs', 'aperol': 'liqueurs', 'chartreuse': 'liqueurs'
-  };
-  const motTrouve = Object.keys(motsCategorie).find(mot => nom.includes(mot));
-  if (motTrouve) {
-    const catId = motsCategorie[motTrouve];
-    const cat = (cave?.categories || []).find(c => c.id === catId);
-    const possedes = (cat?.items || []).filter(i => i.detenu !== false);
-    if (possedes.length === 1) candidat = possedes[0];
-  }
+  // 2. Entrée glossaire déjà liée à une bouteille (nom canonique ou alias exact)
+  const matchGlossaire = glossaireIngredients.find(g =>
+    g.item_cave_id && (
+      g.nom_canonique.toLowerCase() === nom ||
+      (g.alias || []).some(a => a.toLowerCase() === nom)
+    )
+  );
+  if (matchGlossaire) return matchGlossaire.item_cave_id;
 
-  return candidat?.id || null;
+  return null;
 }
 async function validerDirectement(id) {
   const inspi = inspirationsList.find(x => x.id === id);
