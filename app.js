@@ -1005,8 +1005,15 @@ ${ingsEffectifs.map(ing => {
                 </div>
                 ${pct > 0 ? `<div class="fiche-ing-barre"><div class="fiche-ing-barre-fill fiche-ing-barre-fill--${couleur}" style="width:${pct}%"></div></div>` : ''}
                 ${enCave === false && !ing.optionnel ? `<div class="fiche-ing-warn">Manquant — voir À acheter</div>` : ''}
-                ${enCave === null && !ing.optionnel ? `<div class="fiche-ing-warn" style="color:var(--text-muted)">Non lié à Ma Cave — statut inconnu</div>` : ''}
-              </div>
+${enCave === null && !ing.optionnel ? `
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="fiche-ing-warn" style="color:var(--text-muted)">Non lié à Ma Cave</div>
+    <button onclick="event.stopPropagation();ouvrirLiaisonIngredient('${ing.nom.replace(/'/g, "\\'")}', '${ing.id}')" 
+      style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:0.75rem;color:var(--text-accent);cursor:pointer;">
+      🔗 Lier
+    </button>
+  </div>` : ''}
+  </div>
             </div>`;
         }).join('')}
       </div>
