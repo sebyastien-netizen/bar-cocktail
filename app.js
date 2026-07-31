@@ -4073,14 +4073,15 @@ async function _creerInspirationDepuisImport(r) {
     nom: r.nom,
     source: 'url',
     source_detail: domaine,
+    photo_url: window._photoImportChoisie || null,
     ingredients: r.ingredients || [],
     statut: 'en_attente',
     notes: JSON.stringify({
       type: 'cocktail',
       verre: r.verre || null,
       garniture: r.garniture || null,
-      methode: r.methode || null
-     complements: r.complements || null
+      methode: r.methode || null,
+      complements: r.complements || null
     })
   });
 }
