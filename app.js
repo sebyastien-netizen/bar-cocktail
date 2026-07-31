@@ -1379,6 +1379,8 @@ function ouvrirModalAjout() {
     const btn = modal.querySelector('#btn-identifier-claude');
     btn.disabled = true;
     btn.textContent = '⏳ Identification…';
+   window._sousTypeIdentifie = null;
+    window._tourbeIdentifie = false;
  
     const result = modal.querySelector('#ajout-claude-result');
     result.innerHTML = '';
@@ -1403,6 +1405,8 @@ function ouvrirModalAjout() {
         if (info.description) modal.querySelector('#input-detail-ajout').value = info.description;
         if (info.origine) modal.querySelector('#input-origine-ajout').value = info.origine;
         if (info.anecdote) modal.querySelector('#input-anecdote-ajout').value = info.anecdote;
+       window._sousTypeIdentifie = info.sous_type_alcool || null;
+        window._tourbeIdentifie = !!info.tourbe;
  
         result.innerHTML = `<div class="ajout-claude-success">✅ Identifié — champs pré-remplis, vérifiez et complétez.</div>`;
         result.classList.add('visible');
@@ -1425,14 +1429,16 @@ function ouvrirModalAjout() {
     const cl_total = parseInt(modal.querySelector('#input-cl-ajout').value) || null;
     const origine  = modal.querySelector('#input-origine-ajout').value.trim();
     const anecdote = modal.querySelector('#input-anecdote-ajout').value.trim();
-    if (!nom) return;
- 
+ if (!nom) return;
+
     const newItem = {
       id:               'custom-' + Date.now(),
       user_id:          currentUser.id,
       category_id:      catId,
       nom, detail,
       degre,
+      sous_type_alcool: window._sousTypeIdentifie || null,
+      tourbe:           window._tourbeIdentifie || false,
       prix_estime:      prixPaye,
       cl_total,
       cl_restants:      cl_total,
@@ -1443,13 +1449,14 @@ function ouvrirModalAjout() {
       info_origine:     origine || null,
       info_anecdote:    anecdote || null
     };
- 
+
     const { data, error } = await db.from('items').insert(newItem).select().single();
     if (!error && data) {
+      window._sousTypeIdentifie = null;
+      window._tourbeIdentifie = false;
       const cat = cave.categories.find(c => c.id === catId);
       if (cat) cat.items.push(data);
     }
- 
     fermerModal('modal-ajout');
     renderCave();
   };
