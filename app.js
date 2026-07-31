@@ -4811,6 +4811,7 @@ async function supprimerInspiration(id) {
 // Matching sûr uniquement — jamais de déduction par catégorie/mots-clés.
 // Ne relie que ce qui est déjà confirmé : alias exact validé via 🔗,
 // ou entrée du glossaire déjà rattachée à une bouteille de Ma Cave.
+// Matching sûr uniquement — jamais de déduction par catégorie/mots-clés fourre-tout.
 function trouverItemCaveCorrespondant(nomIngredient) {
   const nom = (nomIngredient || '').toLowerCase().trim();
   if (!nom) return null;
@@ -4826,6 +4827,23 @@ function trouverItemCaveCorrespondant(nomIngredient) {
     )
   );
   if (matchGlossaire) return matchGlossaire.item_cave_id;
+
+  // 3. Catégories de base non-ambiguës uniquement — jamais de paniers fourre-tout
+  const baseSansAmbiguite = { 'gin': 'gin', 'vodka': 'vodka', 'rhum': 'rhum', 'whisky': 'whisky' };
+  const catId = baseSansAmbiguite[nom];
+  if (catId) {
+    const cat = (cave?.categories || []).find(c => c.id === catId);
+    const possedes = (cat?.items || []).filter(i => i.detenu !== false);
+    if (possedes.length === 1) return possedes[0].id;
+  }
+
+  // 4. Tequila / Mezcal : catégorie cave partagée — vérification du nom en plus du nombre
+  if (nom === 'tequila' || nom === 'mezcal') {
+    const cat = (cave?.categories || []).find(c => c.id === 'mezcal-tequila');
+    const possedes = (cat?.items || []).filter(i => i.detenu !== false);
+    const correspondants = possedes.filter(i => (i.nom || '').toLowerCase().includes(nom));
+    if (correspondants.length === 1) return correspondants[0].id;
+  }
 
   return null;
 }
