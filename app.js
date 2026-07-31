@@ -1546,6 +1546,7 @@ const { data, error } = await db.from('items').insert(newItem).select().single()
       window._tourbeIdentifie = false;
       const cat = cave.categories.find(c => c.id === catId);
       if (cat) cat.items.push(data);
+      await autoLierIngredientParNom(data.nom, data.id);
     }
 
     fermerModal('modal-ajout');
@@ -2069,17 +2070,18 @@ async function confirmerArchiver() {
     notes_degustation: notes || null
   }).eq('id', concId).eq('user_id', currentUser.id);
 
-  // Ajouter à Ma Cave si coché
+// Ajouter à Ma Cave si coché
   if (ajouterCave) {
     const conc = concoctions.find(c => c.id === concId);
     if (conc) {
-      await db.from('items').insert({
+      const { data: itemArchive } = await db.from('items').insert({
         user_id: currentUser.id,
         nom: conc.nom,
         category_id: 'concoctions',
         detenu: true,
         info_description: notes || `Concoction maison archivée le ${new Date().toLocaleDateString('fr-FR')}.`
-      });
+      }).select().single();
+      if (itemArchive) await autoLierIngredientParNom(itemArchive.nom, itemArchive.id);
     }
   }
 
