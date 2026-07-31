@@ -3775,8 +3775,8 @@ async function analyserScreenshot(input) {
 notes: JSON.stringify({
         type: 'cocktail',
         garniture: data.garniture || null,
-        methode: data.methode || suggererTechniqueParDefaut(data.ingredients),
-        methode_source: data.methode ? 'lue sur l\'image' : 'suggérée par défaut',
+methode: (data.methode && data.methode.length) ? data.methode : suggererTechniqueParDefaut(data.ingredients),
+        methode_source: (data.methode && data.methode.length) ? 'lue sur l\'image' : 'suggérée par défaut',
         origine: 'Importé via screenshot'
       })
     });
@@ -4263,7 +4263,12 @@ ${(() => {
   if (notes.prenom) lignes.push(`<div style="font-size:0.85rem">👤 Partagé par <strong>${notes.prenom}</strong></div>`);
   if (notes.type) lignes.push(`<div style="font-size:0.85rem">📌 Type : <strong>${notes.type === 'cocktail' ? 'Cocktail' : 'Concoction/Recette'}</strong></div>`);
   if (notes.origine) lignes.push(`<div style="font-size:0.85rem;font-style:italic;color:var(--text-secondary)">💬 "${notes.origine}"</div>`);
- if (notes.methode) lignes.push(`<div style="font-size:0.85rem">🔧 <strong>Préparation :</strong> ${notes.methode}${notes.methode_source ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-style:italic">(${notes.methode_source})</span>` : ''}</div>`);
+if (notes.methode && (Array.isArray(notes.methode) ? notes.methode.length : notes.methode !== 'null')) {
+  const etapesHtml = Array.isArray(notes.methode)
+    ? notes.methode.map((e, i) => `<div style="margin-top:2px">${i + 1}. ${e}</div>`).join('')
+    : `<div>${notes.methode}</div>`;
+  lignes.push(`<div style="font-size:0.85rem">🔧 <strong>Préparation :</strong>${notes.methode_source ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-style:italic">(${notes.methode_source})</span>` : ''}${etapesHtml}</div>`);
+}
   if (notes.garniture && notes.garniture !== 'null') lignes.push(`<div style="font-size:0.85rem">🍋 <strong>Garniture :</strong> ${notes.garniture}</div>`);
  if (notes.complements && notes.complements !== 'null') lignes.push(`<div style="font-size:0.82rem;color:var(--text-secondary);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">💡 ${notes.complements}</div>`);
   if (notes.etapes?.length) lignes.push(`<div style="font-size:0.85rem;margin-top:4px"><strong>Étapes :</strong><br>${notes.etapes.map((e,i) => `${i+1}. ${e.description}${e.duree ? ' — ' + e.duree + ' ' + e.unite : ''}`).join('<br>')}</div>`);
