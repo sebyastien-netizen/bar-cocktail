@@ -1892,6 +1892,8 @@ main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .fiche-ing-icon--accent { background: var(--bg-accent); color: var(--text-accent); }
 .fiche-ing-icon--danger { background: var(--bg-danger); color: var(--text-danger); }
 .fiche-ing-icon--success { background: var(--bg-success); color: var(--text-success); }
+.fiche-ing-icon--muted { background: rgba(138,155,176,0.12); color: var(--text-muted); }
+.fiche-ing-barre-fill--muted { background: var(--text-muted); }
 .fiche-ing-body { flex: 1; min-width: 0; }
 .fiche-ing-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
 .fiche-ing-nom { font-size: 0.88rem; font-weight: 500; color: var(--text-primary); }
