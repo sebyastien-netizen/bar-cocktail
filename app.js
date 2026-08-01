@@ -3507,10 +3507,9 @@ function renderSessions(sessions, sessionsOpp = []) {
   container.innerHTML = `
     <div class="cave-header">
       <h2>🎉 Sessions cocktail</h2>
-      <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px">
         ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
-        <button class="btn-outline" onclick="ouvrirFinDuMonde()">🆘 Fin du monde</button>
-        <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">+ Nouvelle session</button>
+        <button class="btn-primary" onclick="ouvrirChoixTypeSession()">+ Nouvelle session</button>
       </div>
     </div>
 
@@ -3864,7 +3863,37 @@ function setModeSession(mode) {
   document.getElementById('btn-mode-libre').classList.toggle('active', mode === 'libre');
   document.getElementById('btn-mode-verrouille').classList.toggle('active', mode === 'verrouille');
 }
+function ouvrirChoixTypeSession() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:380px;width:100%">
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">🎉 Nouvelle session</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:18px">Quel type de session ?</div>
 
+      <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:10px;text-align:left;display:flex;align-items:center;gap:12px"
+        onclick="this.closest('div[style*=fixed]').remove(); ouvrirModalNouvelleSession()">
+        <span style="font-size:1.4rem">🎉</span>
+        <span>
+          <div style="font-weight:600">Soirée programmée</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">QR code, invités, choix de cocktails</div>
+        </span>
+      </button>
+
+      <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:16px;text-align:left;display:flex;align-items:center;gap:12px"
+        onclick="this.closest('div[style*=fixed]').remove(); ouvrirFinDuMonde()">
+        <span style="font-size:1.4rem">🆘</span>
+        <span>
+          <div style="font-weight:600">Fin du monde</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Cave d'opportunité, identification bouteilles</div>
+        </span>
+      </button>
+
+      <button class="btn-outline" style="width:100%;padding:10px" onclick="this.closest('div[style*=fixed]').remove()">Annuler</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 function ouvrirModalNouvelleSession() {
   modeSessionActif = 'libre';
   document.getElementById('session-nom').value = '';
