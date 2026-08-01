@@ -426,7 +426,7 @@ async function chargerRecettes() {
 
   renderRecettes();
 }
-async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
+async function ouvrirLiaisonIngredient(nomIng, recetteIngId, onApresLiaison) {
   const caveItems = (cave?.categories?.flatMap(c => c.items.filter(i => i.detenu !== false)) || [])
     .sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
   const alias = ingredientsAlias[nomIng.toLowerCase()];
@@ -707,7 +707,7 @@ const categorieVersType = {
     renderListe();
   };
 
-  document.getElementById('btn-alias-annuler').onclick = () => modal.remove();
+document.getElementById('btn-alias-annuler').onclick = () => { modal.remove(); if (onApresLiaison) onApresLiaison(); };
   document.getElementById('btn-alias-valider').onclick = async () => {
     const itemCaveId = itemSelectionne;
     if (!itemCaveId) { modal.remove(); return; }
@@ -728,8 +728,8 @@ const categorieVersType = {
         }
       });
     });
-    modal.remove();
-    ouvrirFicheRecette(recetteOuverte?.id);
+   modal.remove();
+    if (onApresLiaison) onApresLiaison(); else ouvrirFicheRecette(recetteOuverte?.id);
     alert(`✅ "${nomIng}" lié à "${(cave?.categories?.flatMap(c=>c.items).find(i=>i.id===itemCaveId))?.nom || itemCaveId}" sur toutes vos recettes.`);
   };
 }
@@ -4758,6 +4758,46 @@ function ouvrirRecadragePhoto(id) {
     ouvrirFicheInspiration(id);
   };
 }
+function statutIngredientPreview(nomIng) {
+  const nomLower = (nomIng || '').toLowerCase().trim();
+
+  if (ingredientsAlias[nomLower]) {
+    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ingredientsAlias[nomLower]);
+    if (item) return item.detenu !== false ? 'ok' : 'manquant';
+  }
+
+  const gLie = glossaireIngredients.find(g => g.item_cave_id && (
+    g.nom_canonique.toLowerCase() === nomLower || (g.alias || []).some(a => a.toLowerCase() === nomLower)
+  ));
+  if (gLie) {
+    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === gLie.item_cave_id);
+    if (item) return item.detenu !== false ? 'ok' : 'manquant';
+  }
+
+  const autoId = trouverItemCaveCorrespondant(nomIng);
+  if (autoId) {
+    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === autoId);
+    if (item) return item.detenu !== false ? 'ok' : 'manquant';
+  }
+
+  const gConnu = glossaireIngredients.find(g =>
+    g.nom_canonique.toLowerCase() === nomLower || (g.alias || []).some(a => a.toLowerCase() === nomLower)
+  );
+  if (gConnu) return 'glossaire';
+
+  return 'inconnu';
+}
+
+function badgeStatutIngredientInspiration(statut) {
+  const map = {
+    ok:        { icon: '✅', label: 'En cave',  color: 'var(--text-success)' },
+    manquant:  { icon: '❌', label: 'Manquant', color: 'var(--text-danger)' },
+    glossaire: { icon: '🧪', label: 'Connu',    color: 'var(--text-accent)' },
+    inconnu:   { icon: '❓', label: 'Inconnu',  color: 'var(--text-muted)' }
+  };
+  const s = map[statut];
+  return `<span style="font-size:0.72rem;color:${s.color};white-space:nowrap">${s.icon} ${s.label}</span>`;
+}
 async function ouvrirFicheInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
   if (!inspi) return;
@@ -4803,15 +4843,28 @@ ${inspi.photo_url ? `
       ${reponsesBartender.map(r => renderReponseBartender(r)).join('')}
     </div>` : ''}
 
-    ${ings.length > 0 ? `
+${ings.length > 0 ? (() => {
+      const statuts = ings.map(ing => statutIngredientPreview(typeof ing === 'string' ? ing : ing.nom));
+      const nbOk = statuts.filter(s => s === 'ok').length;
+      return `
     <div class="plante-section">
       <h3>Ingrédients</h3>
-      ${ings.map(ing => {
- const uniteValide = (ing.unite && ing.unite !== 'null') ? ing.unite : '';
-  const dosage = ing.quantite ? `<span style="color:var(--text-accent);font-weight:600;margin-left:8px">${ing.quantite}${uniteValide ? ' ' + uniteValide : ''}</span>` : '';
-  return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.9rem"><span>${ing.nom}</span>${dosage}</div>`;
-}).join('')}
-    </div>` : ''}
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px">📦 ${nbOk}/${ings.length} déjà en cave</div>
+      ${ings.map((ing, idx) => {
+        const nomIng = typeof ing === 'string' ? ing : ing.nom;
+        const uniteValide = (ing.unite && ing.unite !== 'null') ? ing.unite : '';
+        const dosage = ing.quantite ? `<span style="color:var(--text-accent);font-weight:600;margin-left:8px">${ing.quantite}${uniteValide ? ' ' + uniteValide : ''}</span>` : '';
+        const statut = statuts[idx];
+        return `<div style="display:flex;flex-direction:column;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.9rem">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>${nomIng}</span>
+            <div style="display:flex;align-items:center;gap:8px">${dosage}${badgeStatutIngredientInspiration(statut)}</div>
+          </div>
+          ${statut !== 'ok' ? `<button class="btn-outline" style="align-self:flex-start;margin-top:4px;font-size:0.72rem;padding:3px 10px" onclick="ouvrirLiaisonIngredient('${nomIng.replace(/'/g, "\\'")}', null, () => ouvrirFicheInspiration('${inspi.id}'))">🔗 Préparer dans Ma Cave</button>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+    })() : ''}
 
 ${(() => {
   if (!inspi.notes) return '';
