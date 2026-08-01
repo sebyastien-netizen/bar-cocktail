@@ -4607,7 +4607,34 @@ async function sauvegarderNomInspiration(id, nouveauNom) {
   inspi.nom = nom;
 }
 
-async function definirFocusPhoto(id, event) {
+let recadragePhotoActifId = null;
+
+function toggleModeRecadrage(id) {
+  const img = document.getElementById(`inspi-photo-${id}`);
+  const btn = document.getElementById(`btn-recadrage-${id}`);
+  if (!img || !btn) return;
+
+  if (recadragePhotoActifId === id) {
+    // Désactivation
+    recadragePhotoActifId = null;
+    img.style.cursor = 'default';
+    btn.style.background = 'var(--bg-card)';
+    btn.style.color = 'var(--text-secondary)';
+    btn.textContent = '🎯 Recentrer';
+  } else {
+    // Activation
+    recadragePhotoActifId = id;
+    img.style.cursor = 'crosshair';
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#000';
+    btn.textContent = '🎯 Touchez la photo…';
+  }
+}
+
+async function handleClicPhotoInspiration(id, event) {
+  if (recadragePhotoActifId !== id) return; // mode inactif → clic normal, rien ne bouge
+  event.stopPropagation();
+
   const img = event.currentTarget;
   const rect = img.getBoundingClientRect();
   const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
@@ -4620,6 +4647,9 @@ async function definirFocusPhoto(id, event) {
   if (inspi) inspi.photo_focus = focus;
 
   await db.from('inspirations').update({ photo_focus: focus }).eq('id', id).eq('user_id', currentUser.id);
+
+  // Un seul tap utile, puis désactivation automatique
+  toggleModeRecadrage(id);
 }
 async function ouvrirFicheInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
@@ -4646,10 +4676,13 @@ document.getElementById('inspiration-fiche-contenu').innerHTML = `
 
 ${inspi.photo_url ? `
 <div style="position:relative;margin-bottom:4px">
-  <img id="inspi-photo-${inspi.id}" src="${inspi.photo_url}" onclick="definirFocusPhoto('${inspi.id}', event)"
-    style="width:100%;max-height:220px;object-fit:cover;object-position:${inspi.photo_focus || '50% 50%'};border-radius:12px;cursor:crosshair">
+  <img id="inspi-photo-${inspi.id}" src="${inspi.photo_url}" onclick="handleClicPhotoInspiration('${inspi.id}', event)"
+    style="width:100%;max-height:220px;object-fit:cover;object-position:${inspi.photo_focus || '50% 50%'};border-radius:12px">
+  <button id="btn-recadrage-${inspi.id}" onclick="toggleModeRecadrage('${inspi.id}')"
+    style="position:absolute;bottom:8px;right:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:0.75rem;cursor:pointer">
+    🎯 Recentrer
+  </button>
 </div>
-<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:16px">🎯 Touchez la photo pour recentrer la meilleure partie</div>
 ` : ''}
 
 <div class="plante-section" style="display:flex;gap:8px;align-items:center">
