@@ -4192,8 +4192,8 @@ function ouvrirModalNouvelleSession() {
   const realisables = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
   const liste = document.getElementById('session-recettes-liste');
   liste.innerHTML = realisables.map(r => `
-    <div class="session-recette-item" onclick="this.querySelector('input').click()">
-      <input type="checkbox" value="${r.id}" checked />
+<div class="session-recette-item" onclick="this.querySelector('input').click()">
+      <input type="checkbox" value="${r.id}" />
       <div>
         <div class="session-recette-item-nom">${r.nom}</div>
         <div class="session-recette-item-meta">${r.base_alcool || ''} · ${(r.gouts || []).slice(0,2).join(' · ')}</div>
