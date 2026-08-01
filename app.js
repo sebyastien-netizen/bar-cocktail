@@ -762,6 +762,7 @@ function renderRecettes() {
   if (!container) return;
  
   let liste = recettes.filter(r => r.type === sectionRecette);
+  if (modeSelectionSoiree) liste = liste.filter(r => calculerDisponibilite(r) === 0);
  
   if (filtreBase) liste = liste.filter(r => r.base_alcool === filtreBase);
   if (filtreGout) liste = liste.filter(r => r.gouts && r.gouts.includes(filtreGout));
@@ -908,6 +909,7 @@ function lancerSoireeDepuisSelection() {
   recettesSelectionneesSoiree.clear();
   const barre = document.getElementById('barre-selection-soiree');
   if (barre) barre.remove();
+  renderRecettes();
   ouvrirChoixTypeSession();
 }
 function renderCarteRecette(r) {
@@ -4228,7 +4230,7 @@ async function creerSessionVoteRestreint(soireeMenuId) {
 
   const token = Math.random().toString(36).substring(2, 10);
   const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
-  const nom = prompt('Nom de la soirée ?', 'Ma soirée') || 'Soirée sans nom';
+  const nom = prompt('Nom de la soirée ?', 'Ma soirée') || `Soirée sans nom — ${new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
 
   await db.from('sessions_invites').insert({
     user_id: currentUser.id,
@@ -4266,7 +4268,7 @@ function ouvrirModalNouvelleSession() {
   document.getElementById('modal-nouvelle-session').classList.add('visible');
 } 
 async function creerSession() {
-  const nom = document.getElementById('session-nom').value.trim() || 'Soirée sans nom';
+const nom = document.getElementById('session-nom').value.trim() || `Soirée sans nom — ${new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
   const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
   const recettesDisponibles = Array.from(checks).map(c => c.value);
 
