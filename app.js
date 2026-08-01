@@ -4446,8 +4446,8 @@ async function assignerCocktailInvite(inviteId, recetteId) {
     await chargerStockReserve();
   }
 
-  document.querySelectorAll('div[style*="position:fixed"]').forEach(m => m.remove());
-  renderSessionActive(sessionActive);
+modal.remove();
+  renderInvitesListe(sessionActive?.invites || [], sessionActive);
   alert(`✅ "${recette?.nom}" assigné !`);
 }
 function renderInvitesListe(invites, session) {
@@ -5233,10 +5233,11 @@ function ouvrirRecadragePhoto(id) {
   frame.addEventListener('touchmove', pointerMove, { passive: true });
   frame.addEventListener('touchend', pointerUp);
 
-  document.getElementById('btn-cadrage-annuler').onclick = () => modal.remove();
+document.getElementById('btn-cadrage-annuler').onclick = () => { window.removeEventListener('mouseup', pointerUp); modal.remove(); };
   document.getElementById('btn-cadrage-valider').onclick = async () => {
     await db.from('inspirations').update({ photo_cadrage: cadrage }).eq('id', id).eq('user_id', currentUser.id);
     inspi.photo_cadrage = cadrage;
+    window.removeEventListener('mouseup', pointerUp);
     modal.remove();
     ouvrirFicheInspiration(id);
   };
