@@ -668,11 +668,27 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId) {
       caveItems.sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
     }
 
+const categorieVersType = {
+      sirops: 'sirop', liqueurs: 'liqueur', bitters: 'bitter',
+      'garde-manger': 'sucrant', 'ingredients-frais': 'jus'
+    };
+
     if (matchGlossaire) {
       await db.from('ingredients_glossaire')
         .update({ item_cave_id: nouvelItem.id })
         .eq('id', matchGlossaire.id);
       matchGlossaire.item_cave_id = nouvelItem.id;
+    } else if (categorieVersType[catId]) {
+      // Ingrédient créé manuellement, absent du glossaire → on l'y ajoute
+      const { data: nouvelleEntreeGlossaire } = await db.from('ingredients_glossaire').insert({
+        user_id: currentUser.id,
+        nom_canonique: nouvelItem.nom,
+        alias: [],
+        type: categorieVersType[catId],
+        item_cave_id: nouvelItem.id,
+        source: 'manuel-liaison'
+      }).select().single();
+      if (nouvelleEntreeGlossaire) glossaireIngredients.push(nouvelleEntreeGlossaire);
     }
 
     itemSelectionne = nouvelItem.id;
