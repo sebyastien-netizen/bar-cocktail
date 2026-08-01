@@ -3522,9 +3522,9 @@ function renderSessions(sessions, sessionsOpp = []) {
     <div class="section-label" style="margin-top:1.5rem">EN COURS</div>
     ${actives.map(s => renderCarteSession(s)).join('')}
     ` : `
-    <div class="empty-state">
+<div class="empty-state">
       <p>Aucune session active</p>
-      <button class="btn-primary" onclick="ouvrirModalNouvelleSession()">Lancer une soirée</button>
+      <button class="btn-primary" onclick="ouvrirChoixTypeSession()">Lancer une soirée</button>
     </div>
     `}
 
