@@ -3504,10 +3504,10 @@ function renderSessions(sessions, sessionsOpp = []) {
   const actives = sessions.filter(s => new Date(s.expires_at) > new Date());
   const passees = sessions.filter(s => new Date(s.expires_at) <= new Date());
 
-  container.innerHTML = `
+container.innerHTML = `
     <div class="cave-header">
-     h2>🎉 Sessions cocktail</h2
-    <div style="display:flex;gap:8px">
+      <h2>🎉 Soirées cocktail</h2>
+      <div style="display:flex;gap:8px">
         ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
         <button class="btn-primary" onclick="ouvrirChoixTypeSession()">+ Nouvelle soirée</button>
       </div>
