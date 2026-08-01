@@ -679,16 +679,24 @@ const categorieVersType = {
         .eq('id', matchGlossaire.id);
       matchGlossaire.item_cave_id = nouvelItem.id;
     } else if (categorieVersType[catId]) {
-      // Ingrédient créé manuellement, absent du glossaire → on l'y ajoute
-      const { data: nouvelleEntreeGlossaire } = await db.from('ingredients_glossaire').insert({
-        user_id: currentUser.id,
-        nom_canonique: nouvelItem.nom,
-        alias: [],
-        type: categorieVersType[catId],
-        item_cave_id: nouvelItem.id,
-        source: 'manuel-liaison'
-      }).select().single();
-      if (nouvelleEntreeGlossaire) glossaireIngredients.push(nouvelleEntreeGlossaire);
+      const doublon = trouverDoublonPotentiel(nouvelItem.nom);
+      if (doublon && confirm(`⚠️ "${nouvelItem.nom}" ressemble à "${doublon.nom_canonique}" déjà dans le glossaire.\n\nEst-ce la même chose ?\n\nOK = ajouter "${nouvelItem.nom}" comme orthographe alternative\nAnnuler = créer une entrée séparée`)) {
+        await db.from('ingredients_glossaire')
+          .update({ alias: [...(doublon.alias || []), nouvelItem.nom.toLowerCase()], item_cave_id: doublon.item_cave_id || nouvelItem.id })
+          .eq('id', doublon.id);
+        doublon.alias = [...(doublon.alias || []), nouvelItem.nom.toLowerCase()];
+        if (!doublon.item_cave_id) doublon.item_cave_id = nouvelItem.id;
+      } else {
+        const { data: nouvelleEntreeGlossaire } = await db.from('ingredients_glossaire').insert({
+          user_id: currentUser.id,
+          nom_canonique: nouvelItem.nom,
+          alias: [],
+          type: categorieVersType[catId],
+          item_cave_id: nouvelItem.id,
+          source: 'manuel-liaison'
+        }).select().single();
+        if (nouvelleEntreeGlossaire) glossaireIngredients.push(nouvelleEntreeGlossaire);
+      }
     }
 
     itemSelectionne = nouvelItem.id;
@@ -1833,6 +1841,22 @@ const { data, error } = await db.from('items').insert(newItem).select().single()
   };
  
   afficherModal('modal-ajout');
+}
+function normaliserPourComparaison(texte) {
+  return (texte || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/^(sirop|liqueur|cordial|creme)\s+(de\s+|d')?/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function trouverDoublonPotentiel(nom) {
+  const cible = normaliserPourComparaison(nom);
+  return glossaireIngredients.find(g => {
+    const candidats = [g.nom_canonique, ...(g.alias || [])].map(normaliserPourComparaison);
+    return candidats.some(c => c === cible || (c.length > 3 && (c.includes(cible) || cible.includes(c))));
+  });
 }
  // Auto-liaison : si un item ajouté à Ma Cave porte exactement le même nom
 // qu'un ingrédient de recette non lié, on fait le lien automatiquement.
