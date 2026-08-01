@@ -22,6 +22,9 @@ let rechercheRecette = '';
 let ingredientsAlias = {};
 let catNonDetenusOuvertes = new Set();
 let glossaireIngredients = [];
+let modeSelectionSoiree = false;
+let recettesSelectionneesSoiree = new Set();
+let selectionPourSoireeEnAttente = null;
 let filtreGout      = '';
 let filtreDiff      = '';
 let filtreDisponible = false;
@@ -786,8 +789,12 @@ function renderRecettes() {
       <button class="section-btn ${sectionRecette === 'preparation' ? 'active' : ''}" onclick="changerSection('preparation')">
         ⚗️ Préparations <span class="section-count">${recettes.filter(r=>r.type==='preparation').length}</span>
       </button>
-    </div>
- 
+</div>
+
+    <button class="btn-outline" style="margin:8px 0" onclick="toggleModeSelectionSoiree()">
+      ${modeSelectionSoiree ? '✕ Annuler la sélection' : '☑️ Sélectionner pour une soirée'}
+    </button>
+
 <div style="padding:0 0 10px 0;">
 <input type="text" id="recherche-recettes"
 placeholder="🔍 Rechercher une recette…" 
@@ -815,11 +822,12 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
       </button>
     </div>
  
-    <div class="recettes-grille">
+<div class="recettes-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune recette trouvée.</div>' : ''}
       ${liste.map(r => renderCarteRecette(r)).join('')}
     </div>
   `;
+  ouvrirBarreSelectionSoiree();
 }
  
 // =============================================
@@ -863,6 +871,45 @@ const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
   if (max === Infinity) return null;
   return { max, partiel: inconnu };
 }
+function toggleModeSelectionSoiree() {
+  modeSelectionSoiree = !modeSelectionSoiree;
+  if (!modeSelectionSoiree) recettesSelectionneesSoiree.clear();
+  renderRecettes();
+}
+
+function toggleSelectionRecette(id, event) {
+  event.stopPropagation();
+  if (recettesSelectionneesSoiree.has(id)) recettesSelectionneesSoiree.delete(id);
+  else recettesSelectionneesSoiree.add(id);
+  renderRecettes();
+}
+
+function ouvrirBarreSelectionSoiree() {
+  let barre = document.getElementById('barre-selection-soiree');
+  if (recettesSelectionneesSoiree.size === 0) {
+    if (barre) barre.remove();
+    return;
+  }
+  if (!barre) {
+    barre = document.createElement('div');
+    barre.id = 'barre-selection-soiree';
+    barre.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-top:1px solid var(--border-accent);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:5000;gap:10px';
+    document.body.appendChild(barre);
+  }
+  barre.innerHTML = `
+    <span style="font-size:0.85rem">${recettesSelectionneesSoiree.size} sélectionnée${recettesSelectionneesSoiree.size > 1 ? 's' : ''}</span>
+    <button class="btn-primary" style="padding:8px 16px" onclick="lancerSoireeDepuisSelection()">🎉 Nouvelle soirée avec ces recettes</button>
+  `;
+}
+
+function lancerSoireeDepuisSelection() {
+  selectionPourSoireeEnAttente = Array.from(recettesSelectionneesSoiree);
+  modeSelectionSoiree = false;
+  recettesSelectionneesSoiree.clear();
+  const barre = document.getElementById('barre-selection-soiree');
+  if (barre) barre.remove();
+  ouvrirChoixTypeSession();
+}
 function renderCarteRecette(r) {
   const nbManquants = calculerDisponibilite(r);
   const diffLabel   = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
@@ -883,8 +930,11 @@ function renderCarteRecette(r) {
         <span class="carte-badge-dispo">${badgeDisponibilite(nbManquants)}</span>
        </div>`;
  
+const selectionnee = recettesSelectionneesSoiree.has(r.id);
+
   return `
-    <div class="carte-recette" onclick="ouvrirFicheRecette('${r.id}')">
+    <div class="carte-recette" onclick="${modeSelectionSoiree ? `toggleSelectionRecette('${r.id}', event)` : `ouvrirFicheRecette('${r.id}')`}" style="${modeSelectionSoiree && selectionnee ? 'outline:2px solid var(--accent);outline-offset:-2px' : ''}">
+      ${modeSelectionSoiree ? `<div style="position:absolute;top:8px;left:8px;z-index:5;width:22px;height:22px;border-radius:6px;background:${selectionnee ? 'var(--accent)' : 'rgba(0,0,0,0.5)'};border:1px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;color:#000;font-size:0.85rem">${selectionnee ? '✓' : ''}</div>` : ''}
       ${imgHtml}
       <div class="carte-body">
         <div class="carte-top">
@@ -3963,7 +4013,18 @@ async function creerSoireeMenuSolo() {
     mode: 'solo'
   }).select().single();
 
-  if (error) { alert('Erreur : ' + error.message); return; }
+if (error) { alert('Erreur : ' + error.message); return; }
+
+  if (selectionPourSoireeEnAttente) {
+    for (const recetteId of selectionPourSoireeEnAttente) {
+      await db.from('soiree_menu_recettes').insert({
+        id: 'smr-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        soiree_menu_id: id, recette_id: recetteId, portions_prevues: 6, ordre: 0
+      });
+    }
+    selectionPourSoireeEnAttente = null;
+  }
+
   ouvrirTableauBordSoiree(id);
 }
 
@@ -4188,12 +4249,14 @@ function ouvrirModalNouvelleSession() {
   document.getElementById('btn-mode-libre').classList.add('active');
   document.getElementById('btn-mode-verrouille').classList.remove('active');
 
-  // Liste recettes réalisables
-  const realisables = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
+// Liste recettes réalisables — si une sélection vient de l'onglet Recettes, on ne montre qu'elle
+  const realisables = selectionPourSoireeEnAttente
+    ? recettes.filter(r => selectionPourSoireeEnAttente.includes(r.id))
+    : recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
   const liste = document.getElementById('session-recettes-liste');
   liste.innerHTML = realisables.map(r => `
-<div class="session-recette-item" onclick="this.querySelector('input').click()">
-      <input type="checkbox" value="${r.id}" />
+    <div class="session-recette-item" onclick="this.querySelector('input').click()">
+      <input type="checkbox" value="${r.id}" ${selectionPourSoireeEnAttente ? 'checked' : ''} />
       <div>
         <div class="session-recette-item-nom">${r.nom}</div>
         <div class="session-recette-item-meta">${r.base_alcool || ''} · ${(r.gouts || []).slice(0,2).join(' · ')}</div>
