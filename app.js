@@ -2091,6 +2091,15 @@ function fermerModal(id) {
   }
 }
 
+// Filet de sécurité global : certaines fonctions de fermeture historiques
+// ne passent pas par fermerModal() et oublient de réinitialiser le scroll.
+// Cet observateur corrige automatiquement, peu importe la fonction en cause.
+new MutationObserver(() => {
+  if (!document.querySelector('.modal-overlay.visible')) {
+    document.body.style.overflow = '';
+  }
+}).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+
 window.addEventListener('popstate', () => {
   if (modalHistoryOuvert) {
     modalHistoryOuvert = false;
