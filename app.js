@@ -4492,7 +4492,7 @@ const coche = inspirationsSelectionRejetees.has(inspi.id);
       <input type="checkbox" ${coche ? 'checked' : ''} onclick="toggleSelectionInspirationRejetee('${inspi.id}', event)"
         style="position:absolute;top:8px;right:8px;width:20px;height:20px;z-index:2;cursor:pointer">
       ` : ''}
-      ${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px">` : ''}
+${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;height:120px;object-fit:cover;object-position:${inspi.photo_focus || '50% 50%'};border-radius:8px;margin-bottom:8px">` : ''}
       <div class="herbo-carte-top">
         <span class="herbo-emoji">${sourceIcon[inspi.source] || '💡'}</span>
         <div class="herbo-carte-info">
@@ -4599,6 +4599,28 @@ async function associerPhotoInspiration(id) {
   renderInspirations();
   await ouvrirFicheInspiration(id);
 }
+async function sauvegarderNomInspiration(id, nouveauNom) {
+  const nom = (nouveauNom || '').trim();
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi || !nom || nom === inspi.nom) return;
+  await db.from('inspirations').update({ nom }).eq('id', id).eq('user_id', currentUser.id);
+  inspi.nom = nom;
+}
+
+async function definirFocusPhoto(id, event) {
+  const img = event.currentTarget;
+  const rect = img.getBoundingClientRect();
+  const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+  const y = Math.round(((event.clientY - rect.top) / rect.height) * 100);
+  const focus = `${x}% ${y}%`;
+
+  img.style.objectPosition = focus;
+
+  const inspi = inspirationsList.find(i => i.id === id);
+  if (inspi) inspi.photo_focus = focus;
+
+  await db.from('inspirations').update({ photo_focus: focus }).eq('id', id).eq('user_id', currentUser.id);
+}
 async function ouvrirFicheInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
   if (!inspi) return;
@@ -4610,16 +4632,25 @@ async function ouvrirFicheInspiration(id) {
 
   const { data: reponsesBartender } = await db.from('bartender_reponses').select('*').eq('inspiration_id', id).order('created_at', { ascending: false });
 
-  document.getElementById('inspiration-fiche-contenu').innerHTML = `
+document.getElementById('inspiration-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2rem">💡</span>
-      <div>
-        <h2 class="fiche-titre">${inspi.nom}</h2>
+      <div style="flex:1">
+        <input type="text" id="inspi-nom-input-${inspi.id}" value="${inspi.nom}" class="fiche-titre"
+          style="font-family:inherit;background:none;border:none;border-bottom:1px dashed var(--border);color:inherit;width:100%;padding:2px 0"
+          onblur="sauvegarderNomInspiration('${inspi.id}', this.value)"
+          onkeydown="if(event.key==='Enter') this.blur()">
         <div class="herbo-latin">${sourceLabel[inspi.source] || ''} ${inspi.source_detail ? '· ' + inspi.source_detail : ''} · ${dateStr}</div>
       </div>
     </div>
 
-${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:16px">` : ''}
+${inspi.photo_url ? `
+<div style="position:relative;margin-bottom:4px">
+  <img id="inspi-photo-${inspi.id}" src="${inspi.photo_url}" onclick="definirFocusPhoto('${inspi.id}', event)"
+    style="width:100%;max-height:220px;object-fit:cover;object-position:${inspi.photo_focus || '50% 50%'};border-radius:12px;cursor:crosshair">
+</div>
+<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:16px">🎯 Touchez la photo pour recentrer la meilleure partie</div>
+` : ''}
 
 <div class="plante-section" style="display:flex;gap:8px;align-items:center">
   <input type="text" id="inspi-photo-manuelle-${inspi.id}" placeholder="Coller une URL de photo…" style="flex:1;font-size:0.8rem">
