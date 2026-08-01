@@ -47,11 +47,12 @@ function afficherLogin() {
   document.getElementById('screen-app').classList.add('hidden');
 }
  
-function afficherApp() {
+async function afficherApp() {
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
   chargerCave();
   chargerRecettes();
+  await chargerStockReserve();
   chargerEquipements();
   chargerConcoctions();
   chargerDashboard();
