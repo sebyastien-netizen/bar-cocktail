@@ -824,7 +824,31 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
 // =============================================
 // CARTE RECETTE — avec photo_url
 // =============================================
- 
+
+function calculerVerresPossibles(recette) {
+  const ings = (recette.ingredients || []).filter(i =>
+    i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel && i.item_cave_id
+  );
+  if (ings.length === 0) return null;
+
+  let max = Infinity;
+  let inconnu = false;
+
+  ings.forEach(ing => {
+    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
+    if (!item || item.cl_restants === null || item.cl_restants === undefined) {
+      inconnu = true;
+      return;
+    }
+    const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+    if (qteCl <= 0) return;
+    const possibles = Math.floor(item.cl_restants / qteCl);
+    if (possibles < max) max = possibles;
+  });
+
+  if (max === Infinity) return null;
+  return { max, partiel: inconnu };
+}
 function renderCarteRecette(r) {
   const nbManquants = calculerDisponibilite(r);
   const diffLabel   = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
@@ -857,8 +881,14 @@ function renderCarteRecette(r) {
         <div class="carte-gouts">
           ${(r.gouts || []).map(g => `<span class="tag-gout">${g}</span>`).join('')}
         </div>
-        <div class="carte-footer">
+<div class="carte-footer">
           ${r.prix_portion ? `<span class="carte-prix">~${r.prix_portion.toFixed(2)}€</span>` : ''}
+          ${(() => {
+            const vp = calculerVerresPossibles(r);
+            if (!vp) return '';
+            const couleur = vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
+            return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''}${vp.partiel ? '*' : ''}</span>`;
+          })()}
         </div>
       </div>
     </div>
@@ -1224,6 +1254,12 @@ ${r.photo_url ? `<div class="fiche-img-wrap" style="${r.photo_cadrage ? 'positio
             style="font-family:inherit;background:none;border:none;border-bottom:1px dashed var(--border);color:inherit;width:100%;padding:2px 0"
             onblur="sauvegarderNomRecette('${r.id}', this.value)"
             onkeydown="if(event.key==='Enter') this.blur()">
+          ${(() => {
+            const vp = calculerVerresPossibles(r);
+            if (!vp) return '';
+            const couleur = vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
+            return `<div style="font-size:0.85rem;color:${couleur};font-weight:600;margin-top:4px">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''} possible${vp.max > 1 ? 's' : ''} avec ta cave actuelle${vp.partiel ? ' <span style="color:var(--text-muted);font-weight:400">(calcul partiel)</span>' : ''}</div>`;
+          })()}
           <div class="fiche-badges">
             <span class="carte-diff diff-${r.difficulte}">${diffLabel}</span>
             ${badgeDisponibilite(nbManquants)}
@@ -5697,7 +5733,7 @@ async function ouvrirFicheGrimoire(id) {
     'kefir-de-fruits': 'Kéfir de fruits', 'bitter-maison': 'Bitter maison'
   };
 
-  document.querySelector('.grimoire-fiche-contenu').innerHTML = `
+document.querySelector('.grimoire-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2.5rem">${r.avec_alcool ? '🍶' : '🌿'}</span>
       <div>
