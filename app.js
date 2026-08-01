@@ -451,9 +451,10 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId, onApresLiaison) {
   const alias = ingredientsAlias[nomIng.toLowerCase()];
   let itemSelectionne = alias || null;
 
-  const typeVersCategorie = {
+const typeVersCategorie = {
     sirop: 'sirops', cordial: 'sirops', liqueur: 'liqueurs', creme: 'liqueurs',
-    bitter: 'bitters', sucrant: 'garde-manger', jus: 'ingredients-frais', mixer: 'garde-manger'
+    bitter: 'bitters', sucrant: 'garde-manger', jus: 'ingredients-frais', mixer: 'garde-manger',
+    puree: 'purees-coulis'
   };
 
   const nomLower = nomIng.toLowerCase();
@@ -689,7 +690,7 @@ async function ouvrirLiaisonIngredient(nomIng, recetteIngId, onApresLiaison) {
 
 const categorieVersType = {
       sirops: 'sirop', liqueurs: 'liqueur', bitters: 'bitter',
-      'garde-manger': 'sucrant', 'ingredients-frais': 'jus'
+      'garde-manger': 'sucrant', 'ingredients-frais': 'jus', 'purees-coulis': 'puree'
     };
 
     if (matchGlossaire) {
