@@ -344,8 +344,54 @@ function questionSuivante() {
     afficherChoixCocktails();
   }
 }
+async function afficherChoixRestreint() {
+  const { data: menuRecettes } = await db.from('soiree_menu_recettes')
+    .select('*, recette:recette_id(*)').eq('soiree_menu_id', session.soiree_menu_id);
 
+  const listeAvecCompteurs = await Promise.all((menuRecettes || []).map(async mr => {
+    const { count } = await db.from('sessions_invites')
+      .select('*', { count: 'exact', head: true })
+      .eq('soiree_menu_recette_id', mr.id).neq('statut', 'annule');
+    return { ...mr, restantes: Math.max(0, mr.portions_prevues - (count || 0)) };
+  }));
+
+  document.getElementById('cocktails-liste').innerHTML = listeAvecCompteurs.map(mr => `
+    <div class="cocktail-card ${mr.restantes === 0 ? 'epuise' : ''}" ${mr.restantes > 0 ? `onclick="voterCocktailRestreint('${mr.id}', '${mr.recette_id}')"` : ''}>
+      <div class="cocktail-thumb">${mr.recette?.photo_url ? `<img src="${mr.recette.photo_url}" />` : '🍸'}</div>
+      <div>
+        <div class="cocktail-name">${mr.recette?.nom}</div>
+        <div class="cocktail-meta" style="color:${mr.restantes === 0 ? '#c0392b' : mr.restantes <= 2 ? '#e67e22' : '#27ae60'}">
+          ${mr.restantes === 0 ? 'Épuisé' : `${mr.restantes} restant${mr.restantes > 1 ? 's' : ''}`}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function voterCocktailRestreint(menuRecetteId, recetteId) {
+  const { data: ok } = await db.rpc('reserver_portion_vote', { p_menu_recette_id: menuRecetteId });
+  if (!ok) {
+    alert('Trop tard, ce cocktail vient d\'être épuisé — choisis-en un autre !');
+    afficherChoixRestreint();
+    return;
+  }
+
+  await db.from('sessions_invites').insert({
+    user_id: session.user_id, token: Math.random().toString(36).substring(2, 10),
+    nom_session: session.nom_session, nom_invite: pseudo,
+    recette_id: recetteId, soiree_menu_recette_id: menuRecetteId,
+    choix_type: 'invite', statut: 'en_attente', is_master: false,
+    mode_choix: 'restreint', expires_at: session.expires_at
+  });
+
+  afficherScreen('screen-confirmation');
+}
 async function afficherChoixCocktails() {
+  if (session.mode_choix === 'restreint') {
+    return afficherChoixRestreint();
+  }
+
+  // ... tout le reste de la fonction existante continue inchangé en dessous
   afficherScreen('screen-choix');
 const ids = session.recettes_disponibles || [];
 console.log('ids:', ids, 'session:', session.token);
