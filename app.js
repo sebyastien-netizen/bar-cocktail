@@ -787,9 +787,12 @@ function renderCarteRecette(r) {
   const diffClass   = { facile: 'diff-facile', moyen: 'diff-moyen', avance: 'diff-avance' }[r.difficulte] || '';
  
   // Image ou fallback initiale
+ const cadreRecette = r.photo_cadrage
+    ? `style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;transform:translate(calc(-50% + ${r.photo_cadrage.x}%), calc(-50% + ${r.photo_cadrage.y}%)) scale(${r.photo_cadrage.zoom});"`
+    : '';
   const imgHtml = r.photo_url
-    ? `<div class="carte-img-wrap">
-        <img src="${r.photo_url}" alt="${r.nom}" class="carte-img" loading="lazy"
+    ? `<div class="carte-img-wrap" style="${r.photo_cadrage ? 'position:relative;background:#000' : ''}">
+        <img src="${r.photo_url}" alt="${r.nom}" class="${r.photo_cadrage ? '' : 'carte-img'}" loading="lazy" ${cadreRecette}
           onerror="this.parentElement.innerHTML='<span class=carte-img-initiale>${r.nom.charAt(0)}</span>'; this.parentElement.classList.add('carte-img--fallback')">
         <span class="carte-badge-dispo">${badgeDisponibilite(nbManquants)}</span>
        </div>`
@@ -1170,8 +1173,8 @@ function renderFiche(portions) {
 
     <!-- EN-TÊTE -->
     <div class="fiche-entete">
-      ${r.photo_url ? `<div class="fiche-img-wrap"><img src="${r.photo_url}" alt="${r.nom}" class="fiche-img" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
-      <div class="fiche-entete-body">
+${r.photo_url ? `<div class="fiche-img-wrap" style="${r.photo_cadrage ? 'position:relative;background:#000' : ''}"><img src="${r.photo_url}" alt="${r.nom}" class="${r.photo_cadrage ? '' : 'fiche-img'}" loading="lazy" ${r.photo_cadrage ? `style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;transform:translate(calc(-50% + ${r.photo_cadrage.x}%), calc(-50% + ${r.photo_cadrage.y}%)) scale(${r.photo_cadrage.zoom});"` : ''} onerror="this.parentElement.style.display='none'"></div>` : ''}
+<div class="fiche-entete-body">
         <div class="fiche-entete-top">
           <h2 class="fiche-titre">${r.nom}</h2>
           <div class="fiche-badges">
@@ -4612,6 +4615,7 @@ async function sauvegarderNomInspiration(id, nouveauNom) {
   if (!inspi || !nom || nom === inspi.nom) return;
   await db.from('inspirations').update({ nom }).eq('id', id).eq('user_id', currentUser.id);
   inspi.nom = nom;
+  renderInspirations();
 }
 
 function ouvrirRecadragePhoto(id) {
@@ -5128,7 +5132,8 @@ async function validerDirectement(id) {
     nom: inspi.nom,
     difficulte: 'moyen',
    base_alcool: (notesTournee.base_alcool && notesTournee.base_alcool !== 'null') ? notesTournee.base_alcool : null,
-    photo_url: inspi.photo_url || null,
+photo_url: inspi.photo_url || null,
+    photo_cadrage: inspi.photo_cadrage || null,
     anecdote,
     variante_notes: complementsTexte,
     source_marque: inspi.source === 'url' ? inspi.source_detail : null
@@ -5386,8 +5391,9 @@ async function validerAvecDosages(id) {
     base_alcool: result.base_alcool || null,
     verre_type: result.verre || null,
     description_courte: result.explication || null,
-    anecdote: anecdoteFinale,
+anecdote: anecdoteFinale,
     photo_url: inspi.photo_url || null,
+    photo_cadrage: inspi.photo_cadrage || null,
     ...completerInspirationData.profil
   }).select().single();
 
