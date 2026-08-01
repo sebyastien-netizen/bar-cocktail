@@ -3867,8 +3867,9 @@ function ouvrirChoixTypeSession() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px';
   modal.innerHTML = `
     <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:380px;width:100%">
-      <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">🎉 Nouvelle session</div>
-      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:18px">Quel type de session ?</div>
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">🎉 Nouvelle soirée</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:18px">Quel type de soirée ?</div>
+
 
       <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:10px;text-align:left;display:flex;align-items:center;gap:12px"
         onclick="this.closest('div[style*=fixed]').remove(); ouvrirModalNouvelleSession()">
