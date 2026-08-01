@@ -4157,6 +4157,27 @@ async function verrouillerSoireeMenu() {
   document.getElementById('modal-tableau-bord-soiree').remove();
   alert('✅ Menu verrouillé — le stock nécessaire est réservé jusqu\'au ' + dateEvenement + '.');
 }
+async function creerSessionVoteRestreint(soireeMenuId) {
+  const { data: menuRecettes } = await db.from('soiree_menu_recettes').select('*').eq('soiree_menu_id', soireeMenuId);
+  const recetteIds = (menuRecettes || []).map(mr => mr.recette_id);
+
+  const token = Math.random().toString(36).substring(2, 10);
+  const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
+  const nom = prompt('Nom de la soirée ?', 'Ma soirée') || 'Soirée sans nom';
+
+  await db.from('sessions_invites').insert({
+    user_id: currentUser.id,
+    token,
+    nom_session: nom,
+    mode_choix: 'restreint',
+    recettes_disponibles: recetteIds,
+    soiree_menu_id: soireeMenuId,
+    expires_at: expiresAt,
+    is_master: true
+  });
+
+  chargerSessions();
+}
 function ouvrirModalNouvelleSession() {
   modeSessionActif = 'libre';
   document.getElementById('session-nom').value = '';
