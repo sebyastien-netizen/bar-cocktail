@@ -4492,7 +4492,14 @@ const coche = inspirationsSelectionRejetees.has(inspi.id);
       <input type="checkbox" ${coche ? 'checked' : ''} onclick="toggleSelectionInspirationRejetee('${inspi.id}', event)"
         style="position:absolute;top:8px;right:8px;width:20px;height:20px;z-index:2;cursor:pointer">
       ` : ''}
-${inspi.photo_url ? `<img src="${inspi.photo_url}" style="width:100%;height:120px;object-fit:cover;object-position:${inspi.photo_focus || '50% 50%'};border-radius:8px;margin-bottom:8px">` : ''}
+${(() => {
+        if (!inspi.photo_url) return '';
+        const c = inspi.photo_cadrage || { zoom: 1, x: 0, y: 0 };
+        return `<div style="position:relative;width:100%;height:120px;overflow:hidden;border-radius:8px;background:#000;margin-bottom:8px">
+          <img src="${inspi.photo_url}" style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;
+          transform:translate(calc(-50% + ${c.x}%), calc(-50% + ${c.y}%)) scale(${c.zoom});">
+        </div>`;
+      })()}
       <div class="herbo-carte-top">
         <span class="herbo-emoji">${sourceIcon[inspi.source] || '💡'}</span>
         <div class="herbo-carte-info">
@@ -4607,49 +4614,86 @@ async function sauvegarderNomInspiration(id, nouveauNom) {
   inspi.nom = nom;
 }
 
-let recadragePhotoActifId = null;
+function ouvrirRecadragePhoto(id) {
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (!inspi || !inspi.photo_url) return;
 
-function toggleModeRecadrage(id) {
-  const img = document.getElementById(`inspi-photo-${id}`);
-  const btn = document.getElementById(`btn-recadrage-${id}`);
-  if (!img || !btn) return;
+  let cadrage = { ...(inspi.photo_cadrage || { zoom: 1, x: 0, y: 0 }) };
+  let dragging = false, startX = 0, startY = 0, startCadrageX = 0, startCadrageY = 0;
 
-  if (recadragePhotoActifId === id) {
-    // Désactivation
-    recadragePhotoActifId = null;
-    img.style.cursor = 'default';
-    btn.style.background = 'var(--bg-card)';
-    btn.style.color = 'var(--text-secondary)';
-    btn.textContent = '🎯 Recentrer';
-  } else {
-    // Activation
-    recadragePhotoActifId = id;
-    img.style.cursor = 'crosshair';
-    btn.style.background = 'var(--accent)';
-    btn.style.color = '#000';
-    btn.textContent = '🎯 Touchez la photo…';
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:20px;max-width:420px;width:100%">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🎯 Ajuster le cadrage</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px">Glissez la photo pour la repositionner. Le cadre gris pointillé représente les limites visibles.</div>
+      <div id="cadrage-frame" style="position:relative;width:100%;height:220px;overflow:hidden;border-radius:12px;background:#000;border:2px dashed var(--border-accent);cursor:grab;touch-action:none">
+        <img id="cadrage-img" src="${inspi.photo_url}" draggable="false"
+          style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;user-select:none;
+          transform:translate(calc(-50% + ${cadrage.x}%), calc(-50% + ${cadrage.y}%)) scale(${cadrage.zoom})">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+        <span style="font-size:0.8rem;color:var(--text-secondary)">🔍−</span>
+        <input type="range" id="cadrage-zoom" min="30" max="250" value="${Math.round(cadrage.zoom * 100)}" style="flex:1">
+        <span style="font-size:0.8rem;color:var(--text-secondary)">🔍+</span>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:2px">Zoom : ${Math.round(cadrage.zoom * 100)}% — sous 100%, des bandes noires apparaissent</div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="btn-cadrage-annuler" class="btn-outline" style="flex:1">Annuler</button>
+        <button id="btn-cadrage-valider" class="btn-primary" style="flex:1">✅ Enregistrer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const frame = document.getElementById('cadrage-frame');
+  const img = document.getElementById('cadrage-img');
+  const zoomInput = document.getElementById('cadrage-zoom');
+  const zoomLabel = modal.querySelector('div[style*="text-align:center"]');
+
+  function appliquer() {
+    img.style.transform = `translate(calc(-50% + ${cadrage.x}%), calc(-50% + ${cadrage.y}%)) scale(${cadrage.zoom})`;
+    zoomLabel.textContent = `Zoom : ${Math.round(cadrage.zoom * 100)}% — sous 100%, des bandes noires apparaissent`;
   }
-}
 
-async function handleClicPhotoInspiration(id, event) {
-  if (recadragePhotoActifId !== id) return; // mode inactif → clic normal, rien ne bouge
-  event.stopPropagation();
+  zoomInput.oninput = () => {
+    cadrage.zoom = zoomInput.value / 100;
+    appliquer();
+  };
 
-  const img = event.currentTarget;
-  const rect = img.getBoundingClientRect();
-  const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
-  const y = Math.round(((event.clientY - rect.top) / rect.height) * 100);
-  const focus = `${x}% ${y}%`;
+  function pointerDown(e) {
+    dragging = true;
+    frame.style.cursor = 'grabbing';
+    const p = e.touches ? e.touches[0] : e;
+    startX = p.clientX; startY = p.clientY;
+    startCadrageX = cadrage.x; startCadrageY = cadrage.y;
+  }
+  function pointerMove(e) {
+    if (!dragging) return;
+    const p = e.touches ? e.touches[0] : e;
+    const rect = frame.getBoundingClientRect();
+    const dx = ((p.clientX - startX) / rect.width) * 100;
+    const dy = ((p.clientY - startY) / rect.height) * 100;
+    cadrage.x = startCadrageX + dx;
+    cadrage.y = startCadrageY + dy;
+    appliquer();
+  }
+  function pointerUp() { dragging = false; frame.style.cursor = 'grab'; }
 
-  img.style.objectPosition = focus;
+  frame.addEventListener('mousedown', pointerDown);
+  frame.addEventListener('mousemove', pointerMove);
+  window.addEventListener('mouseup', pointerUp);
+  frame.addEventListener('touchstart', pointerDown, { passive: true });
+  frame.addEventListener('touchmove', pointerMove, { passive: true });
+  frame.addEventListener('touchend', pointerUp);
 
-  const inspi = inspirationsList.find(i => i.id === id);
-  if (inspi) inspi.photo_focus = focus;
-
-  await db.from('inspirations').update({ photo_focus: focus }).eq('id', id).eq('user_id', currentUser.id);
-
-  // Un seul tap utile, puis désactivation automatique
-  toggleModeRecadrage(id);
+  document.getElementById('btn-cadrage-annuler').onclick = () => modal.remove();
+  document.getElementById('btn-cadrage-valider').onclick = async () => {
+    await db.from('inspirations').update({ photo_cadrage: cadrage }).eq('id', id).eq('user_id', currentUser.id);
+    inspi.photo_cadrage = cadrage;
+    modal.remove();
+    ouvrirFicheInspiration(id);
+  };
 }
 async function ouvrirFicheInspiration(id) {
   const inspi = inspirationsList.find(x => x.id === id);
@@ -4662,7 +4706,9 @@ async function ouvrirFicheInspiration(id) {
 
   const { data: reponsesBartender } = await db.from('bartender_reponses').select('*').eq('inspiration_id', id).order('created_at', { ascending: false });
 
-document.getElementById('inspiration-fiche-contenu').innerHTML = `
+const cadrage = inspi.photo_cadrage || { zoom: 1, x: 0, y: 0 };
+
+  document.getElementById('inspiration-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2rem">💡</span>
       <div style="flex:1">
@@ -4675,14 +4721,12 @@ document.getElementById('inspiration-fiche-contenu').innerHTML = `
     </div>
 
 ${inspi.photo_url ? `
-<div style="position:relative;margin-bottom:4px">
-  <img id="inspi-photo-${inspi.id}" src="${inspi.photo_url}" onclick="handleClicPhotoInspiration('${inspi.id}', event)"
-    style="width:100%;max-height:220px;object-fit:cover;object-position:${inspi.photo_focus || '50% 50%'};border-radius:12px">
-  <button id="btn-recadrage-${inspi.id}" onclick="toggleModeRecadrage('${inspi.id}')"
-    style="position:absolute;bottom:8px;right:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:0.75rem;cursor:pointer">
-    🎯 Recentrer
-  </button>
+<div style="position:relative;width:100%;height:220px;overflow:hidden;border-radius:12px;background:#000;margin-bottom:4px">
+  <img id="inspi-photo-${inspi.id}" src="${inspi.photo_url}"
+    style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;
+    transform:translate(calc(-50% + ${cadrage.x}%), calc(-50% + ${cadrage.y}%)) scale(${cadrage.zoom});">
 </div>
+<button class="btn-outline" style="font-size:0.78rem;padding:6px 12px;margin-bottom:16px" onclick="ouvrirRecadragePhoto('${inspi.id}')">🎯 Ajuster le cadrage</button>
 ` : ''}
 
 <div class="plante-section" style="display:flex;gap:8px;align-items:center">
