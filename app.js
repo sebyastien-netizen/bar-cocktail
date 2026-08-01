@@ -1176,7 +1176,10 @@ function renderFiche(portions) {
 ${r.photo_url ? `<div class="fiche-img-wrap" style="${r.photo_cadrage ? 'position:relative;background:#000' : ''}"><img src="${r.photo_url}" alt="${r.nom}" class="${r.photo_cadrage ? '' : 'fiche-img'}" loading="lazy" ${r.photo_cadrage ? `style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;transform:translate(calc(-50% + ${r.photo_cadrage.x}%), calc(-50% + ${r.photo_cadrage.y}%)) scale(${r.photo_cadrage.zoom});"` : ''} onerror="this.parentElement.style.display='none'"></div>` : ''}
 <div class="fiche-entete-body">
         <div class="fiche-entete-top">
-          <h2 class="fiche-titre">${r.nom}</h2>
+<input type="text" id="fiche-nom-input-${r.id}" value="${r.nom}" class="fiche-titre"
+            style="font-family:inherit;background:none;border:none;border-bottom:1px dashed var(--border);color:inherit;width:100%;padding:2px 0"
+            onblur="sauvegarderNomRecette('${r.id}', this.value)"
+            onkeydown="if(event.key==='Enter') this.blur()">
           <div class="fiche-badges">
             <span class="carte-diff diff-${r.difficulte}">${diffLabel}</span>
             ${badgeDisponibilite(nbManquants)}
@@ -1452,7 +1455,14 @@ function changerPortions(n) {
   if (n < 1 || n > 10) return;
   renderFiche(n);
 }
-
+async function sauvegarderNomRecette(id, nouveauNom) {
+  const nom = (nouveauNom || '').trim();
+  const r = recettes.find(x => x.id === id);
+  if (!r || !nom || nom === r.nom) return;
+  await db.from('recettes').update({ nom }).eq('id', id).eq('user_id', currentUser.id);
+  r.nom = nom;
+  renderRecettes();
+}
 async function supprimerRecette(id) {
   const r = recettes.find(x => x.id === id);
   if (!r) return;
@@ -1469,6 +1479,15 @@ async function supprimerRecette(id) {
       alert('Erreur suppression : ' + error.message);
     }
     return;
+  }
+
+  // Si cette recette provenait d'une inspiration validée, elle redevient "validable"
+  await db.from('inspirations').update({ statut: 'en_attente', recette_liee_id: null }).eq('recette_liee_id', id);
+  const inspiLiee = inspirationsList.find(i => i.recette_liee_id === id);
+  if (inspiLiee) {
+    inspiLiee.statut = 'en_attente';
+    inspiLiee.recette_liee_id = null;
+    renderInspirations();
   }
 
   recettes = recettes.filter(x => x.id !== id);
