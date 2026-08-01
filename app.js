@@ -4278,7 +4278,83 @@ async function chargerInvitesSession(session) {
 
   renderInvitesListe(invites || [], session);
 }
+function scorerRecettesPourProfil(profil, recettesCandidates) {
+  const axes = ['sucre','amer','acide','fruite','fume','floral','epice','cremeux'];
+  return recettesCandidates.map(r => {
+    let score = 0, total = 0;
+    axes.forEach(a => {
+      const rv = r[`gout_${a}`] || 0;
+      const pv = profil?.[a] || 0;
+      if (rv > 0 || pv > 0) { score += Math.max(0, 5 - Math.abs(rv - pv)); total += 5; }
+    });
+    return { ...r, matchScore: total > 0 ? Math.round((score / total) * 100) : 50 };
+  }).sort((a, b) => b.matchScore - a.matchScore);
+}
+function ouvrirAssignationCocktail(inviteId) {
+  const invite = sessionActive?.invites?.find(i => i.id === inviteId) ||
+    { id: inviteId }; // fallback si non trouvé localement, on relit en base au besoin
 
+  db.from('sessions_invites').select('*').eq('id', inviteId).single().then(({ data: inv }) => {
+    if (!inv) return;
+
+    const candidats = recettes.filter(r =>
+      r.type === 'cocktail' && sessionActive?.recettes_disponibles?.includes(r.id)
+    );
+    const scored = scorerRecettesPourProfil(inv.profil_gustatif, candidats);
+
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = `
+      <div style="background:var(--bg-card);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto">
+        <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🎁 Choisir pour ${inv.nom_invite || 'cet invité'}</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px">Classé selon son profil gustatif</div>
+        ${scored.map(r => {
+          const vp = calculerVerresPossibles(r);
+          const stockOk = !vp || vp.max > 0;
+          return `<div class="item-alias-choix" style="padding:10px 12px;border-bottom:1px solid var(--border);${!stockOk ? 'opacity:0.4' : 'cursor:pointer'}"
+            ${stockOk ? `onclick="assignerCocktailInvite('${inv.id}', '${r.id}')"` : ''}>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-weight:600">${r.nom}</span>
+              <span style="color:var(--text-accent);font-size:0.8rem">${r.matchScore}% match</span>
+            </div>
+            <div style="font-size:0.75rem;color:${stockOk ? 'var(--text-muted)' : 'var(--text-danger)'};margin-top:2px">
+              ${vp ? `🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''} possible${vp.max > 1 ? 's' : ''}` : 'Stock non suivi'}
+            </div>
+          </div>`;
+        }).join('')}
+        <button class="btn-outline" style="width:100%;margin-top:14px" onclick="this.closest('div[style*=fixed]').remove()">Annuler</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  });
+}
+
+async function assignerCocktailInvite(inviteId, recetteId) {
+  await db.from('sessions_invites').update({ recette_id: recetteId, statut: 'assignee' }).eq('id', inviteId);
+
+  // Réserve immédiatement 1 portion — un décrément réel se fera au marquerRealisee
+  // le jour J, mais on protège tout de suite les assignations suivantes du même sondage.
+  const recette = recettes.find(r => r.id === recetteId);
+  if (recette && sessionActive) {
+    for (const ing of (recette.ingredients || [])) {
+      if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+      if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+      await db.from('stock_reserve').insert({
+        id: 'reserve-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        item_id: ing.item_cave_id,
+        soiree_menu_id: null,
+        cl_reserve: qteCl,
+        date_evenement: new Date().toISOString().slice(0, 10)
+      });
+    }
+    await chargerStockReserve();
+  }
+
+  document.querySelectorAll('div[style*="position:fixed"]').forEach(m => m.remove());
+  renderSessionActive(sessionActive);
+  alert(`✅ "${recette?.nom}" assigné !`);
+}
 function renderInvitesListe(invites, session) {
   const liste = document.getElementById('session-invites-liste');
   if (!liste) return;
@@ -4298,6 +4374,7 @@ function renderInvitesListe(invites, session) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div style="font-weight:600">${inv.nom_invite || 'Invité'}</div>
           <span style="font-size:0.75rem;opacity:0.5">${inv.choix_type === 'seb' ? '✨ Laisse Seb choisir' : '🍸 A choisi'}</span>
+          ${inv.choix_type === 'seb' && !inv.recette_id ? `<button class="btn-outline" style="margin-top:6px;padding:4px 10px;font-size:0.75rem" onclick="ouvrirAssignationCocktail('${inv.id}')">🎁 Choisir un cocktail</button>` : ''}
         </div>
         <div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">Profil : ${axes}</div>
         <div style="font-size:0.82rem;margin-bottom:10px">Cocktail : <strong>${recette}</strong></div>
