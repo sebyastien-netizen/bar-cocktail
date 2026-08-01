@@ -2025,6 +2025,11 @@ async function autoLierIngredientParNom(nomItem, itemCaveId) {
   setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 2500);
 }
 function onTabChange(tab) {
+  // Filet de sécurité : aucune modal ne devrait rester ouverte au changement d'onglet.
+  if (!document.querySelector('.modal-overlay.visible')) {
+    document.body.style.overflow = '';
+  }
+
   if (tab === 'aacheter') chargerAAcheter();
   if (tab === 'concoctions') chargerConcoctions();
   if (tab === 'dashboard') chargerDashboard();
@@ -4214,8 +4219,9 @@ async function verrouillerSoireeMenu() {
   const consommation = calculerConsommationAgregee();
   for (const c of consommation) {
     if (c.inconnu) continue;
-    await db.from('stock_reserve').insert({
+await db.from('stock_reserve').insert({
       id: 'reserve-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+      user_id: currentUser.id,
       item_id: c.itemId,
       soiree_menu_id: soireeMenuActive.id,
       cl_reserve: c.besoinCl,
@@ -4435,8 +4441,9 @@ async function assignerCocktailInvite(inviteId, recetteId) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
       const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
-      await db.from('stock_reserve').insert({
+await db.from('stock_reserve').insert({
         id: 'reserve-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        user_id: currentUser.id,
         item_id: ing.item_cave_id,
         soiree_menu_id: null,
         cl_reserve: qteCl,
