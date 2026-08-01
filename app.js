@@ -20,6 +20,7 @@ let sectionRecette  = 'cocktail';
 let filtreBase      = '';
 let rechercheRecette = '';
 let ingredientsAlias = {};
+let catNonDetenusOuvertes = new Set();
 let glossaireIngredients = [];
 let filtreGout      = '';
 let filtreDiff      = '';
@@ -197,17 +198,21 @@ container.appendChild(searchBar);
   `;
   document.getElementById('cave-container').appendChild(prixBanner);
  
-  cave.categories.forEach(cat => {
+cave.categories.forEach(cat => {
     if (cat.id.startsWith('a-acheter')) return;
     if (filtreCategorieActive && cat.id !== filtreCategorieActive) return;
- 
+
     const items = filtrerItems(cat.items);
     if (filtreRecherche && items.length === 0) return;
- 
+
+    const detenus = items.filter(i => i.detenu !== false);
+    const nonDetenus = items.filter(i => i.detenu === false);
+    const ouvert = filtreRecherche ? true : catNonDetenusOuvertes.has(cat.id);
+
     const div = document.createElement('div');
     div.className = 'categorie open';
     div.id = 'cat-' + cat.id;
- 
+
     div.innerHTML = `
       <div class="categorie-header" onclick="toggleCategorie('${cat.id}')">
         <span class="categorie-icon">${cat.icon}</span>
@@ -216,11 +221,25 @@ container.appendChild(searchBar);
         <span class="categorie-chevron">▼</span>
       </div>
       <div class="categorie-items">
-        ${items.map(item => renderItem(item, cat.id)).join('')}
+        ${detenus.map(item => renderItem(item, cat.id)).join('')}
+        ${nonDetenus.length > 0 ? `
+        <div class="non-detenus-toggle" onclick="event.stopPropagation(); toggleNonDetenus('${cat.id}')"
+          style="padding:8px 14px;font-size:0.8rem;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:6px">
+          <span>${ouvert ? '▾' : '▸'}</span> ${nonDetenus.length} non détenu${nonDetenus.length > 1 ? 's' : ''}
+        </div>
+        <div class="non-detenus-liste" style="display:${ouvert ? 'block' : 'none'}">
+          ${nonDetenus.map(item => renderItem(item, cat.id)).join('')}
+        </div>` : ''}
       </div>
     `;
     container.appendChild(div);
   });
+}
+
+function toggleNonDetenus(catId) {
+  if (catNonDetenusOuvertes.has(catId)) catNonDetenusOuvertes.delete(catId);
+  else catNonDetenusOuvertes.add(catId);
+  renderCave();
 }
  async function supprimerItemCave(itemId, catId) {
   const cat = cave.categories.find(c => c.id === catId);
