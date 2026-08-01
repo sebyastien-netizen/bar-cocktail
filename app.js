@@ -4088,9 +4088,13 @@ function renderTableauBordSoiree() {
         }).join('')}
       </div>` : ''}
 
-      <button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
+     <button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
         🔒 Verrouiller le menu (réserve le stock)
       </button>
+      ${peutVerrouiller ? `
+      <button class="btn-outline" style="width:100%;padding:12px;margin-top:8px" onclick="creerSessionVoteRestreint(soireeMenuActive.id)">
+        🗳️ Publier comme vote pour les invités
+      </button>` : ''}
       ${!peutVerrouiller && soireeMenuRecettesActives.length > 0 ? `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:6px">Résous les points ci-dessus pour verrouiller</div>` : ''}
     </div>
   `;
