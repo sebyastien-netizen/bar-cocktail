@@ -3953,6 +3953,209 @@ function ouvrirChoixTypeSession() {
   `;
   document.body.appendChild(modal);
 }
+async function creerSoireeMenuSolo() {
+  const id = 'soiree-' + Date.now();
+  const { data, error } = await db.from('soiree_menu').insert({
+    id,
+    user_id: currentUser.id,
+    nom: 'Ma soirée',
+    mode: 'solo'
+  }).select().single();
+
+  if (error) { alert('Erreur : ' + error.message); return; }
+  ouvrirTableauBordSoiree(id);
+}
+
+let soireeMenuActive = null;
+let soireeMenuRecettesActives = [];
+
+async function ouvrirTableauBordSoiree(soireeMenuId) {
+  const { data: menu } = await db.from('soiree_menu').select('*').eq('id', soireeMenuId).single();
+  const { data: menuRecettes } = await db.from('soiree_menu_recettes').select('*').eq('soiree_menu_id', soireeMenuId).order('ordre');
+
+  soireeMenuActive = menu;
+  soireeMenuRecettesActives = menuRecettes || [];
+
+  let modal = document.getElementById('modal-tableau-bord-soiree');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-tableau-bord-soiree';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9000;overflow-y:auto;padding:20px';
+    document.body.appendChild(modal);
+  }
+
+  renderTableauBordSoiree();
+}
+
+function calculerConsommationAgregee() {
+  // Pour chaque item_cave_id apparaissant dans au moins une recette du menu,
+  // additionne la consommation projetée sur toutes les recettes qui l'utilisent.
+  const conso = {};
+
+  soireeMenuRecettesActives.forEach(mr => {
+    const recette = recettes.find(r => r.id === mr.recette_id);
+    if (!recette) return;
+    (recette.ingredients || []).forEach(ing => {
+      if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
+      if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+      if (!conso[ing.item_cave_id]) conso[ing.item_cave_id] = { nom: ing.nom, totalCl: 0 };
+      conso[ing.item_cave_id].totalCl += qteCl * mr.portions_prevues;
+    });
+  });
+
+  return Object.entries(conso).map(([itemId, c]) => {
+    const item = cave?.categories?.flatMap(cat => cat.items).find(i => i.id === itemId);
+    const disponibleReel = item ? Math.max(0, item.cl_restants - clReserveePour(itemId)) : null;
+    return {
+      itemId,
+      nomItem: item?.nom || c.nom,
+      besoinCl: Math.round(c.totalCl * 10) / 10,
+      disponibleReel,
+      inconnu: !item || item.cl_restants === null,
+      suffisant: disponibleReel !== null ? disponibleReel >= c.totalCl : null
+    };
+  });
+}
+
+function renderTableauBordSoiree() {
+  const modal = document.getElementById('modal-tableau-bord-soiree');
+  const consommation = calculerConsommationAgregee();
+
+  const ingredientsNonLies = [];
+  soireeMenuRecettesActives.forEach(mr => {
+    const recette = recettes.find(r => r.id === mr.recette_id);
+    (recette?.ingredients || []).forEach(ing => {
+      if (!ing.item_cave_id && !ing.optionnel) ingredientsNonLies.push({ nom: ing.nom, recette: recette.nom });
+    });
+  });
+
+  const stockInsuffisant = consommation.some(c => c.suffisant === false);
+  const peutVerrouiller = ingredientsNonLies.length === 0 && !stockInsuffisant && soireeMenuRecettesActives.length > 0;
+
+  const recettesDispo = recettes.filter(r => r.type === 'cocktail' && !soireeMenuRecettesActives.some(mr => mr.recette_id === r.id));
+
+  modal.innerHTML = `
+    <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <input type="text" value="${soireeMenuActive.nom}" style="font-size:1.1rem;font-weight:700;background:none;border:none;border-bottom:1px dashed var(--border);color:inherit;flex:1"
+          onblur="renommerSoireeMenu(this.value)">
+        <button onclick="document.getElementById('modal-tableau-bord-soiree').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer;margin-left:12px">✕</button>
+      </div>
+
+      ${ingredientsNonLies.length > 0 ? `
+      <div style="background:var(--bg-danger);border-left:3px solid var(--border-danger);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:14px;font-size:0.82rem;color:var(--text-danger)">
+        🔗 ${ingredientsNonLies.length} ingrédient(s) non lié(s) — ${ingredientsNonLies.map(i => i.nom).join(', ')}. Lie-les depuis chaque fiche recette avant de verrouiller.
+      </div>` : ''}
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍸 Cocktails du menu</div>
+        ${soireeMenuRecettesActives.length === 0 ? `<div style="font-size:0.8rem;color:var(--text-muted)">Aucun cocktail ajouté.</div>` : ''}
+        ${soireeMenuRecettesActives.map(mr => {
+          const recette = recettes.find(r => r.id === mr.recette_id);
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:0.9rem">${recette?.nom || '—'}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn-outline" style="padding:2px 10px" onclick="ajusterPortionsMenu('${mr.id}', -1)">−</button>
+              <span style="min-width:24px;text-align:center">${mr.portions_prevues}</span>
+              <button class="btn-outline" style="padding:2px 10px" onclick="ajusterPortionsMenu('${mr.id}', 1)">+</button>
+              <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
+            </div>
+          </div>`;
+        }).join('')}
+        <select id="select-ajout-recette" style="width:100%;margin-top:10px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary)">
+          <option value="">+ Ajouter un cocktail au menu…</option>
+          ${recettesDispo.map(r => `<option value="${r.id}">${r.nom}</option>`).join('')}
+        </select>
+      </div>
+
+      ${consommation.length > 0 ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">📦 Stock partagé</div>
+        ${consommation.map(c => {
+          const pct = c.disponibleReel !== null ? Math.min(100, Math.round((c.besoinCl / Math.max(c.disponibleReel, 0.01)) * 100)) : null;
+          const couleur = c.inconnu ? 'var(--text-muted)' : c.suffisant === false ? 'var(--text-danger)' : pct > 80 ? 'var(--text-warning)' : 'var(--text-success)';
+          return `<div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:2px">
+              <span>${c.nomItem}</span>
+              <span style="color:${couleur}">${c.inconnu ? 'contenance inconnue' : `${c.besoinCl}cl / ${c.disponibleReel}cl`}</span>
+            </div>
+            ${!c.inconnu ? `<div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(100, pct)}%;background:${couleur}"></div>
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+
+      <button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
+        🔒 Verrouiller le menu (réserve le stock)
+      </button>
+      ${!peutVerrouiller && soireeMenuRecettesActives.length > 0 ? `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:6px">Résous les points ci-dessus pour verrouiller</div>` : ''}
+    </div>
+  `;
+
+  document.getElementById('select-ajout-recette').onchange = async (e) => {
+    if (!e.target.value) return;
+    await ajouterRecetteMenu(e.target.value);
+  };
+}
+
+async function ajouterRecetteMenu(recetteId) {
+  const { data } = await db.from('soiree_menu_recettes').insert({
+    id: 'smr-' + Date.now(),
+    soiree_menu_id: soireeMenuActive.id,
+    recette_id: recetteId,
+    portions_prevues: 6,
+    ordre: soireeMenuRecettesActives.length
+  }).select().single();
+  if (data) soireeMenuRecettesActives.push(data);
+  renderTableauBordSoiree();
+}
+
+async function ajusterPortionsMenu(id, delta) {
+  const mr = soireeMenuRecettesActives.find(m => m.id === id);
+  if (!mr) return;
+  mr.portions_prevues = Math.max(1, mr.portions_prevues + delta);
+  await db.from('soiree_menu_recettes').update({ portions_prevues: mr.portions_prevues }).eq('id', id);
+  renderTableauBordSoiree();
+}
+
+async function retirerRecetteMenu(id) {
+  await db.from('soiree_menu_recettes').delete().eq('id', id);
+  soireeMenuRecettesActives = soireeMenuRecettesActives.filter(m => m.id !== id);
+  renderTableauBordSoiree();
+}
+
+async function renommerSoireeMenu(nom) {
+  if (!nom.trim() || nom === soireeMenuActive.nom) return;
+  soireeMenuActive.nom = nom.trim();
+  await db.from('soiree_menu').update({ nom: nom.trim() }).eq('id', soireeMenuActive.id);
+}
+
+async function verrouillerSoireeMenu() {
+  if (!confirm('Verrouiller ce menu ? Le stock nécessaire sera réservé jusqu\'à la date de l\'événement.')) return;
+
+  const dateEvenement = prompt('Date de la soirée (AAAA-MM-JJ) ?', new Date().toISOString().slice(0, 10));
+  if (!dateEvenement) return;
+
+  const consommation = calculerConsommationAgregee();
+  for (const c of consommation) {
+    if (c.inconnu) continue;
+    await db.from('stock_reserve').insert({
+      id: 'reserve-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+      item_id: c.itemId,
+      soiree_menu_id: soireeMenuActive.id,
+      cl_reserve: c.besoinCl,
+      date_evenement: dateEvenement
+    });
+  }
+
+  await db.from('soiree_menu').update({ statut: 'verrouille', date_evenement: dateEvenement }).eq('id', soireeMenuActive.id);
+  await chargerStockReserve();
+
+  document.getElementById('modal-tableau-bord-soiree').remove();
+  alert('✅ Menu verrouillé — le stock nécessaire est réservé jusqu\'au ' + dateEvenement + '.');
+}
 function ouvrirModalNouvelleSession() {
   modeSessionActif = 'libre';
   document.getElementById('session-nom').value = '';
