@@ -1784,9 +1784,13 @@ function ouvrirModalContenance(itemId, catId) {
     </div>
   `;
  
-  document.getElementById('btn-sauver-contenance').onclick = async () => {
-    const cl_total    = parseInt(document.getElementById('input-cl-total')?.value)    || null;
-    const cl_restants = parseFloat(document.getElementById('input-cl-restants')?.value) || null;
+document.getElementById('btn-sauver-contenance').onclick = async () => {
+    const totalInput = document.getElementById('input-cl-total')?.value;
+    const restantsInput = document.getElementById('input-cl-restants')?.value;
+
+    const cl_total = totalInput !== '' && !isNaN(parseInt(totalInput)) ? parseInt(totalInput) : item.cl_total;
+    const cl_restants = restantsInput !== '' && !isNaN(parseFloat(restantsInput)) ? parseFloat(restantsInput) : item.cl_restants;
+
     const updates = { cl_total, cl_restants };
     await db.from('items').update(updates).eq('id', itemId).eq('user_id', currentUser.id);
     Object.assign(item, updates);
