@@ -848,21 +848,22 @@ function clReserveePour(itemId) {
   return stockReserveActif.filter(r => r.item_id === itemId).reduce((s, r) => s + r.cl_reserve, 0);
 }
 function calculerVerresPossibles(recette) {
-  const ings = (recette.ingredients || []).filter(i =>
-    i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel && i.item_cave_id
+  const tousIngs = (recette.ingredients || []).filter(i =>
+    i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel
   );
-  if (ings.length === 0) return null;
+  if (tousIngs.length === 0) return null;
 
   let max = Infinity;
   let inconnu = false;
 
-  ings.forEach(ing => {
+  tousIngs.forEach(ing => {
+    if (!ing.item_cave_id) { inconnu = true; return; }
     const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
     if (!item || item.cl_restants === null || item.cl_restants === undefined) {
       inconnu = true;
       return;
     }
-const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+    const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
     if (qteCl <= 0) return;
     const disponibleReel = Math.max(0, item.cl_restants - clReserveePour(item.id));
     const possibles = Math.floor(disponibleReel / qteCl);
