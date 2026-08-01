@@ -825,6 +825,18 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
 // CARTE RECETTE — avec photo_url
 // =============================================
 
+let stockReserveActif = [];
+
+async function chargerStockReserve() {
+  const { data } = await db.from('stock_reserve').select('*').eq('user_id', currentUser.id);
+  // Une réservation ne protège plus rien une fois sa date passée — pas de nettoyage à faire, juste ignorée
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  stockReserveActif = (data || []).filter(r => !r.date_evenement || r.date_evenement >= aujourdhui);
+}
+
+function clReserveePour(itemId) {
+  return stockReserveActif.filter(r => r.item_id === itemId).reduce((s, r) => s + r.cl_reserve, 0);
+}
 function calculerVerresPossibles(recette) {
   const ings = (recette.ingredients || []).filter(i =>
     i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel && i.item_cave_id
@@ -840,9 +852,10 @@ function calculerVerresPossibles(recette) {
       inconnu = true;
       return;
     }
-    const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
     if (qteCl <= 0) return;
-    const possibles = Math.floor(item.cl_restants / qteCl);
+    const disponibleReel = Math.max(0, item.cl_restants - clReserveePour(item.id));
+    const possibles = Math.floor(disponibleReel / qteCl);
     if (possibles < max) max = possibles;
   });
 
@@ -3923,6 +3936,15 @@ function ouvrirChoixTypeSession() {
         <span>
           <div style="font-weight:600">Fin du monde</div>
           <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Cave d'opportunité, identification bouteilles</div>
+        </span>
+      </button>
+
+<button class="btn-outline" style="width:100%;padding:14px;margin-bottom:16px;text-align:left;display:flex;align-items:center;gap:12px"
+        onclick="this.closest('div[style*=fixed]').remove(); creerSoireeMenuSolo()">
+        <span style="font-size:1.4rem">🧑‍🍳</span>
+        <span>
+          <div style="font-weight:600">Je prépare seul</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Batch imposé, tableau de bord de stock</div>
         </span>
       </button>
 
