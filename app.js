@@ -407,7 +407,17 @@ function calculerDisponibilite(recette, caveIdsOverride) {
  // Mode Fin du monde : matching par texte (nom/catégorie), pas par item_cave_id —
 // les bouteilles d'opportunité ne sont jamais dans la cave cataloguée de Seb.
 function calculerDisponibiliteOpportunite(recette, dispoTextes) {
+  function calculerDisponibiliteOpportunite(recette, dispoTextes) {
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel);
+  const manquants = ingredientsRequis.filter(ing => {
+    if (ing.item_cave_id && CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) {
+      return false; // ingrédient frais/générique jamais tracké — toujours considéré disponible
+    }
+    const key = (ing.nom || '').toLowerCase();
+    return !dispoTextes.some(d => key.includes(d) || d.includes(key));
+  });
+  return manquants.length;
+};
   const manquants = ingredientsRequis.filter(ing => {
     const key = (ing.nom || '').toLowerCase();
     return !dispoTextes.some(d => key.includes(d) || d.includes(key));
@@ -847,6 +857,14 @@ async function chargerStockReserve() {
 function clReserveePour(itemId) {
   return stockReserveActif.filter(r => r.item_id === itemId).reduce((s, r) => s + r.cl_reserve, 0);
 }
+const CATEGORIES_NON_TRACKEES = ['ingredients-frais', 'garde-manger', 'ponctuels'];
+
+function categorieDeItemGlobal(itemId) {
+  for (const cat of (cave?.categories || [])) {
+    if (cat.items.some(i => i.id === itemId)) return cat.id;
+  }
+  return null;
+}
 function calculerVerresPossibles(recette) {
   const tousIngs = (recette.ingredients || []).filter(i =>
     i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel
@@ -856,8 +874,9 @@ function calculerVerresPossibles(recette) {
   let max = Infinity;
   let inconnu = false;
 
-  tousIngs.forEach(ing => {
+tousIngs.forEach(ing => {
     if (!ing.item_cave_id) { inconnu = true; return; }
+    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
     const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
     if (!item || item.cl_restants === null || item.cl_restants === undefined) {
       inconnu = true;
@@ -4078,9 +4097,10 @@ function calculerConsommationAgregee() {
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
     if (!recette) return;
-    (recette.ingredients || []).forEach(ing => {
+(recette.ingredients || []).forEach(ing => {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+      if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
       const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
       if (!conso[ing.item_cave_id]) conso[ing.item_cave_id] = { nom: ing.nom, totalCl: 0 };
       conso[ing.item_cave_id].totalCl += qteCl * mr.portions_prevues;
