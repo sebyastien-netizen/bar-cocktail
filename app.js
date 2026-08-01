@@ -3506,10 +3506,10 @@ function renderSessions(sessions, sessionsOpp = []) {
 
   container.innerHTML = `
     <div class="cave-header">
-      <h2>🎉 Sessions cocktail</h2>
+     h2>🎉 Sessions cocktail</h2
     <div style="display:flex;gap:8px">
         ${passees.length > 0 ? `<button class="btn-outline" onclick="supprimerSessionsPassees()">🗑️ Vider les passées (${passees.length})</button>` : ''}
-        <button class="btn-primary" onclick="ouvrirChoixTypeSession()">+ Nouvelle session</button>
+        <button class="btn-primary" onclick="ouvrirChoixTypeSession()">+ Nouvelle soirée</button>
       </div>
     </div>
 
@@ -3523,8 +3523,7 @@ function renderSessions(sessions, sessionsOpp = []) {
     ${actives.map(s => renderCarteSession(s)).join('')}
     ` : `
 <div class="empty-state">
-      <p>Aucune session active</p>
-      <button class="btn-primary" onclick="ouvrirChoixTypeSession()">Lancer une soirée</button>
+      <p>Aucune soirée active</p>
     </div>
     `}
 
@@ -3611,7 +3610,7 @@ function renderFinDuMondeAccueil() {
   const zone = document.getElementById('fin-du-monde-contenu');
   zone.innerHTML = `
     <button class="btn-outline" style="margin-bottom:16px" onclick="fermerModal('modal-fin-du-monde')">← Fermer</button>
-    <h2 style="margin-bottom:4px">🆘 Session Fin du monde</h2>
+    <h2 style="margin-bottom:4px">🆘 Soirée Fin du monde</h2>
     <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">
       Tu n'as pas ta cave sous la main — dis-nous ce qu'il y a, on te dit ce que tu peux faire.
     </p>
