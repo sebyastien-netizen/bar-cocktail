@@ -3815,7 +3815,7 @@ function renderCarteSession(s, passee = false) {
       <button style="position:absolute;top:0.75rem;right:0.75rem;width:28px;height:28px;border-radius:8px;background:var(--bg-danger);color:var(--text-danger);border:1px solid var(--border-danger);font-size:0.75rem;cursor:pointer"
         onclick="event.stopPropagation(); supprimerSession('${s.id}', '${s.nom_session}')">✕</button>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;padding-right:32px">
-        <span style="font-weight:600;font-size:1rem">${s.nom_session || 'Session sans nom'}</span>
+        <span style="font-weight:600;font-size:1rem">${s.nom_session || 'Soirée sans nom'}</span>
         ${!passee
           ? `<span class="badge badge-ok">${heuresRestantes}h restantes</span>`
           : `<span class="badge badge-3">Terminée</span>`}
@@ -3915,7 +3915,7 @@ function ouvrirModalNouvelleSession() {
   document.getElementById('modal-nouvelle-session').classList.add('visible');
 } 
 async function creerSession() {
-  const nom = document.getElementById('session-nom').value.trim() || 'Session sans nom';
+  const nom = document.getElementById('session-nom').value.trim() || 'Soirée sans nom';
   const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
   const recettesDisponibles = Array.from(checks).map(c => c.value);
 
@@ -3959,7 +3959,7 @@ function renderSessionActive(session) {
 
   document.getElementById('session-active-contenu').innerHTML = `
     <div style="margin-bottom:1.25rem">
-      <div style="font-size:1.2rem;font-weight:600;margin-bottom:4px">${session.nom_session || 'Session sans nom'}</div>
+      <div style="font-size:1.2rem;font-weight:600;margin-bottom:4px">${session.nom_session || 'Soirée sans nom'}</div>
       <div style="font-size:0.8rem;opacity:0.5">
         ${session.mode_choix === 'verrouille' ? '🔒 Verrouillé' : '🔓 Libre'} · 
         ${recettesSession.length} recette(s) · 
