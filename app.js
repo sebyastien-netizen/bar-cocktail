@@ -4138,34 +4138,40 @@ async function analyserScreenshot(input) {
     const data = await res.json();
 
     if (data.error) { alert('Erreur : ' + data.error); return; }
-    if (!data.nom && (!data.ingredients || data.ingredients.length === 0)) {
+
+    const recettesTrouvees = data.recettes || [];
+    if (recettesTrouvees.length === 0) {
       alert('Aucune recette lisible sur ce screenshot.');
       return;
     }
 
-    const { error } = await db.from('inspirations').insert({
-      id: 'screenshot-' + Date.now(),
-      user_id: currentUser.id,
-      nom: data.nom || 'Cocktail screenshot',
-      source: 'photo',
-      source_detail: data.source || 'Screenshot réseau social',
-      photo_url,
-      ingredients: data.ingredients || [],
-      statut: 'en_attente',
-notes: JSON.stringify({
-        type: 'cocktail',
-        garniture: data.garniture || null,
-methode: (data.methode && data.methode.length) ? data.methode : suggererTechniqueParDefaut(data.ingredients),
-methode_source: (data.methode && data.methode.length) ? 'lue sur l\'image' : 'suggérée par défaut',
-        base_alcool: data.base_alcool || null,
-        origine: 'Importé via screenshot'
-      })
-    });
-
-    if (error) { alert('Erreur : ' + error.message); return; }
+    for (const r of recettesTrouvees) {
+      await db.from('inspirations').insert({
+        id: 'screenshot-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        user_id: currentUser.id,
+        nom: r.nom || 'Cocktail screenshot',
+        source: 'photo',
+        source_detail: 'Screenshot',
+        photo_url,
+        ingredients: r.ingredients || [],
+        statut: 'en_attente',
+        notes: JSON.stringify({
+          type: 'cocktail',
+          verre: r.verre || null,
+          garniture: r.garniture || null,
+          methode: (r.methode && r.methode.length) ? r.methode : suggererTechniqueParDefaut(r.ingredients),
+          methode_source: (r.methode && r.methode.length) ? 'lue sur l\'image' : 'suggérée par défaut',
+          complements: r.complements || null,
+          base_alcool: r.base_alcool || null,
+          origine: 'Importé via screenshot'
+        })
+      });
+    }
 
     await chargerInspirations();
-    alert('✅ Recette "' + (data.nom || 'Cocktail') + '" ajoutée dans Inspirations !');
+    alert(recettesTrouvees.length === 1
+      ? '✅ Recette "' + (recettesTrouvees[0].nom || 'Cocktail') + '" ajoutée dans Inspirations !'
+      : `✅ ${recettesTrouvees.length} recettes ajoutées dans Inspirations !`);
 
   } catch (e) {
     alert('Erreur réseau : ' + e.message);
