@@ -612,14 +612,6 @@ function asTuRecu() {
   lancerDegustation(recetteObj);
 }
 
-function asTuRecu() {
-  degRecette = recetteConfirmee;
-  degReponses = [];
-  degEtapeActuelle = 0;
-  afficherScreen('screen-degustation');
-  afficherEtapeDegustation(0);
-}
-
 async function laisserSebChoisir() {
   await envoyerProfil(null, 'seb');
   afficherScreen('screen-confirmation');
