@@ -4012,6 +4012,9 @@ function setModeSession(mode) {
   document.getElementById('btn-mode-libre').classList.toggle('active', mode === 'libre');
   document.getElementById('btn-mode-verrouille').classList.toggle('active', mode === 'verrouille');
 
+  const blocRecettes = document.getElementById('bloc-recettes-liste');
+  if (blocRecettes) blocRecettes.style.display = mode === 'libre' ? 'none' : '';
+
   const blocQuiz = document.getElementById('bloc-quiz-actif');
   if (mode === 'verrouille') {
     quizActif = true;
@@ -4311,6 +4314,7 @@ function ouvrirModalNouvelleSession() {
   modeSessionActif = 'libre';
   document.getElementById('session-nom').value = '';
   document.getElementById('btn-mode-libre').classList.add('active');
+ document.getElementById('bloc-recettes-liste').style.display = 'none';
   document.getElementById('btn-mode-verrouille').classList.remove('active');
 
   quizActif = true;
@@ -4340,8 +4344,13 @@ const nom = document.getElementById('session-nom').value.trim();
     document.getElementById('session-nom').focus();
     return;
   }
-  const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
-  const recettesDisponibles = Array.from(checks).map(c => c.value);
+let recettesDisponibles;
+  if (modeSessionActif === 'libre') {
+    recettesDisponibles = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0).map(r => r.id);
+  } else {
+    const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
+    recettesDisponibles = Array.from(checks).map(c => c.value);
+  }
 
   const token = Math.random().toString(36).substring(2, 10);
   const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
