@@ -4000,7 +4000,13 @@ async function supprimerSessionsPassees() {
   chargerSessions();
 }
 let modeSessionActif = 'libre';
+let quizActif = true;
 
+function setQuizActif(actif) {
+  quizActif = actif;
+  document.getElementById('btn-quiz-oui').classList.toggle('active', actif);
+  document.getElementById('btn-quiz-non').classList.toggle('active', !actif);
+}
 function setModeSession(mode) {
   modeSessionActif = mode;
   document.getElementById('btn-mode-libre').classList.toggle('active', mode === 'libre');
