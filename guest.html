@@ -607,11 +607,9 @@ async function confirmerCocktail() {
 }
 
 function asTuRecu() {
-  degRecette = recetteConfirmee;
-  degReponses = [];
-  degEtapeActuelle = 0;
-  afficherScreen('screen-degustation');
-  afficherEtapeDegustation(0);
+  const recetteObj = recettesAffichees.find(r => r.id === recetteConfirmee);
+  if (!recetteObj) return;
+  lancerDegustation(recetteObj);
 }
 
 function asTuRecu() {
