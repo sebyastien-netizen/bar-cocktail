@@ -309,6 +309,12 @@ function afficherScreen(id) {
 function validerAccueil() {
   pseudo = document.getElementById('input-pseudo').value.trim();
   if (!pseudo) { document.getElementById('error-accueil').textContent = 'Entre un prénom ou pseudo.'; document.getElementById('error-accueil').classList.remove('hidden'); return; }
+
+  if (session.quiz_actif === false) {
+    afficherChoixCocktails();
+    return;
+  }
+
   afficherScreen('screen-questionnaire');
   afficherQuestion(0);
 }
