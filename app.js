@@ -4045,8 +4045,8 @@ function ouvrirChoixTypeSession() {
       <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:20px;text-align:left;display:flex;align-items:center;gap:12px"
         onclick="this.closest('div[style*=fixed]').remove(); creerSoireeMenuSolo()">
         <span style="font-size:1.4rem">🧑‍🍳</span>
-        <span>
-          <div style="font-weight:600">Je prépare seul</div>
+<span>
+          <div style="font-weight:600">Je sers moi-même</div>
           <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Batch imposé, tableau de bord de stock</div>
         </span>
       </button>
