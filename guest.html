@@ -626,11 +626,14 @@ async function confirmerCocktail() {
   document.getElementById('confirm-sous-titre').textContent = 'Ton cocktail arrive.';
 }
 
+let degEtapesActives = [];
+let degEtapeIndex = 0;
+
 function asTuRecu() {
   const r = recettesAffichees.find(x => x.id === recetteConfirmee);
   if (!r) return;
 
-  const etapes = [
+  degEtapesActives = [
     { icon: '👁', label: 'Regardez', texte: r.degustation_voir },
     { icon: '👃', label: 'Sentez', texte: r.degustation_sentir },
     { icon: '👅', label: 'Goûtez', texte: r.degustation_gout },
@@ -638,41 +641,124 @@ function asTuRecu() {
   ].filter(e => e.texte);
 
   if (r.degustation_defi) {
-    etapes.push({ icon: '🎯', label: 'Défi détection', texte: r.degustation_defi, defi: true });
+    degEtapesActives.push({ icon: '🎯', label: 'Défi détection', texte: r.degustation_defi, defi: true });
   }
 
-  if (etapes.length === 0) {
+  if (degEtapesActives.length === 0) {
     alert('Pas de guide de dégustation disponible pour ce cocktail — profite juste du verre ! 🍸');
     return;
   }
 
-  const overlay = document.createElement('div');
-  overlay.id = 'overlay-degustation';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9500;display:flex;align-items:flex-end;justify-content:center';
+  degEtapeIndex = 0;
+  ouvrirEcranDegustation(r.nom);
+}
+
+function ouvrirEcranDegustation(nomCocktail) {
+  let overlay = document.getElementById('overlay-degustation');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'overlay-degustation';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#0d1119;z-index:9500;display:flex;flex-direction:column';
+    document.body.appendChild(overlay);
+  }
+  overlay.dataset.nom = nomCocktail;
+  renderEtapeDegustation();
+}
+
+function renderEtapeDegustation() {
+  const overlay = document.getElementById('overlay-degustation');
+  const etape = degEtapesActives[degEtapeIndex];
+  const total = degEtapesActives.length;
+
+  const points = degEtapesActives.map((_, i) => `
+    <div style="flex:1;height:4px;border-radius:2px;background:${i <= degEtapeIndex ? '#d9a441' : 'rgba(232,213,168,0.15)'};transition:background 0.3s"></div>
+  `).join('');
+
   overlay.innerHTML = `
-    <div style="background:#161b2a;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
-      <div style="display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0">
-        <div style="width:36px;height:4px;border-radius:2px;background:rgba(232,213,168,0.25)"></div>
-      </div>
-      <div style="padding:6px 20px 4px;flex-shrink:0">
-        <div style="font-size:1.05rem;font-weight:700;color:#d9a441">🧪 Guide de dégustation</div>
-        <div style="font-size:0.78rem;color:rgba(232,213,168,0.5);margin-top:2px">${r.nom}</div>
-      </div>
-      <div style="padding:16px 20px 28px;overflow-y:auto;-webkit-overflow-scrolling:touch">
-        ${etapes.map(e => `
-          <div style="display:flex;gap:12px;margin-bottom:18px;${e.defi ? 'background:rgba(217,164,65,0.08);border-radius:12px;padding:12px;margin-top:6px' : ''}">
-            <div style="font-size:1.3rem;flex-shrink:0">${e.icon}</div>
-            <div>
-              <div style="font-size:0.75rem;font-weight:700;color:${e.defi ? '#d9a441' : 'rgba(232,213,168,0.6)'};text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">${e.label}</div>
-              <div style="font-size:0.86rem;line-height:1.5;color:rgba(232,213,168,0.9)">${e.texte}</div>
-            </div>
-          </div>
-        `).join('')}
-        <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="document.getElementById('overlay-degustation').remove()">C'est noté, à ta santé 🥂</button>
-      </div>
+    <div style="display:flex;gap:5px;padding:16px 20px 0">${points}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px 0">
+      <span style="font-size:0.72rem;color:rgba(232,213,168,0.4)">${overlay.dataset.nom} · ${degEtapeIndex + 1}/${total}</span>
+      <button onclick="document.getElementById('overlay-degustation').remove()" style="background:none;border:none;color:rgba(232,213,168,0.4);font-size:1.1rem">✕</button>
+    </div>
+
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center">
+      <div style="font-size:3.2rem;margin-bottom:20px;${etape.defi ? 'animation:pulseIcon 1.6s ease-in-out infinite' : ''}">${etape.icon}</div>
+      <div style="font-size:0.78rem;font-weight:700;color:#d9a441;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">${etape.label}</div>
+      <div style="font-size:1.05rem;line-height:1.6;color:rgba(232,213,168,0.92);max-width:340px">${etape.texte}</div>
+    </div>
+
+    <div style="padding:20px 20px 32px">
+      ${etape.defi ? `
+        <div style="display:flex;gap:10px">
+          <button id="btn-defi-non" onclick="repondreDefi(false)" style="flex:1;padding:14px;border-radius:12px;border:1px solid rgba(232,213,168,0.25);background:none;color:rgba(232,213,168,0.7);font-size:0.88rem;font-weight:600" disabled>❌ Pas trouvé</button>
+          <button id="btn-defi-oui" onclick="repondreDefi(true)" style="flex:1;padding:14px;border-radius:12px;border:none;background:#d9a441;color:#10141f;font-size:0.88rem;font-weight:700" disabled>✅ Trouvé !</button>
+        </div>
+      ` : `
+        <button id="btn-suivant-degu" style="width:100%;padding:15px;border-radius:12px;border:none;background:#d9a441;color:#10141f;font-size:0.9rem;font-weight:700" disabled>Suivant <span id="compte-degu"></span></button>
+      `}
+    </div>
+    <style>
+      @keyframes pulseIcon { 0%,100% { transform:scale(1) } 50% { transform:scale(1.12) } }
+    </style>
+  `;
+
+  activerBoutonApresDelai(etape.defi);
+}
+
+function activerBoutonApresDelai(estDefi) {
+  let secondes = 3;
+  const idBtn = estDefi ? null : 'btn-suivant-degu';
+  const idCompte = estDefi ? null : 'compte-degu';
+
+  const tick = () => {
+    secondes--;
+    if (estDefi) {
+      const btnOui = document.getElementById('btn-defi-oui');
+      const btnNon = document.getElementById('btn-defi-non');
+      if (secondes <= 0) {
+        if (btnOui) { btnOui.disabled = false; btnOui.style.opacity = 1; }
+        if (btnNon) { btnNon.disabled = false; btnNon.style.opacity = 1; }
+        return;
+      }
+    } else {
+      const btn = document.getElementById(idBtn);
+      const compte = document.getElementById(idCompte);
+      if (!btn) return;
+      if (secondes <= 0) {
+        btn.disabled = false;
+        btn.textContent = 'Suivant →';
+        btn.onclick = etapeSuivanteDegustation;
+        return;
+      }
+      if (compte) compte.textContent = `(${secondes})`;
+    }
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 1000);
+}
+
+function etapeSuivanteDegustation() {
+  degEtapeIndex++;
+  if (degEtapeIndex >= degEtapesActives.length) {
+    document.getElementById('overlay-degustation').remove();
+    return;
+  }
+  renderEtapeDegustation();
+}
+
+async function repondreDefi(trouve) {
+  if (inviteId) {
+    await db.from('sessions_invites').update({ defi_reussi: trouve }).eq('id', inviteId);
+  }
+  const overlay = document.getElementById('overlay-degustation');
+  overlay.innerHTML = `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
+      <div style="font-size:3.5rem;margin-bottom:16px">${trouve ? '🎉' : '👏'}</div>
+      <div style="font-size:1.15rem;font-weight:700;color:#d9a441;margin-bottom:8px">${trouve ? 'Bien joué !' : 'Pas grave, à la prochaine !'}</div>
+      <div style="font-size:0.85rem;color:rgba(232,213,168,0.6);margin-bottom:24px">${trouve ? 'Tu as l\\'œil (et le palais)' : 'On te donnera la réponse plus tard 😉'}</div>
+      <button onclick="document.getElementById('overlay-degustation').remove()" style="padding:12px 32px;border-radius:12px;border:none;background:#d9a441;color:#10141f;font-weight:700">Retour 🥂</button>
     </div>
   `;
-  document.body.appendChild(overlay);
 }
 
 async function laisserSebChoisir() {
