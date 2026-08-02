@@ -459,17 +459,18 @@ function renderTuilesCocktails() {
     liste = liste.slice().sort((a, b) => (b[`gout_${filtreGoutActif}`] || 0) - (a[`gout_${filtreGoutActif}`] || 0));
   }
 
-  const cadrageStyle = (r) => r.photo_cadrage
+const cadrageStyle = (r) => r.photo_cadrage
     ? `transform:translate(calc(-50% + ${r.photo_cadrage.x}%), calc(-50% + ${r.photo_cadrage.y}%)) scale(${r.photo_cadrage.zoom});`
-    : '';
+    : 'transform:translate(-50%,-50%);';
 
   document.getElementById('cocktails-liste').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:70px">
       ${liste.map(r => `
         <div class="tuile-cocktail ${cocktailSelectionne === r.id ? 'selectionnee' : ''}" onclick="selectionnerTuile('${r.id}', '${r.nom.replace(/'/g,"\\'")}')">
-          <div style="position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:8px;background:#000">
+<div style="position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:8px;background:#000">
             ${r.photo_url ? `<img src="${r.photo_url}" style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;${cadrageStyle(r)}">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;opacity:0.3">🍸</div>`}
             ${cocktailSelectionne === r.id ? `<div style="position:absolute;top:4px;right:4px;background:#d9a441;color:#10141f;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem">✓</div>` : ''}
+            <button onclick="event.stopPropagation();ouvrirInfoCocktail('${r.id}')" style="position:absolute;bottom:4px;left:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:0.7rem;display:flex;align-items:center;justify-content:center">i</button>
           </div>
           <div style="font-size:0.72rem;font-weight:600;margin-top:4px;line-height:1.2">${r.nom}</div>
           <div style="font-size:0.62rem;opacity:0.5">${r.verres !== null ? `🍸 ${r.verres}${r.partiel ? '*' : ''}` : ''}</div>
@@ -478,7 +479,32 @@ function renderTuilesCocktails() {
     </div>
   `;
 }
+function ouvrirInfoCocktail(id) {
+  const r = recettesAffichees.find(x => x.id === id);
+  if (!r) return;
 
+  const axes = [['sucre','Sucré'],['amer','Amer'],['acide','Acide'],['fruite','Fruité'],['fume','Fumé'],['floral','Floral'],['epice','Épicé'],['cremeux','Crémeux']];
+  const barres = axes.map(([cle, label]) => `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <span style="font-size:0.68rem;width:52px;opacity:0.6">${label}</span>
+      <div style="flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${(r[`gout_${cle}`] || 0) * 20}%;background:#d9a441"></div>
+      </div>
+    </div>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'overlay-info-cocktail';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;align-items:flex-end;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#10141f;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:480px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+      <div style="font-size:1.05rem;font-weight:700;color:#d9a441;margin-bottom:12px">${r.nom}</div>
+      ${barres}
+      ${r.anecdote ? `<div style="margin-top:14px;font-size:0.82rem;line-height:1.5;color:rgba(232,213,168,0.75)">${r.anecdote}</div>` : ''}
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
 function selectionnerTuile(id, nom) {
   cocktailSelectionne = cocktailSelectionne === id ? null : id;
   renderTuilesCocktails();
