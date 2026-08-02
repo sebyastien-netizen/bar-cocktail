@@ -4435,7 +4435,8 @@ function ouvrirAssignationCocktail(inviteId) {
     );
     const scored = scorerRecettesPourProfil(inv.profil_gustatif, candidats);
 
-    const modal = document.createElement('div');
+const modal = document.createElement('div');
+    modal.id = 'modal-assignation-cocktail';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
     modal.innerHTML = `
       <div style="background:var(--bg-card);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto">
@@ -4485,7 +4486,7 @@ await db.from('stock_reserve').insert({
     await chargerStockReserve();
   }
 
-modal.remove();
+document.getElementById('modal-assignation-cocktail')?.remove();
   renderInvitesListe(sessionActive?.invites || [], sessionActive);
   alert(`✅ "${recette?.nom}" assigné !`);
 }
