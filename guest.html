@@ -85,7 +85,21 @@
     <div class="title" style="font-size:17px">Cocktails pour toi</div>
     <div class="subtitle" id="choix-subtitle"></div>
   </div>
-  <div id="cocktails-liste"></div>
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+  <select id="filtre-base" onchange="filtreBaseActif=this.value;renderTuilesCocktails()" style="flex:1;padding:6px;border-radius:6px;font-size:0.78rem"></select>
+  <select id="filtre-gout" onchange="filtreGoutActif=this.value;renderTuilesCocktails()" style="flex:1;padding:6px;border-radius:6px;font-size:0.78rem">
+    <option value="">Trier par goût</option>
+    <option value="sucre">Sucré</option>
+    <option value="amer">Amer</option>
+    <option value="acide">Acide</option>
+    <option value="fruite">Fruité</option>
+    <option value="fume">Fumé</option>
+    <option value="floral">Floral</option>
+    <option value="epice">Épicé</option>
+    <option value="cremeux">Crémeux</option>
+  </select>
+</div>
+<div id="cocktails-liste"></div>
   <button class="btn btn-ghost" onclick="laisserSebChoisir()">Laisser Seb choisir pour moi ✨</button>
 </div>
 
@@ -392,51 +406,95 @@ async function voterCocktailRestreint(menuRecetteId, recetteId) {
 
   afficherScreen('screen-confirmation');
 }
+let filtreBaseActif = '';
+let filtreGoutActif = '';
+let cocktailSelectionne = null;
+let recettesAffichees = [];
+
 async function afficherChoixCocktails() {
-  if (session.mode_choix === 'restreint') {
-    return afficherChoixRestreint();
-  }
-
-  // ... tout le reste de la fonction existante continue inchangé en dessous
   afficherScreen('screen-choix');
-const ids = session.recettes_disponibles || [];
-console.log('ids:', ids, 'session:', session.token);
+  const ids = session.recettes_disponibles || [];
 
-  const { data: recettesData, error: errRecettes } = await db.from('recettes').select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url').in('id', ids);
-console.log('recettesData:', recettesData, 'errRecettes:', errRecettes);
+  const { data: recettesData } = await db.from('recettes')
+    .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage')
+    .in('id', ids);
 
-  const scored = (recettesData || []).map(r => {
-    const axes = ['sucre','amer','acide','fruite','fume','floral','epice','cremeux'];
-    let score = 0, total = 0;
-    axes.forEach(a => {
-      const rv = r[`gout_${a}`] || 0;
-      const pv = profilGustatif[a] || 0;
-      if (rv > 0 || pv > 0) { score += Math.max(0, 5 - Math.abs(rv - pv)); total += 5; }
-    });
-    return { ...r, score: total > 0 ? Math.round((score / total) * 100) : 50 };
+  const { data: verresData } = await db.rpc('verres_possibles_public', { p_recette_ids: ids });
+  const verresMap = {};
+  (verresData || []).forEach(v => { verresMap[v.recette_id] = v; });
+
+  const quizRepondu = Object.values(profilGustatif).some(v => v > 0);
+
+  recettesAffichees = (recettesData || []).map(r => {
+    let score = 50;
+    if (quizRepondu) {
+      const axes = ['sucre','amer','acide','fruite','fume','floral','epice','cremeux'];
+      let s = 0, total = 0;
+      axes.forEach(a => {
+        const rv = r[`gout_${a}`] || 0, pv = profilGustatif[a] || 0;
+        if (rv > 0 || pv > 0) { s += Math.max(0, 5 - Math.abs(rv - pv)); total += 5; }
+      });
+      score = total > 0 ? Math.round((s / total) * 100) : 50;
+    }
+    const v = verresMap[r.id];
+    return { ...r, score, verres: v ? v.verres : null, partiel: v ? v.partiel : true };
   }).sort((a, b) => b.score - a.score);
 
-  if (session.mode_choix === 'verrouille') {
-    await envoyerProfil(null, 'seb');
-    afficherScreen('screen-confirmation');
-    document.getElementById('confirm-titre').textContent = 'Seb choisit pour toi !';
-    document.getElementById('confirm-sous-titre').textContent = 'Ton profil gustatif a été envoyé.';
-    return;
+  construireFiltres();
+  renderTuilesCocktails();
+}
+
+function construireFiltres() {
+  const bases = [...new Set(recettesAffichees.map(r => r.base_alcool).filter(Boolean))];
+  const filtreBase = document.getElementById('filtre-base');
+  if (filtreBase) {
+    filtreBase.innerHTML = `<option value="">Toutes bases</option>` + bases.map(b => `<option value="${b}">${b}</option>`).join('');
+  }
+}
+
+function renderTuilesCocktails() {
+  let liste = recettesAffichees.filter(r => r.verres === null || r.verres > 0);
+  if (filtreBaseActif) liste = liste.filter(r => r.base_alcool === filtreBaseActif);
+  if (filtreGoutActif) {
+    liste = liste.slice().sort((a, b) => (b[`gout_${filtreGoutActif}`] || 0) - (a[`gout_${filtreGoutActif}`] || 0));
   }
 
-  document.getElementById('choix-subtitle').textContent = `${scored.length} cocktail(s) correspondent à ton profil`;
-  document.getElementById('cocktails-liste').innerHTML = scored.map(r => `
-    <div class="cocktail-card" onclick="selectionnerCocktail('${r.id}', this)">
-      <div class="cocktail-thumb">
-        ${r.photo_url ? `<img src="${r.photo_url}" alt="${r.nom}" />` : '🍸'}
-      </div>
-      <div>
-        <div class="cocktail-name">${r.nom}</div>
-        <div class="cocktail-meta">${r.base_alcool || ''}</div>
-      </div>
-      <div class="match-badge">${r.score}%</div>
+  const cadrageStyle = (r) => r.photo_cadrage
+    ? `transform:translate(calc(-50% + ${r.photo_cadrage.x}%), calc(-50% + ${r.photo_cadrage.y}%)) scale(${r.photo_cadrage.zoom});`
+    : '';
+
+  document.getElementById('cocktails-liste').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:70px">
+      ${liste.map(r => `
+        <div class="tuile-cocktail ${cocktailSelectionne === r.id ? 'selectionnee' : ''}" onclick="selectionnerTuile('${r.id}', '${r.nom.replace(/'/g,"\\'")}')">
+          <div style="position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:8px;background:#000">
+            ${r.photo_url ? `<img src="${r.photo_url}" style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;${cadrageStyle(r)}">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;opacity:0.3">🍸</div>`}
+            ${cocktailSelectionne === r.id ? `<div style="position:absolute;top:4px;right:4px;background:#d9a441;color:#10141f;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem">✓</div>` : ''}
+          </div>
+          <div style="font-size:0.72rem;font-weight:600;margin-top:4px;line-height:1.2">${r.nom}</div>
+          <div style="font-size:0.62rem;opacity:0.5">${r.verres !== null ? `🍸 ${r.verres}${r.partiel ? '*' : ''}` : ''}</div>
+        </div>
+      `).join('')}
     </div>
-  `).join('');
+  `;
+}
+
+function selectionnerTuile(id, nom) {
+  cocktailSelectionne = cocktailSelectionne === id ? null : id;
+  renderTuilesCocktails();
+
+  let bandeau = document.getElementById('bandeau-selection');
+  if (cocktailSelectionne) {
+    if (!bandeau) {
+      bandeau = document.createElement('div');
+      bandeau.id = 'bandeau-selection';
+      bandeau.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#d9a441;color:#10141f;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:100;font-size:0.85rem;font-weight:600';
+      document.body.appendChild(bandeau);
+    }
+    bandeau.innerHTML = `<span>🍸 "${nom}" sélectionné</span><button onclick="confirmerCocktail()" style="background:#10141f;color:#d9a441;border:none;padding:8px 16px;border-radius:20px;font-weight:700">Confirmer →</button>`;
+  } else if (bandeau) {
+    bandeau.remove();
+  }
 }
 
 let cocktailChoisi = null;
@@ -449,11 +507,14 @@ function selectionnerCocktail(id, el) {
 }
 
 async function confirmerCocktail() {
-  if (!cocktailChoisi) return;
-  await envoyerProfil(cocktailChoisi, 'invite');
+  if (!cocktailSelectionne) return;
+  await envoyerProfil(cocktailSelectionne, 'invite');
+  const bandeau = document.getElementById('bandeau-selection');
+  if (bandeau) bandeau.remove();
   afficherScreen('screen-confirmation');
+  chargerAnecdotesGuest();
   document.getElementById('confirm-titre').textContent = 'Parfait !';
-  document.getElementById('confirm-sous-titre').textContent = 'Seb prépare ton cocktail.';
+  document.getElementById('confirm-sous-titre').textContent = 'Ton cocktail arrive.';
 }
 
 async function laisserSebChoisir() {
