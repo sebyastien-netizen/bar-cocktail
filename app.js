@@ -4206,8 +4206,9 @@ function renderTableauBordSoiree() {
         🔒 Verrouiller le menu (réserve le stock)
       </button>
 
-      ${soireeMenuRecettesActives.length > 0 ? `
+${soireeMenuRecettesActives.length > 0 ? `
       <button class="btn-outline" style="width:100%;margin-top:8px" onclick="ouvrirAjoutInviteManuel()">👤 + Invité (verre déjà servi)</button>
+      <div id="resume-defi-solo" style="margin-top:8px"></div>
       ` : ''}
       ${peutVerrouiller ? `
       <button class="btn-outline" style="width:100%;padding:12px;margin-top:8px" onclick="creerSessionVoteRestreint(soireeMenuActive.id)">
@@ -4221,7 +4222,9 @@ function renderTableauBordSoiree() {
     if (!e.target.value) return;
     await ajouterRecetteMenu(e.target.value);
   };
+ chargerResumeDefiSolo();
 }
+
 
 async function ajouterRecetteMenu(recetteId) {
   const { data } = await db.from('soiree_menu_recettes').insert({
@@ -4279,6 +4282,15 @@ await db.from('stock_reserve').insert({
 
   document.getElementById('modal-tableau-bord-soiree').remove();
   alert('✅ Menu verrouillé — le stock nécessaire est réservé jusqu\'au ' + dateEvenement + '.');
+}
+async function chargerResumeDefiSolo() {
+  const el = document.getElementById('resume-defi-solo');
+  if (!el || !soireeMenuActive) return;
+  const { data } = await db.from('sessions_invites').select('defi_reussi').eq('nom_session', soireeMenuActive.nom).eq('mode_choix', 'manuel');
+  if (!data || data.length === 0) return;
+  const nbRepondu = data.filter(i => i.defi_reussi !== null).length;
+  const nbTrouve = data.filter(i => i.defi_reussi === true).length;
+  el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-accent);text-align:center">🎯 ${nbRepondu}/${data.length} ont relevé le défi — ${nbTrouve} ont trouvé</div>`;
 }
 function ouvrirAjoutInviteManuel() {
   const modal = document.createElement('div');
@@ -4591,20 +4603,32 @@ function renderInvitesListe(invites, session) {
     return;
   }
 
-  liste.innerHTML = invites.map(inv => {
+  const nbRepondu = invites.filter(i => i.defi_reussi !== null && i.defi_reussi !== undefined).length;
+  const nbTrouve = invites.filter(i => i.defi_reussi === true).length;
+  const resume = nbRepondu > 0
+    ? `<div style="font-size:0.78rem;color:var(--text-accent);margin-bottom:10px;text-align:center">🎯 ${nbRepondu}/${invites.length} ont relevé le défi — ${nbTrouve} ont trouvé</div>`
+    : '';
+
+  liste.innerHTML = resume + invites.map(inv => {
     const profil = inv.profil_gustatif || {};
     const axes = Object.entries(profil).filter(([k, v]) => v > 0).map(([k, v]) => k).join(' · ') || '—';
     const recette = inv.recette_id ? recettes.find(r => r.id === inv.recette_id)?.nom || inv.recette_id : '—';
+
+    let badgeDefi = '';
+    if (inv.defi_reussi === true) badgeDefi = `<span style="font-size:0.72rem;color:var(--text-success)">🎯 ✅ Trouvé</span>`;
+    else if (inv.defi_reussi === false) badgeDefi = `<span style="font-size:0.72rem;color:var(--text-muted)">🎯 ❌ Pas trouvé</span>`;
 
     return `
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div style="font-weight:600">${inv.nom_invite || 'Invité'}</div>
           <span style="font-size:0.75rem;opacity:0.5">${inv.choix_type === 'seb' ? '✨ Laisse Seb choisir' : '🍸 A choisi'}</span>
-          ${inv.choix_type === 'seb' && !inv.recette_id ? `<button class="btn-outline" style="margin-top:6px;padding:4px 10px;font-size:0.75rem" onclick="ouvrirAssignationCocktail('${inv.id}')">🎁 Choisir un cocktail</button>` : ''}
         </div>
         <div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">Profil : ${axes}</div>
-        <div style="font-size:0.82rem;margin-bottom:10px">Cocktail : <strong>${recette}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:0.82rem">Cocktail : <strong>${recette}</strong></div>
+          ${badgeDefi}
+        </div>
         <div style="display:flex;gap:8px">
           <button class="btn-primary" style="flex:1;font-size:0.78rem" 
             onclick="lancerJeu('${inv.id}', 'degustation')">🍸 Dégustation</button>
@@ -4619,7 +4643,6 @@ function renderInvitesListe(invites, session) {
     `;
   }).join('');
 }
-
 async function lancerJeu(inviteId, jeu) {
   await db.from('sessions_invites')
     .update({ jeu_actif: jeu })
