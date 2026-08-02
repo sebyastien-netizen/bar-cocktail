@@ -4011,6 +4011,16 @@ function setModeSession(mode) {
   modeSessionActif = mode;
   document.getElementById('btn-mode-libre').classList.toggle('active', mode === 'libre');
   document.getElementById('btn-mode-verrouille').classList.toggle('active', mode === 'verrouille');
+
+  const blocQuiz = document.getElementById('bloc-quiz-actif');
+  if (mode === 'verrouille') {
+    quizActif = true;
+    document.getElementById('btn-quiz-oui').classList.add('active');
+    document.getElementById('btn-quiz-non').classList.remove('active');
+    if (blocQuiz) blocQuiz.style.display = 'none';
+  } else {
+    if (blocQuiz) blocQuiz.style.display = '';
+  }
 }
 function ouvrirChoixTypeSession() {
   const modal = document.createElement('div');
@@ -4280,7 +4290,9 @@ async function creerSessionVoteRestreint(soireeMenuId) {
 
   const token = Math.random().toString(36).substring(2, 10);
   const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
-  const nom = prompt('Nom de la soirée ?', 'Ma soirée') || `Soirée sans nom — ${new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+  let nom = prompt('Nom de la soirée ?');
+  if (!nom || !nom.trim()) { alert('Une soirée doit avoir un nom.'); return; }
+  nom = nom.trim();
 
   await db.from('sessions_invites').insert({
     user_id: currentUser.id,
@@ -4322,7 +4334,12 @@ function ouvrirModalNouvelleSession() {
   document.getElementById('modal-nouvelle-session').classList.add('visible');
 } 
 async function creerSession() {
-const nom = document.getElementById('session-nom').value.trim() || `Soirée sans nom — ${new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+const nom = document.getElementById('session-nom').value.trim();
+  if (!nom) {
+    alert('Donne un nom à ta soirée avant de lancer.');
+    document.getElementById('session-nom').focus();
+    return;
+  }`;
   const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
   const recettesDisponibles = Array.from(checks).map(c => c.value);
 
