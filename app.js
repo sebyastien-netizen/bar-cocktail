@@ -4339,7 +4339,7 @@ const nom = document.getElementById('session-nom').value.trim();
     alert('Donne un nom à ta soirée avant de lancer.');
     document.getElementById('session-nom').focus();
     return;
-  }`;
+  }
   const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
   const recettesDisponibles = Array.from(checks).map(c => c.value);
 
