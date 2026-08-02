@@ -334,7 +334,25 @@ function validerAccueil() {
   afficherScreen('screen-questionnaire');
   afficherQuestion(0);
 }
+let anecdotesListe = [];
+let anecdoteIndexActuel = -1;
 
+async function chargerAnecdotesGuest() {
+  const { data } = await db.from('anecdotes').select('*');
+  anecdotesListe = data || [];
+  anecdoteSuivante();
+}
+
+function anecdoteSuivante() {
+  if (anecdotesListe.length === 0) return;
+  let nouvelIndex;
+  do {
+    nouvelIndex = Math.floor(Math.random() * anecdotesListe.length);
+  } while (nouvelIndex === anecdoteIndexActuel && anecdotesListe.length > 1);
+  anecdoteIndexActuel = nouvelIndex;
+  const el = document.getElementById('anecdote-texte');
+  if (el) el.textContent = anecdotesListe[nouvelIndex].texte;
+}
 function afficherQuestion(index) {
   questionActuelle = index;
   document.querySelectorAll('.step-dot').forEach((d, i) => d.classList.toggle('active', i <= index));
