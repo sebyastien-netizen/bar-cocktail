@@ -4291,6 +4291,52 @@ await db.from('stock_reserve').insert({
   document.getElementById('modal-tableau-bord-soiree').remove();
   alert('✅ Menu verrouillé — le stock nécessaire est réservé jusqu\'au ' + dateEvenement + '.');
 }
+function ouvrirAjoutInviteManuel() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:20px;max-width:380px;width:100%">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:12px">👤 Nouvel invité servi</div>
+      <input type="text" id="invite-manuel-nom" placeholder="Prénom de l'invité" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);margin-bottom:10px">
+      <select id="invite-manuel-recette" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);margin-bottom:16px">
+        ${soireeMenuRecettesActives.map(mr => {
+          const r = recettes.find(x => x.id === mr.recette_id);
+          return `<option value="${mr.recette_id}">${r?.nom || '—'}</option>`;
+        }).join('')}
+      </select>
+      <button class="btn-primary" style="width:100%" onclick="genererLienInviteManuel()">Générer le lien →</button>
+      <div id="resultat-lien-invite" style="margin-top:12px"></div>
+      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="this.closest('div[style*=fixed]').remove()">Fermer</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function genererLienInviteManuel() {
+  const nomInvite = document.getElementById('invite-manuel-nom').value.trim();
+  const recetteId = document.getElementById('invite-manuel-recette').value;
+  if (!nomInvite) { alert('Entre un prénom.'); return; }
+
+  const { data, error } = await db.from('sessions_invites').insert({
+    user_id: currentUser.id,
+    nom_session: soireeMenuActive.nom,
+    nom_invite: nomInvite,
+    recette_id: recetteId,
+    mode_choix: 'manuel',
+    statut: 'recette_choisie',
+    is_master: false,
+    token: Math.random().toString(36).substring(2, 10),
+    expires_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString()
+  }).select().single();
+
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  const lien = `https://bar-cocktail-smoky.vercel.app/guest.html?invite=${data.id}`;
+  document.getElementById('resultat-lien-invite').innerHTML = `
+    <div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all;margin-bottom:8px">${lien}</div>
+    <button class="btn-outline" style="width:100%" onclick="navigator.clipboard.writeText('${lien}');this.textContent='✅ Copié !'">📋 Copier ce lien</button>
+  `;
+}
 async function creerSessionVoteRestreint(soireeMenuId) {
   const { data: menuRecettes } = await db.from('soiree_menu_recettes').select('*').eq('soiree_menu_id', soireeMenuId);
   const recetteIds = (menuRecettes || []).map(mr => mr.recette_id);
