@@ -4350,7 +4350,8 @@ const nom = document.getElementById('session-nom').value.trim();
     user_id: currentUser.id,
     token,
     nom_session: nom,
-    mode_choix: modeSessionActif,
+mode_choix: modeSessionActif,
+    quiz_actif: quizActif,
     recettes_disponibles: recettesDisponibles,
     expires_at: expiresAt,
     is_master: true
