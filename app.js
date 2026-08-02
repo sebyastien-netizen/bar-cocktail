@@ -4012,8 +4012,7 @@ function ouvrirChoixTypeSession() {
   modal.innerHTML = `
     <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:380px;width:100%">
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">🎉 Nouvelle soirée</div>
-      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:18px">Quel type de soirée ?</div>
-
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:18px">Quel type de session ?</div>
 
       <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:10px;text-align:left;display:flex;align-items:center;gap:12px"
         onclick="this.closest('div[style*=fixed]').remove(); ouvrirModalNouvelleSession()">
@@ -4024,21 +4023,23 @@ function ouvrirChoixTypeSession() {
         </span>
       </button>
 
+      <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:20px;text-align:left;display:flex;align-items:center;gap:12px"
+        onclick="this.closest('div[style*=fixed]').remove(); creerSoireeMenuSolo()">
+        <span style="font-size:1.4rem">🧑‍🍳</span>
+        <span>
+          <div style="font-weight:600">Je prépare seul</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Batch imposé, tableau de bord de stock</div>
+        </span>
+      </button>
+
+      <div style="border-top:1px dashed var(--border);margin-bottom:16px"></div>
+
       <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:16px;text-align:left;display:flex;align-items:center;gap:12px"
         onclick="this.closest('div[style*=fixed]').remove(); ouvrirFinDuMonde()">
         <span style="font-size:1.4rem">🆘</span>
         <span>
           <div style="font-weight:600">Fin du monde</div>
           <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Cave d'opportunité, identification bouteilles</div>
-        </span>
-      </button>
-
-<button class="btn-outline" style="width:100%;padding:14px;margin-bottom:16px;text-align:left;display:flex;align-items:center;gap:12px"
-        onclick="this.closest('div[style*=fixed]').remove(); creerSoireeMenuSolo()">
-        <span style="font-size:1.4rem">🧑‍🍳</span>
-        <span>
-          <div style="font-weight:600">Je prépare seul</div>
-          <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Batch imposé, tableau de bord de stock</div>
         </span>
       </button>
 
