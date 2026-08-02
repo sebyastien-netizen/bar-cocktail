@@ -4464,7 +4464,13 @@ const modal = document.createElement('div');
 }
 
 async function assignerCocktailInvite(inviteId, recetteId) {
-  await db.from('sessions_invites').update({ recette_id: recetteId, statut: 'assignee' }).eq('id', inviteId);
+  await db.from('sessions_invites').update({ recette_id: recetteId, statut: 'recette_choisie' }).eq('id', inviteId);
+
+  const inviteLocal = sessionActive?.invites?.find(i => i.id === inviteId);
+  if (inviteLocal) {
+    inviteLocal.recette_id = recetteId;
+    inviteLocal.statut = 'recette_choisie';
+  }
 
   // Réserve immédiatement 1 portion — un décrément réel se fera au marquerRealisee
   // le jour J, mais on protège tout de suite les assignations suivantes du même sondage.
