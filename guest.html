@@ -570,8 +570,11 @@ function selectionnerCocktail(id, el) {
   setTimeout(() => confirmerCocktail(), 400);
 }
 
+let recetteConfirmee = null;
+
 async function confirmerCocktail() {
   if (!cocktailSelectionne) return;
+  recetteConfirmee = cocktailSelectionne;
   await envoyerProfil(cocktailSelectionne, 'invite');
   const bandeau = document.getElementById('bandeau-selection');
   if (bandeau) bandeau.remove();
@@ -579,6 +582,14 @@ async function confirmerCocktail() {
   chargerAnecdotesGuest();
   document.getElementById('confirm-titre').textContent = 'Parfait !';
   document.getElementById('confirm-sous-titre').textContent = 'Ton cocktail arrive.';
+}
+
+function asTuRecu() {
+  degRecette = recetteConfirmee;
+  degReponses = [];
+  degEtapeActuelle = 0;
+  afficherScreen('screen-degustation');
+  afficherEtapeDegustation(0);
 }
 
 async function laisserSebChoisir() {
