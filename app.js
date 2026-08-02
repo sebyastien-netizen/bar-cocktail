@@ -4376,8 +4376,9 @@ function renderSessionActive(session) {
 
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:1.25rem;text-align:center">
       <div style="font-size:0.75rem;opacity:0.5;margin-bottom:8px">QR CODE INVITÉS</div>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}" width="140" height="140" style="border-radius:8px" />
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}" width="140" height="140" style="border-radius:8px" />
       <div style="font-size:0.7rem;opacity:0.4;margin-top:6px;word-break:break-all">${qrUrl}</div>
+      <button class="btn-outline" style="margin-top:8px;padding:6px 14px;font-size:0.78rem" onclick="copierLienSession('${qrUrl}', this)">📋 Copier le lien</button>
     </div>
 
     <div style="font-size:0.75rem;font-weight:600;opacity:0.5;margin-bottom:10px">INVITÉS CONNECTÉS</div>
@@ -4393,9 +4394,17 @@ function renderSessionActive(session) {
           ${r.nom}
         </span>
       `).join('')}
-    </div>
+</div>
   `;
 }
+
+async function copierLienSession(url, btn) {
+  await navigator.clipboard.writeText(url);
+  const texteOriginal = btn.textContent;
+  btn.textContent = '✅ Copié !';
+  setTimeout(() => { btn.textContent = texteOriginal; }, 1500);
+}
+
 let realtimeSession = null;
 
 function abonnerRealtimeSession(session) {
