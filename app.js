@@ -4213,9 +4213,13 @@ function renderTableauBordSoiree() {
         }).join('')}
       </div>` : ''}
 
-     <button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
+<button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
         🔒 Verrouiller le menu (réserve le stock)
       </button>
+
+      ${soireeMenuRecettesActives.length > 0 ? `
+      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="ouvrirAjoutInviteManuel()">👤 + Invité (verre déjà servi)</button>
+      ` : ''}
       ${peutVerrouiller ? `
       <button class="btn-outline" style="width:100%;padding:12px;margin-top:8px" onclick="creerSessionVoteRestreint(soireeMenuActive.id)">
         🗳️ Publier comme vote pour les invités
