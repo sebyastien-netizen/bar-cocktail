@@ -592,6 +592,8 @@ function selectionnerCocktail(id, el) {
 
 let recetteConfirmee = null;
 
+let recetteConfirmee = null;
+
 async function confirmerCocktail() {
   if (!cocktailSelectionne) return;
   recetteConfirmee = cocktailSelectionne;
@@ -602,6 +604,14 @@ async function confirmerCocktail() {
   chargerAnecdotesGuest();
   document.getElementById('confirm-titre').textContent = 'Parfait !';
   document.getElementById('confirm-sous-titre').textContent = 'Ton cocktail arrive.';
+}
+
+function asTuRecu() {
+  degRecette = recetteConfirmee;
+  degReponses = [];
+  degEtapeActuelle = 0;
+  afficherScreen('screen-degustation');
+  afficherEtapeDegustation(0);
 }
 
 function asTuRecu() {
