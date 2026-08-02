@@ -4011,19 +4011,8 @@ function setModeSession(mode) {
   modeSessionActif = mode;
   document.getElementById('btn-mode-libre').classList.toggle('active', mode === 'libre');
   document.getElementById('btn-mode-verrouille').classList.toggle('active', mode === 'verrouille');
-
   const blocRecettes = document.getElementById('bloc-recettes-liste');
   if (blocRecettes) blocRecettes.style.display = mode === 'libre' ? 'none' : '';
-
-  const blocQuiz = document.getElementById('bloc-quiz-actif');
-  if (mode === 'verrouille') {
-    quizActif = true;
-    document.getElementById('btn-quiz-oui').classList.add('active');
-    document.getElementById('btn-quiz-non').classList.remove('active');
-    if (blocQuiz) blocQuiz.style.display = 'none';
-  } else {
-    if (blocQuiz) blocQuiz.style.display = '';
-  }
 }
 function ouvrirChoixTypeSession() {
   const modal = document.createElement('div');
