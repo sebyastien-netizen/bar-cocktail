@@ -415,8 +415,8 @@ async function afficherChoixCocktails() {
   afficherScreen('screen-choix');
   const ids = session.recettes_disponibles || [];
 
-  const { data: recettesData } = await db.from('recettes')
-    .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage')
+const { data: recettesData } = await db.from('recettes')
+    .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage, anecdote')
     .in('id', ids);
 
   const { data: verresData } = await db.rpc('verres_possibles_public', { p_recette_ids: ids });
@@ -483,23 +483,61 @@ function ouvrirInfoCocktail(id) {
   const r = recettesAffichees.find(x => x.id === id);
   if (!r) return;
 
-  const axes = [['sucre','Sucré'],['amer','Amer'],['acide','Acide'],['fruite','Fruité'],['fume','Fumé'],['floral','Floral'],['epice','Épicé'],['cremeux','Crémeux']];
-  const barres = axes.map(([cle, label]) => `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-      <span style="font-size:0.68rem;width:52px;opacity:0.6">${label}</span>
-      <div style="flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${(r[`gout_${cle}`] || 0) * 20}%;background:#d9a441"></div>
+  const cadrageStyle = r.photo_cadrage
+    ? `transform:translate(calc(-50% + ${r.photo_cadrage.x}%), calc(-50% + ${r.photo_cadrage.y}%)) scale(${r.photo_cadrage.zoom});`
+    : 'transform:translate(-50%,-50%);';
+
+  const axes = [['sucre','🍯 Sucré'],['amer','🌿 Amer'],['acide','🍋 Acide'],['fruite','🍓 Fruité'],['fume','🪵 Fumé'],['floral','🌸 Floral'],['epice','🌶 Épicé'],['cremeux','🍦 Crémeux']];
+  const axesPertinents = axes.filter(([cle]) => (r[`gout_${cle}`] || 0) > 0);
+  const barres = axesPertinents.map(([cle, label]) => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:0.75rem;width:72px;flex-shrink:0;color:rgba(232,213,168,0.6)">${label}</span>
+      <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${(r[`gout_${cle}`] || 0) * 20}%;background:linear-gradient(90deg,#b8842f,#d9a441);border-radius:3px"></div>
       </div>
     </div>`).join('');
 
   const overlay = document.createElement('div');
   overlay.id = 'overlay-info-cocktail';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;align-items:flex-end;justify-content:center';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(2px);z-index:9000;display:flex;align-items:flex-end;justify-content:center;animation:fadeInOverlay 0.2s ease';
+
   overlay.innerHTML = `
-    <div style="background:#10141f;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:480px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
-      <div style="font-size:1.05rem;font-weight:700;color:#d9a441;margin-bottom:12px">${r.nom}</div>
-      ${barres}
-      ${r.anecdote ? `<div style="margin-top:14px;font-size:0.82rem;line-height:1.5;color:rgba(232,213,168,0.75)">${r.anecdote}</div>` : ''}
+    <style>
+      @keyframes fadeInOverlay { from { opacity:0 } to { opacity:1 } }
+      @keyframes slideUpSheet { from { transform:translateY(24px); opacity:0 } to { transform:translateY(0); opacity:1 } }
+    </style>
+    <div style="background:#161b2a;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;animation:slideUpSheet 0.25s ease;overflow:hidden">
+
+      <div style="display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0">
+        <div style="width:36px;height:4px;border-radius:2px;background:rgba(232,213,168,0.25)"></div>
+      </div>
+
+      <div style="position:relative;width:100%;height:180px;overflow:hidden;background:#000;flex-shrink:0">
+        ${r.photo_url
+          ? `<img src="${r.photo_url}" style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;${cadrageStyle}">`
+          : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;opacity:0.2">🍸</div>`}
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,#161b2a 0%,rgba(22,27,42,0.1) 55%,transparent 100%)"></div>
+        <div style="position:absolute;bottom:12px;left:18px;right:18px">
+          <div style="font-size:1.25rem;font-weight:700;color:#f2e4c2">${r.nom}</div>
+          ${r.base_alcool ? `<div style="font-size:0.78rem;color:#d9a441;margin-top:2px">🥃 ${r.base_alcool}</div>` : ''}
+        </div>
+      </div>
+
+      <div style="padding:18px 20px 24px;overflow-y:auto;-webkit-overflow-scrolling:touch">
+        ${axesPertinents.length > 0 ? `
+        <div style="margin-bottom:${r.anecdote ? '18px' : '0'}">
+          ${barres}
+        </div>` : ''}
+
+        ${r.anecdote ? `
+        <div style="border-top:${axesPertinents.length > 0 ? '1px solid rgba(232,213,168,0.1)' : 'none'};padding-top:${axesPertinents.length > 0 ? '16px' : '0'}">
+          <div style="font-size:0.72rem;font-weight:700;color:rgba(217,164,65,0.7);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📖 Histoire</div>
+          <div style="font-size:0.86rem;line-height:1.55;color:rgba(232,213,168,0.85)">${r.anecdote}</div>
+        </div>` : ''}
+
+        ${!r.anecdote && axesPertinents.length === 0 ? `
+        <div style="text-align:center;padding:20px 0;font-size:0.8rem;color:rgba(232,213,168,0.35)">Pas encore d'anecdote pour ce cocktail.</div>` : ''}
+      </div>
     </div>
   `;
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
