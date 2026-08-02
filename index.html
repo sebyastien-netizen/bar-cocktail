@@ -447,13 +447,18 @@
     <button class="modal-close" onclick="document.getElementById('modal-nouvelle-session').classList.remove('visible')">✕</button>
     <h2 style="margin-bottom:1.25rem">🎉 Nouvelle session</h2>
 
-    <label class="modal-label">Nom de la soirée</label>
+<label class="modal-label">Nom de la soirée</label>
     <input type="text" id="session-nom" class="modal-input" placeholder="Ex : Apéro vendredi, Soirée Marie…" />
-
     <label class="modal-label" style="margin-top:1rem">Mode invités</label>
     <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem">
-<button class="btn-mode-session active" id="btn-mode-libre" onclick="setModeSession('libre')">🍹 Open Bar — ils choisissent</button>
-<button class="btn-mode-session" id="btn-mode-verrouille" onclick="setModeSession('verrouille')">🎁 Sondage — surprise Seb</button>
+      <button class="btn-mode-session active" id="btn-mode-libre" onclick="setModeSession('libre')">🍹 Open Bar — ils choisissent</button>
+      <button class="btn-mode-session" id="btn-mode-verrouille" onclick="setModeSession('verrouille')">🎁 Sondage — surprise Seb</button>
+    </div>
+
+    <label class="modal-label">Profil gustatif</label>
+    <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem">
+      <button type="button" class="btn-mode-session active" id="btn-quiz-oui" onclick="setQuizActif(true)">✅ Avec questionnaire</button>
+      <button type="button" class="btn-mode-session" id="btn-quiz-non" onclick="setQuizActif(false)">⏭️ Sans questionnaire</button>
     </div>
 
     <label class="modal-label">Recettes disponibles ce soir</label>
