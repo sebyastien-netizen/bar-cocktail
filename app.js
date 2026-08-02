@@ -4295,6 +4295,10 @@ function ouvrirModalNouvelleSession() {
   document.getElementById('btn-mode-libre').classList.add('active');
   document.getElementById('btn-mode-verrouille').classList.remove('active');
 
+  quizActif = true;
+  document.getElementById('btn-quiz-oui').classList.add('active');
+  document.getElementById('btn-quiz-non').classList.remove('active');
+
 // Liste recettes réalisables — si une sélection vient de l'onglet Recettes, on ne montre qu'elle
   const realisables = selectionPourSoireeEnAttente
     ? recettes.filter(r => selectionPourSoireeEnAttente.includes(r.id))
