@@ -1618,10 +1618,6 @@ ${r.materiels && r.materiels.length > 0 ? `
   `;
 }
 
-function changerPortions(n) {
-  if (n < 1 || n > 10) return;
-  renderFiche(n);
-}
 async function sauvegarderNomRecette(id, nouveauNom) {
   const nom = (nouveauNom || '').trim();
   const r = recettes.find(x => x.id === id);
@@ -4651,33 +4647,7 @@ async function lancerJeu(inviteId, jeu) {
     .eq('id', inviteId);
 }
 
-function rafraichirInvite(data) {
-  const liste = document.getElementById('session-invites-liste');
-  if (!liste) return;
 
-  const profil = data.profil_gustatif || {};
-  const axes = Object.entries(profil).filter(([k, v]) => v > 0).map(([k, v]) => k).join(' · ') || '—';
-  const recette = data.recette_id
-    ? recettes.find(r => r.id === data.recette_id)?.nom || data.recette_id
-    : null;
-
-  liste.innerHTML = `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-weight:600">${data.nom_invite || 'Invité'}</div>
-        <span style="font-size:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">
-          ${data.choix_type === 'seb' ? '✨ Laisse Seb choisir' : '🍸 A choisi'}
-        </span>
-      </div>
-      <div style="font-size:0.78rem;opacity:0.5;margin-bottom:10px">Profil : ${axes}</div>
-      ${recette ? `<div style="font-size:0.85rem;margin-bottom:10px">Demande : <strong>${recette}</strong></div>` : ''}
-      <button class="btn-primary" style="width:100%;font-size:0.85rem" 
-        onclick="allerVersRecette('${data.recette_id || sessionActive?.recettes_disponibles?.[0]}')">
-        → Préparer
-      </button>
-    </div>
-  `;
-}
 
 function allerVersRecette(id) {
   document.getElementById('modal-session-active').classList.remove('visible');
@@ -5743,16 +5713,6 @@ Réponds en JSON uniquement :
   }
 }
 
-async function validerInspiration(id) {
-  const inspi = inspirationsList.find(x => x.id === id);
-  if (!inspi) return;
-
-  // Créer la recette dans la table recettes
- // Vérifier si une recette liée existe déjà
-if (inspi.recette_liee_id) {
-  alert('Cette inspiration a déjà été validée — recette existante dans l\'onglet Recettes.');
-  return;
-}
   const recetteId = 'inspi-' + Date.now();
   const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
 
@@ -7104,60 +7064,7 @@ function lancerDepuisChoix() {
   lancerDegustationAveugle(r, portions, date, snapAjust);
 }
 
-function ouvrirModalNotes(recette, date, callback) {
-  const modal = document.getElementById('modal-realisation');
-  document.getElementById('real-cocktail-nom').textContent = recette.nom;
-  let etoilesVal = 0;
-  const etoiles = modal.querySelectorAll('.etoile');
-  etoiles.forEach(e => e.classList.remove('active'));
-  etoiles.forEach(e => {
-    e.onclick = () => {
-      etoilesVal = parseInt(e.dataset.val);
-      etoiles.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= etoilesVal));
-    };
-  });
-  modal.querySelector('#real-plus').value = '';
-  modal.querySelector('#real-moins').value = '';
-  modal.querySelector('#real-note').value = '';
-  modal.querySelector('#real-photo').value = '';
-  modal.querySelector('#real-photo-preview').innerHTML = '';
-  modal.querySelector('#real-photo').onchange = function() {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      modal.querySelector('#real-photo-preview').innerHTML =
-        `<img src="${e.target.result}" style="max-width:100%;border-radius:8px;max-height:150px;object-fit:cover;">`;
-    };
-    reader.readAsDataURL(file);
-  };
-  modal.querySelector('#btn-confirmer-realisation').onclick = async () => {
-    const plus = modal.querySelector('#real-plus').value.trim();
-    const moins = modal.querySelector('#real-moins').value.trim();
-    const noteLib = modal.querySelector('#real-note').value.trim();
-    const photoFile = modal.querySelector('#real-photo').files[0];
-    const noteObj = {};
-    if (etoilesVal) noteObj.etoiles = etoilesVal;
-    if (plus) noteObj.plus = plus;
-    if (moins) noteObj.moins = moins;
-    if (noteLib) noteObj.note = noteLib;
-    let photoUrl = null;
-    if (photoFile) {
-      const ext = photoFile.name.split('.').pop();
-      const path = `realisations/${currentUser.id}/${Date.now()}.${ext}`;
-      const { data: uploadData, error: uploadError } = await db.storage
-        .from('photos-realisations')
-        .upload(path, photoFile, { upsert: true });
-      if (!uploadError) {
-        const { data: urlData } = db.storage.from('photos-realisations').getPublicUrl(path);
-        photoUrl = urlData?.publicUrl || null;
-      }
-    }
-    fermerModal('modal-realisation');
-    if (callback) callback(noteObj, photoUrl);
-  };
-  afficherModal('modal-realisation');
-}
+
  
 // =============================================
 // DÉCRÉMENTER LA CAVE (extrait de marquerRealisee)
@@ -7244,57 +7151,7 @@ const total = realisations.length;
     </div>`;
 }
 
-function renderDashboardSaison(plantesData, grimoireData) {
-  const moisActuel = new Date().getMonth() + 1;
-  const moisSuivant = moisActuel === 12 ? 1 : moisActuel + 1;
-  const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-  const plantesSaison = plantesData.filter(p =>
-    p.disponibilite_mois?.includes(moisActuel) || p.disponibilite_mois?.includes(moisSuivant)
-  );
-  if (plantesSaison.length === 0) return '';
-  const alertesToutes = plantesSaison.map(plante => {
-    const enSaison = plante.disponibilite_mois?.includes(moisActuel);
-    const recettesAssociees = grimoireData.filter(g =>
-      g.plante_ids?.includes(plante.id) ||
-      (plante.categories_preparation || []).some(cat => g.categorie === cat)
-    ).slice(0, 3);
-    return { plante, enSaison, recettesAssociees };
-  }).sort((a, b) => (b.enSaison === true) - (a.enSaison === true));
-  const alertes = alertesToutes.slice(0, 4);
-  const restantes = alertesToutes.length - alertes.length;
-  return `
-    <div class="dash-card">
-      <div class="dash-card-header">
-        <span class="dash-card-titre">📅 En ce moment — ${moisNoms[moisActuel]}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-        ${alertes.map(({ plante, enSaison, recettesAssociees }) => `
-          <div class="dash-saison-card" onclick="ouvrirFicheSaisonniere('${plante.id}')">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:1.8rem">${plante.emoji}</span>
-              <div style="flex:1">
-                <div style="font-weight:600;font-size:0.9rem">${plante.nom}</div>
-                <div style="font-size:0.78rem;color:var(--text-secondary)">${plante.profil_aromatique || ''}</div>
-              </div>
-              <span style="font-size:0.72rem;padding:3px 8px;border-radius:20px;
-                background:${enSaison ? 'var(--bg-success)' : 'var(--bg-warning)'};
-                color:${enSaison ? 'var(--text-success)' : 'var(--text-warning)'}">
-                ${enSaison ? '● En saison' : '◎ Bientôt'}
-              </span>
-            </div>
-            ${recettesAssociees.length > 0 ? `
-            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-              ${recettesAssociees.map(r => `
-                <span style="font-size:0.72rem;padding:2px 8px;background:var(--bg-accent);color:var(--text-accent);border-radius:20px">
-                  ${r.avec_alcool ? '🍶' : '🌿'} ${r.nom}
-                </span>`).join('')}
-            </div>` : ''}
-          </div>
-        `).join('')}
-        ${restantes > 0 ? `<div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);padding:4px">+${restantes} autre${restantes > 1 ? 's' : ''} en saison ce mois-ci</div>` : ''}
-      </div>
-    </div>`;
-}
+
  async function ouvrirFicheSaisonniere(planteId) {
   let plante = plantesList.find(p => p.id === planteId);
   if (!plante) {
