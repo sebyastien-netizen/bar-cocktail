@@ -457,7 +457,7 @@ async function afficherChoixCocktails() {
   const ids = session.recettes_disponibles || [];
 
 const { data: recettesData } = await db.from('recettes')
-    .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage, anecdote, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi')
+    .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage, anecdote, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi_invite')
     .in('id', ids);
 
   const { data: verresData } = await db.rpc('verres_possibles_public', { p_recette_ids: ids });
@@ -640,8 +640,8 @@ function asTuRecu() {
     { icon: '✨', label: 'Finish', texte: r.degustation_finish }
   ].filter(e => e.texte);
 
-  if (r.degustation_defi) {
-    degEtapesActives.push({ icon: '🎯', label: 'Défi détection', texte: r.degustation_defi, defi: true });
+if (r.degustation_defi_invite) {
+    degEtapesActives.push({ icon: '🎯', label: 'Défi détection', texte: r.degustation_defi_invite, defi: true });
   }
 
   if (degEtapesActives.length === 0) {
