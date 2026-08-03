@@ -810,7 +810,7 @@ function renderRecettes() {
 <input type="text" id="recherche-recettes"
 placeholder="🔍 Rechercher une recette…" 
     value="${rechercheRecette}"
-oninput="rechercheRecette=this.value; renderRecettes(); setTimeout(()=>{const i=document.querySelector('#recherche-recettes');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},0)"    
+oninput="rechercheRecette=this.value; clearTimeout(window._debounceRecherche); window._debounceRecherche=setTimeout(()=>{renderRecettes(); const i=document.querySelector('#recherche-recettes');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},220)"    
 style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.95rem;outline:none;">
 </div>
 <div class="recettes-filtres">
