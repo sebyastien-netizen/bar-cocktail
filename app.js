@@ -5713,50 +5713,6 @@ Réponds en JSON uniquement :
   }
 }
 
-  const recetteId = 'inspi-' + Date.now();
-  const ings = Array.isArray(inspi.ingredients) ? inspi.ingredients : [];
-
-  const { data: recette } = await db.from('recettes').insert({
-    id: recetteId,
-    user_id: currentUser.id,
-    type: 'cocktail',
-    nom: inspi.nom,
-    difficulte: 'moyen',
-    description_courte: inspi.notes || null,
-    photo_url: inspi.photo_url || null
-  }).select().single();
-
-  if (recette && ings.length > 0) {
-    // Insérer les ingrédients
-    const ingredientsAInserer = ings.map((ing, i) => ({
-      recette_id: recetteId,
-      user_id: currentUser.id,
-      nom: typeof ing === 'string' ? ing : ing.nom,
-      quantite: ing.quantite || null,
-      unite: ing.unite || null,
-      ordre: i + 1
-    }));
-    await db.from('recette_ingredients').insert(ingredientsAInserer);
-  }
-
-  // Mettre à jour l'inspiration
-  await db.from('inspirations').update({
-    statut: 'validee',
-    recette_liee_id: recetteId
-  }).eq('id', id);
-
-  const idx = inspirationsList.findIndex(x => x.id === id);
-  if (idx !== -1) {
-    inspirationsList[idx].statut = 'validee';
-    inspirationsList[idx].recette_liee_id = recetteId;
-  }
-
-  fermerModal('modal-fiche-inspiration');
-  renderInspirations();
-  // Recharger les recettes pour inclure la nouvelle
-  await chargerRecettes();
-  alert(`✅ "${inspi.nom}" ajoutée aux recettes. Complétez les détails depuis l'onglet Recettes.`);
-}
 
 async function rejeterInspiration(id) {
   await db.from('inspirations').update({ statut: 'rejetee' }).eq('id', id);
