@@ -866,8 +866,9 @@ function categorieDeItemGlobal(itemId) {
   return null;
 }
 function calculerVerresPossibles(recette) {
-  const tousIngs = (recette.ingredients || []).filter(i =>
-    i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel
+const tousIngs = (recette.ingredients || []).filter(i =>
+    i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel &&
+    !/glace|glaçon/i.test(i.nom || '')
   );
   if (tousIngs.length === 0) return null;
 
@@ -4112,6 +4113,7 @@ function calculerConsommationAgregee() {
 (recette.ingredients || []).forEach(ing => {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+      if (/glace|glaçon/i.test(ing.nom || '')) return;
       if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
       const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
       if (!conso[ing.item_cave_id]) conso[ing.item_cave_id] = { nom: ing.nom, totalCl: 0 };
