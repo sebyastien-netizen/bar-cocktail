@@ -289,19 +289,21 @@ function renderItem(item, catId) {
   const dotClass = !detenu ? 'non-detenu'
     : item.ouvert ? 'ouvert' : '';
  
-  return `
+return `
     <div class="item-cave ${!detenu ? 'item-non-detenu' : ''}" onclick="ouvrirModalItem('${item.id}', '${catId}')">
+      <div class="item-photo-vignette" onclick="event.stopPropagation(); ouvrirPhotoItem('${item.id}', '${catId}')" style="width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        ${item.photo_url ? `<img src="${item.photo_url}" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:0.85rem;opacity:0.3">🍾</span>`}
+      </div>
       <div class="item-ouverture-dot ${dotClass}"></div>
       <div class="item-info">
         <div class="item-nom">${item.nom}</div>
         ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
       </div>
       <span class="item-statut ${statutClass}">${statutLabel}</span>
-      ${detenu && item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
+${detenu && item.prix_estime ? `<span class="item-prix">~${item.prix_estime}€</span>` : ''}
       <div class="item-actions">
-       <button class="btn-icon" title="Infos" onclick="event.stopPropagation(); ouvrirModalInfo('${item.id}', '${catId}')">ℹ</button>
+        <button class="btn-icon" title="Infos" onclick="event.stopPropagation(); ouvrirModalInfo('${item.id}', '${catId}')">ℹ</button>
         ${detenu ? `<button class="btn-icon" title="Contenance" onclick="event.stopPropagation(); ouvrirModalContenance('${item.id}', '${catId}')">📊</button>` : ''}
-        <button class="btn-icon" title="Supprimer" onclick="event.stopPropagation(); supprimerItemCave('${item.id}', '${catId}')">🗑</button>
         <button class="btn-icon btn-toggle-detenu" title="${detenu ? 'Marquer non détenu' : 'Marquer détenu'}"
           onclick="event.stopPropagation(); toggleDetenu('${item.id}', '${catId}')">
           ${detenu ? '✓' : '+'}
@@ -310,7 +312,42 @@ function renderItem(item, catId) {
     </div>
   `;
 }
- 
+ function ouvrirPhotoItem(itemId, catId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const blob = await new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const max = 600;
+        let w = img.width, h = img.height;
+        if (w > max) { h = Math.round(h * max / w); w = max; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(b => { resolve(b); URL.revokeObjectURL(url); }, 'image/jpeg', 0.85);
+      };
+      img.src = url;
+    });
+
+    const path = `${currentUser.id}/${itemId}-${Date.now()}.jpg`;
+    const { error: uploadError } = await db.storage.from('photos-items').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+    if (uploadError) { alert('Erreur upload : ' + uploadError.message); return; }
+
+    const { data: urlData } = db.storage.from('photos-items').getPublicUrl(path);
+    await db.from('items').update({ photo_url: urlData.publicUrl }).eq('id', itemId).eq('user_id', currentUser.id);
+
+    const item = trouverItem(itemId, catId);
+    if (item) item.photo_url = urlData.publicUrl;
+    renderCave();
+  };
+  input.click();
+}
 function renderConservations() {
   const ouverts = [];
   cave.categories.forEach(cat => {
