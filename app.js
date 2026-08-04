@@ -4449,6 +4449,80 @@ async function supprimerSoireeVoyage(soireeId) {
   await db.from('soiree_menu').delete().eq('id', soireeId);
   ouvrirTableauBordVoyage();
 }
+async function ouvrirBilanVoyage() {
+  if (!voyageActif) return;
+  if (!confirm('Terminer le voyage et appliquer le bilan à ta cave ?')) return;
+
+  const { data: bouteilles } = await db.from('mode_voyage_bouteilles')
+    .select('*').eq('mode_voyage_id', voyageActif.id);
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-bilan-voyage';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9500;overflow-y:auto;padding:20px';
+
+  const lignes = (bouteilles || []).map(b => {
+    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === b.item_cave_id);
+    const clDepart = item?.cl_restants ?? b.cl_restants_voyage;
+    const clRestant = b.cl_restants_voyage ?? 0;
+    const consomme = Math.max(0, clDepart - clRestant);
+    return { b, item, clDepart, clRestant, consomme };
+  });
+
+  modal.innerHTML = `
+    <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:4px">🏁 Bilan du voyage — ${voyageActif.nom}</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Vérifie et ajuste les quantités consommées avant d'appliquer à ta cave.</div>
+
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:10px">🍾 Bouteilles</div>
+      ${lignes.map((l, idx) => `
+        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:0.9rem;font-weight:600">${l.b.nom}</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">Départ : ${l.clDepart ?? '—'} cl</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:0.82rem;color:var(--text-secondary);min-width:100px">Restant après voyage :</span>
+            <input type="number" id="bilan-cl-${idx}" value="${l.clRestant}" min="0" max="${l.clDepart ?? 9999}" step="0.5"
+              style="width:80px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem">
+            <span style="font-size:0.78rem;color:var(--text-muted)">cl</span>
+          </div>
+        </div>
+      `).join('')}
+
+      <button class="btn-primary" style="width:100%;margin-top:20px;padding:12px" onclick="appliquerBilanVoyage(${JSON.stringify(lignes.map((l, idx) => ({ itemId: l.b.item_cave_id, idx })))})">
+        ✅ Appliquer à ma cave et terminer
+      </button>
+      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="document.getElementById('modal-bilan-voyage').remove()">
+        Annuler
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function appliquerBilanVoyage(lignesRef) {
+  for (const { itemId, idx } of lignesRef) {
+    if (!itemId) continue;
+    const input = document.getElementById('bilan-cl-' + idx);
+    if (!input) continue;
+    const nouveauCl = parseFloat(input.value);
+    if (isNaN(nouveauCl)) continue;
+    await db.from('items').update({ cl_restants: nouveauCl })
+      .eq('id', itemId).eq('user_id', currentUser.id);
+  }
+
+  // Clôturer le voyage
+  await db.from('mode_voyage').update({ statut: 'termine' })
+    .eq('id', voyageActif.id).eq('user_id', currentUser.id);
+
+  voyageActif = null;
+  voyageBouteillesActives = [];
+  document.getElementById('modal-bilan-voyage')?.remove();
+  document.getElementById('modal-tableau-bord-voyage')?.remove();
+  renderBandeauVoyageGlobal();
+  chargerCave();
+  alert('Voyage terminé — ta cave a été mise à jour.');
+}
 let soireeMenuActive = null;
 let soireeMenuRecettesActives = [];
 
