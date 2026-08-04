@@ -4663,32 +4663,92 @@ async function ouvrirDecrementationParCocktail() {
   modal.id = 'modal-decrement-cocktail';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9600;overflow-y:auto;padding:20px';
 
-  const cocktailsDispos = recettes.filter(r => r.type === 'cocktail' || r.type === 'mocktail');
+  window._decrementRecettes = recettes;
+  window._decrementRows = [];
+  window._decrementSection = 'cocktail';
+  window._decrementSearch = '';
 
   modal.innerHTML = `
     <div style="max-width:500px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
       <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🍸 Décrémenter par cocktail</div>
       <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:16px">
-        Sélectionne chaque cocktail réalisé et le nombre de portions pour mettre à jour ta cave voyage.
+        Sélectionne chaque cocktail réalisé et le nombre de portions.
       </div>
-
-      <div id="liste-decrement-cocktails" style="max-height:50vh;overflow-y:auto;margin-bottom:12px">
-        <div id="decrement-rows"></div>
-        <button class="btn-outline" style="width:100%;margin-top:8px" onclick="ajouterLigneDecrement()">+ Ajouter un cocktail</button>
+      <div id="decrement-rows" style="margin-bottom:12px"></div>
+      <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button id="dec-tab-cocktail" style="flex:1;font-size:0.78rem;padding:6px;border-radius:6px;border:1px solid var(--border-accent);background:var(--bg-accent);color:var(--text-accent);cursor:pointer"
+            onclick="window._decrementSection='cocktail'; renderDecrementPicker()">🍸 Cocktails</button>
+          <button id="dec-tab-mocktail" style="flex:1;font-size:0.78rem;padding:6px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-primary);cursor:pointer"
+            onclick="window._decrementSection='mocktail'; renderDecrementPicker()">🥤 Mocktails</button>
+          <button id="dec-tab-preparation" style="flex:1;font-size:0.78rem;padding:6px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-primary);cursor:pointer"
+            onclick="window._decrementSection='preparation'; renderDecrementPicker()">⚗️ Prép.</button>
+        </div>
+        <input type="text" placeholder="Rechercher..." id="dec-search"
+          style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;margin-bottom:8px"
+          oninput="window._decrementSearch=this.value; renderDecrementPicker()">
+        <div id="dec-picker" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
       </div>
-
-      <div style="display:flex;gap:8px;margin-top:8px">
+      <div style="display:flex;gap:8px">
         <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-decrement-cocktail').remove(); ouvrirBilanVoyage()">← Retour</button>
         <button class="btn-primary" style="flex:1" onclick="appliquerDecrementParCocktail()">✅ Appliquer et terminer</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+  renderDecrementPicker();
+}
 
-  // Ajouter une première ligne
-  window._decrementRecettes = recettes.filter(r => r.type === 'cocktail' || r.type === 'mocktail');
-  window._decrementRows = [];
-  ajouterLigneDecrement();
+function renderDecrementPicker() {
+  const picker = document.getElementById('dec-picker');
+  if (!picker) return;
+  ['cocktail','mocktail','preparation'].forEach(s => {
+    const btn = document.getElementById(`dec-tab-${s}`);
+    if (!btn) return;
+    const actif = window._decrementSection === s;
+    btn.style.background = actif ? 'var(--bg-accent)' : 'none';
+    btn.style.color = actif ? 'var(--text-accent)' : 'var(--text-primary)';
+    btn.style.borderColor = actif ? 'var(--border-accent)' : 'var(--border)';
+  });
+  const q = (window._decrementSearch || '').toLowerCase();
+  const liste = (window._decrementRecettes || [])
+    .filter(r => r.type === window._decrementSection)
+    .filter(r => !q || r.nom.toLowerCase().includes(q));
+  picker.innerHTML = liste.map(r => `
+    <div style="padding:8px 10px;border-radius:6px;cursor:pointer;font-size:0.85rem;border:1px solid var(--border)"
+      onmouseover="this.style.background='var(--bg-card-hover)'"
+      onmouseout="this.style.background=''"
+      onclick="ajouterLigneDecrement('${r.id}', '${r.nom.replace(/'/g, "\\'")}')">
+      ${r.nom}
+    </div>
+  `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune recette trouvée.</div>';
+}
+
+function ajouterLigneDecrement(recetteId, recetteNom) {
+  if (!recetteId) return;
+  const rows = document.getElementById('decrement-rows');
+  if (!rows) return;
+  const idx = Date.now();
+  window._decrementRows.push({ recetteId, portions: 1, idx });
+  const div = document.createElement('div');
+  div.id = `decrement-row-${idx}`;
+  div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;border:1px solid var(--border);margin-bottom:6px';
+  div.innerHTML = `
+    <span style="font-size:0.85rem;flex:1">${recetteNom}</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button style="background:none;border:1px solid var(--border);border-radius:4px;width:24px;height:24px;cursor:pointer;color:var(--text-primary)"
+        onclick="window._decrementRows.find(r=>r.idx===${idx}).portions=Math.max(1,window._decrementRows.find(r=>r.idx===${idx}).portions-1); document.getElementById('dec-qty-${idx}').textContent=window._decrementRows.find(r=>r.idx===${idx}).portions">−</button>
+      <span id="dec-qty-${idx}" style="min-width:20px;text-align:center;font-size:0.9rem">1</span>
+      <button style="background:none;border:1px solid var(--border);border-radius:4px;width:24px;height:24px;cursor:pointer;color:var(--text-primary)"
+        onclick="window._decrementRows.find(r=>r.idx===${idx}).portions++; document.getElementById('dec-qty-${idx}').textContent=window._decrementRows.find(r=>r.idx===${idx}).portions">+</button>
+      <span style="font-size:0.75rem;color:var(--text-muted)">v.</span>
+      <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:1rem;margin-left:4px"
+        onclick="document.getElementById('decrement-row-${idx}').remove(); window._decrementRows=window._decrementRows.filter(r=>r.idx!==${idx})">🗑</button>
+    </div>
+  `;
+  rows.appendChild(div);
+  const search = document.getElementById('dec-search');
+  if (search) { search.value = ''; window._decrementSearch = ''; renderDecrementPicker(); }
 }
 
 function ajouterLigneDecrement() {
