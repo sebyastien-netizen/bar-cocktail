@@ -837,8 +837,8 @@ function renderRecettes() {
  
 if (filtreDisponible) {
   if (voyageActif) {
-    liste = liste.filter(r => (calculerVerresPossiblesVoyage(r)?.max ?? 0) > 0);
-    liste = [...liste].sort((a, b) => (calculerVerresPossiblesVoyage(b)?.max ?? 0) - (calculerVerresPossiblesVoyage(a)?.max ?? 0));
+    liste = liste.filter(r => calculerDisponibiliteVoyage(r) === 0);
+    liste = [...liste].sort((a, b) => calculerDisponibiliteVoyage(a) - calculerDisponibiliteVoyage(b));
   } else {
     liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
   }
@@ -897,7 +897,7 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
  
 ${voyageActif && modeSelectionSoiree ? `
   <div style="background:var(--bg-accent);border:1px solid var(--border-accent);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:0.78rem;color:var(--text-accent)">
-    🧳 Sélection filtrée sur ta cave <strong>${voyageActif.nom}</strong> — ${liste.length} recette${liste.length > 1 ? 's' : ''} réalisable${liste.length > 1 ? 's' : ''}
+    🧳 Sélection filtrée sur ta cave <strong>${voyageActif.nom}</strong> — ${liste.filter(r => calculerDisponibiliteVoyage(r) === 0).length} recette${liste.filter(r => calculerDisponibiliteVoyage(r) === 0).length > 1 ? 's' : ''} réalisable${liste.filter(r => calculerDisponibiliteVoyage(r) === 0).length > 1 ? 's' : ''}
   </div>` : ''}
 <div class="recettes-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune recette trouvée.</div>' : ''}
