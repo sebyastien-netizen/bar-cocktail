@@ -28,6 +28,7 @@ let selectionPourSoireeEnAttente = null;
 let filtreGout      = '';
 let filtreDiff      = '';
 let filtreDisponible = false;
+let filtreSansLiaison = false;
 let recetteOuverte  = null;
  
 // =============================================
@@ -760,9 +761,10 @@ const typeVersCategorie = {
     }
 
 const categorieVersType = {
-      sirops: 'sirop', liqueurs: 'liqueur', bitters: 'bitter',
-      'garde-manger': 'sucrant', 'ingredients-frais': 'jus', 'purees-coulis': 'puree'
-    };
+  sirops: 'sirop', liqueurs: 'liqueur', bitters: 'bitter',
+  'garde-manger': 'sucrant', 'ingredients-frais': 'jus', 'purees-coulis': 'puree',
+  'sodas-mixers': 'mixer', 'jus-nectars': 'jus', 'cordials': 'cordial'
+};
 
     if (matchGlossaire) {
       await db.from('ingredients_glossaire')
@@ -835,14 +837,22 @@ function renderRecettes() {
   if (filtreGout) liste = liste.filter(r => r.gouts && r.gouts.includes(filtreGout));
   if (filtreDiff) liste = liste.filter(r => r.difficulte === filtreDiff);
  
-if (filtreDisponible) {
-  if (voyageActif) {
-    liste = liste.filter(r => calculerDisponibiliteVoyage(r) === 0);
-    liste = [...liste].sort((a, b) => calculerDisponibiliteVoyage(a) - calculerDisponibiliteVoyage(b));
-  } else {
-    liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
+  if (filtreDisponible) {
+    if (voyageActif) {
+      liste = liste.filter(r => calculerDisponibiliteVoyage(r) === 0);
+      liste = [...liste].sort((a, b) => calculerDisponibiliteVoyage(a) - calculerDisponibiliteVoyage(b));
+    } else {
+      liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
+    }
   }
-}
+
+  if (filtreSansLiaison) {
+    liste = liste.filter(r => !(r.ingredients || []).some(i =>
+      !i.item_cave_id && !i.optionnel &&
+      i.quantite && (i.unite === 'cl' || i.unite === 'ml') &&
+      !/glace|glaçon/i.test(i.nom || '')
+    ));
+  }
  if (rechercheRecette) liste = liste.filter(r => 
   r.nom.toLowerCase().includes(rechercheRecette.toLowerCase()) ||
   (r.base_alcool && r.base_alcool.toLowerCase().includes(rechercheRecette.toLowerCase()))
@@ -892,6 +902,9 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
       </select>
 <button class="btn-filtre-dispo ${filtreDisponible ? 'active' : ''}" onclick="filtreDisponible=!filtreDisponible; renderRecettes()">
   ${voyageActif ? '🧳 Réalisables voyage' : '✅ Réalisables en premier'}
+</button>
+<button class="btn-filtre-dispo ${filtreSansLiaison ? 'active' : ''}" onclick="filtreSansLiaison=!filtreSansLiaison; renderRecettes()">
+  🔗 Sans liaisons
 </button>
     </div>
  
