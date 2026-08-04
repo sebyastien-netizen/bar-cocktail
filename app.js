@@ -53,9 +53,10 @@ function afficherLogin() {
 async function afficherApp() {
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
-  chargerCave();
+chargerCave();
   chargerRecettes();
   await chargerStockReserve();
+  await chargerVoyageActif();
   chargerEquipements();
   chargerConcoctions();
   chargerDashboard();
@@ -998,6 +999,64 @@ async function lancerModeVoyageDepuisSelection() {
   bouteillesSelectionneesVoyage.clear();
   renderCave();
   ouvrirTableauBordVoyage();
+}
+async function ouvrirTableauBordVoyage() {
+  if (!voyageActif) return;
+
+  const { data: bouteilles } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
+  const { data: achats } = await db.from('mode_voyage_achats').select('*').eq('mode_voyage_id', voyageActif.id);
+
+  let modal = document.getElementById('modal-tableau-bord-voyage');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-tableau-bord-voyage';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9000;overflow-y:auto;padding:20px';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:1.1rem;font-weight:700;color:var(--accent)">🧳 ${voyageActif.nom}</div>
+        <button onclick="document.getElementById('modal-tableau-bord-voyage').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px">Actif depuis le ${new Date(voyageActif.date_debut).toLocaleDateString('fr-FR')}</div>
+
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
+      ${(bouteilles || []).map(b => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
+          <span>${b.nom}</span>
+          <span style="color:var(--text-accent)">${b.cl_restants_voyage ?? '—'} cl</span>
+        </div>
+      `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille.</div>'}
+
+      <div style="font-size:0.85rem;font-weight:600;margin:16px 0 8px">🛒 Achats sur place</div>
+      ${(achats || []).map(a => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
+          <span>${a.nom}</span>
+          <span style="color:var(--text-accent)">${a.cl_restants ?? '—'} cl</span>
+        </div>
+      `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucun achat enregistré.</div>'}
+
+      <button class="btn-outline" style="width:100%;margin-top:14px" onclick="ouvrirAjoutAchatVoyage()">+ Achat sur place</button>
+
+      <button class="btn-outline" style="width:100%;margin-top:20px;border-color:var(--text-danger);color:var(--text-danger)" onclick="alert('La désactivation avec bilan arrive dans la prochaine brique.')">🏁 Terminer le voyage</button>
+    </div>
+  `;
+}
+
+function ouvrirAjoutAchatVoyage() {
+  const nom = prompt('Nom de l\'achat ?');
+  if (!nom || !nom.trim()) return;
+  const cl = parseFloat((prompt('Contenance en cl ?') || '').replace(',', '.'));
+
+  db.from('mode_voyage_achats').insert({
+    id: 'mva-' + Date.now(),
+    mode_voyage_id: voyageActif.id,
+    nom: nom.trim(),
+    cl_total: isNaN(cl) ? null : cl,
+    cl_restants: isNaN(cl) ? null : cl
+  }).then(() => ouvrirTableauBordVoyage());
 }
 function toggleSelectionRecette(id, event) {
   event.stopPropagation();
