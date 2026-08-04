@@ -3906,7 +3906,6 @@ function renderSessions(sessions, sessionsOpp = []) {
   const container = document.getElementById('sessions-container');
   const actives = sessions.filter(s => new Date(s.expires_at) > new Date());
   const passees = sessions.filter(s => new Date(s.expires_at) <= new Date());
-
 container.innerHTML = `
     <div class="cave-header">
       <h2>🎉 Soirées cocktail</h2>
@@ -3915,12 +3914,17 @@ container.innerHTML = `
         <button class="btn-primary" onclick="ouvrirChoixTypeSession()">+ Nouvelle soirée</button>
       </div>
     </div>
-
+    ${voyageActif ? `
+    <div class="section-label">🧳 MODE VOYAGE</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border-accent);border-radius:10px;padding:14px;margin-bottom:16px;cursor:pointer" onclick="ouvrirTableauBordVoyage()">
+      <div style="font-weight:600">${voyageActif.nom}</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">Actif depuis le ${new Date(voyageActif.date_debut).toLocaleDateString('fr-FR')}</div>
+    </div>
+    ` : ''}
     ${sessionsOpp.length > 0 ? `
     <div class="section-label">🆘 FIN DU MONDE</div>
     ${sessionsOpp.map(s => renderCarteSessionOpportunite(s)).join('')}
     ` : ''}
-
     ${actives.length > 0 ? `
     <div class="section-label" style="margin-top:1.5rem">EN COURS</div>
     ${actives.map(s => renderCarteSession(s)).join('')}
@@ -3929,7 +3933,6 @@ container.innerHTML = `
       <p>Aucune soirée active</p>
     </div>
     `}
-
     ${passees.length > 0 ? `
     <div class="section-label" style="margin-top:1.5rem">PASSÉES</div>
     ${passees.slice(0, 5).map(s => renderCarteSession(s, true)).join('')}
