@@ -1147,27 +1147,171 @@ async function retirerBouteilleVoyage(mvbId) {
 
 function ouvrirAjoutBouteilleVoyage() {
   const idsDejaVoyage = voyageBouteillesActives.map(b => b.item_cave_id);
-  const disponibles = cave.categories.flatMap(c => c.items).filter(i => i.detenu !== false && !idsDejaVoyage.includes(i.id));
+  const disponibles = cave.categories.flatMap(c => c.items)
+    .filter(i => i.detenu !== false && !idsDejaVoyage.includes(i.id));
 
-  if (disponibles.length === 0) { alert('Toutes tes bouteilles détenues sont déjà dans le voyage.'); return; }
+  let ongletActifVoyage = 'cave';
 
-  const nom = prompt('Tape le nom exact de la bouteille à ajouter (ou une partie) :\n\n' + disponibles.map(i => '• ' + i.nom).join('\n'));
-  if (!nom) return;
+  const modal = document.createElement('div');
+  modal.id = 'modal-ajout-bouteille-voyage';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9800;overflow-y:auto;padding:20px';
 
-  const trouve = disponibles.find(i => i.nom.toLowerCase().includes(nom.toLowerCase()));
-  if (!trouve) { alert('Bouteille non trouvée.'); return; }
+  function renderModal() {
+    modal.innerHTML = `
+      <div style="max-width:500px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:1rem;font-weight:700">+ Ajouter une bouteille</div>
+          <button onclick="document.getElementById('modal-ajout-bouteille-voyage').remove(); ouvrirTableauBordVoyage()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer">✕</button>
+        </div>
 
-  db.from('mode_voyage_bouteilles').insert({
-    id: 'mvb-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-    mode_voyage_id: voyageActif.id,
-    item_cave_id: trouve.id,
-    nom: trouve.nom,
-    cl_restants_voyage: trouve.cl_restants,
-    cl_restants_origine: trouve.cl_restants
-  }).select().single().then(({ data }) => {
-    if (data) voyageBouteillesActives.push(data);
-    ouvrirTableauBordVoyage();
-  });
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn-outline ${ongletActifVoyage === 'cave' ? 'active' : ''}" style="flex:1;${ongletActifVoyage === 'cave' ? 'background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)' : ''}"
+            onclick="window._ongletVoyage('cave')">Depuis ma cave</button>
+          <button class="btn-outline ${ongletActifVoyage === 'nouveau' ? 'active' : ''}" style="flex:1;${ongletActifVoyage === 'nouveau' ? 'background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)' : ''}"
+            onclick="window._ongletVoyage('nouveau')">Nouvelle bouteille</button>
+        </div>
+
+        ${ongletActifVoyage === 'cave' ? `
+          <input type="text" id="recherche-cave-voyage" placeholder="Rechercher..." value=""
+            style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);margin-bottom:10px;box-sizing:border-box"
+            oninput="window._filtrerCaveVoyage(this.value)">
+          <div id="liste-cave-voyage" style="max-height:300px;overflow-y:auto">
+            ${disponibles.length === 0
+              ? '<div style="font-size:0.8rem;color:var(--text-muted)">Toutes tes bouteilles sont déjà dans le voyage.</div>'
+              : disponibles.map(i => `
+                <div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+                  onclick="window._ajouterDepuisCave('${i.id}', '${i.nom.replace(/'/g, "\\'")}', ${i.cl_restants ?? 0})"
+                  onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background=''">
+                  <span style="font-size:0.88rem">${i.nom}</span>
+                  <span style="font-size:0.75rem;color:var(--text-muted)">${i.cl_restants ?? '—'} cl</span>
+                </div>
+              `).join('')}
+          </div>
+        ` : `
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <input type="text" id="nouveau-nom-voyage" placeholder="Nom de la bouteille" 
+              style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);box-sizing:border-box">
+            <select id="nouveau-cat-voyage" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary)">
+              ${cave.categories.filter(c => !['equipements', 'verres'].includes(c.id)).map(c =>
+                `<option value="${c.id}">${c.label || c.id}</option>`
+              ).join('')}
+            </select>
+            <div style="display:flex;gap:8px">
+              <input type="number" id="nouveau-cl-voyage" placeholder="Contenance (cl)" min="0" step="0.5"
+                style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary)">
+              <input type="number" id="nouveau-prix-voyage" placeholder="Prix (€)" min="0" step="0.5"
+                style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary)">
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;cursor:pointer">
+              <input type="checkbox" id="nouveau-detenu-voyage" checked> Je l\'ai déjà avec moi
+            </label>
+            <button class="btn-primary" style="width:100%;padding:12px" onclick="window._creerNouvellesBouteilleVoyage()">
+              ✅ Créer et ajouter au voyage
+            </button>
+          </div>
+        `}
+      </div>
+    `;
+
+    window._ongletVoyage = (o) => { ongletActifVoyage = o; renderModal(); };
+
+    window._filtrerCaveVoyage = (q) => {
+      const liste = document.getElementById('liste-cave-voyage');
+      if (!liste) return;
+      const filtrees = disponibles.filter(i => i.nom.toLowerCase().includes(q.toLowerCase()));
+      liste.innerHTML = filtrees.length === 0
+        ? '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille trouvée.</div>'
+        : filtrees.map(i => `
+          <div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+            onclick="window._ajouterDepuisCave('${i.id}', '${i.nom.replace(/'/g, "\\'")}', ${i.cl_restants ?? 0})"
+            onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background=''">
+            <span style="font-size:0.88rem">${i.nom}</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">${i.cl_restants ?? '—'} cl</span>
+          </div>
+        `).join('');
+    };
+
+    window._ajouterDepuisCave = async (itemId, nomItem, clRestants) => {
+      const { data } = await db.from('mode_voyage_bouteilles').insert({
+        id: 'mvb-' + Date.now(),
+        mode_voyage_id: voyageActif.id,
+        item_cave_id: itemId,
+        nom: nomItem,
+        cl_restants_voyage: clRestants,
+        cl_restants_origine: clRestants
+      }).select().single();
+      if (data) voyageBouteillesActives.push(data);
+      modal.remove();
+      ouvrirTableauBordVoyage();
+    };
+
+    window._creerNouvellesBouteilleVoyage = async () => {
+      const nom = document.getElementById('nouveau-nom-voyage').value.trim();
+      const catId = document.getElementById('nouveau-cat-voyage').value;
+      const cl = parseFloat(document.getElementById('nouveau-cl-voyage').value) || null;
+      const prix = parseFloat(document.getElementById('nouveau-prix-voyage').value) || null;
+      const detenu = document.getElementById('nouveau-detenu-voyage').checked;
+
+      if (!nom) { alert('Donne un nom à la bouteille.'); return; }
+
+      const { data: nouvelItem, error } = await db.from('items').insert({
+        id: 'custom-' + Date.now(),
+        user_id: currentUser.id,
+        category_id: catId,
+        nom,
+        detenu,
+        cl_total: cl,
+        cl_restants: cl,
+        prix_estime: prix
+      }).select().single();
+
+      if (error) { alert('Erreur : ' + error.message); return; }
+
+      // Intégrer dans la cave locale
+      const cat = cave.categories.find(c => c.id === catId);
+      if (cat) cat.items.push(nouvelItem);
+
+      // Glossaire + auto-liaison recettes
+      const categorieVersType = {
+        sirops: 'sirop', liqueurs: 'liqueur', bitters: 'bitter',
+        'garde-manger': 'sucrant', 'ingredients-frais': 'jus', 'purees-coulis': 'puree'
+      };
+      const doublon = trouverDoublonPotentiel(nouvelItem.nom);
+      if (doublon && confirm(`⚠️ "${nouvelItem.nom}" ressemble à "${doublon.nom_canonique}" déjà dans le glossaire.\n\nEst-ce la même chose ?\n\nOK = fusionner\nAnnuler = créer séparément`)) {
+        await db.from('ingredients_glossaire')
+          .update({ alias: [...(doublon.alias || []), nouvelItem.nom.toLowerCase()], item_cave_id: doublon.item_cave_id || nouvelItem.id })
+          .eq('id', doublon.id);
+      } else if (categorieVersType[catId]) {
+        await db.from('ingredients_glossaire').insert({
+          user_id: currentUser.id,
+          nom_canonique: nouvelItem.nom,
+          alias: [],
+          type: categorieVersType[catId],
+          item_cave_id: nouvelItem.id,
+          source: 'voyage'
+        });
+      }
+      await autoLierIngredientParNom(nouvelItem.nom, nouvelItem.id);
+
+      // Ajouter au voyage
+      const { data: mvb } = await db.from('mode_voyage_bouteilles').insert({
+        id: 'mvb-' + Date.now(),
+        mode_voyage_id: voyageActif.id,
+        item_cave_id: nouvelItem.id,
+        nom: nouvelItem.nom,
+        cl_restants_voyage: cl,
+        cl_restants_origine: cl
+      }).select().single();
+      if (mvb) voyageBouteillesActives.push(mvb);
+
+      modal.remove();
+      renderCave();
+      ouvrirTableauBordVoyage();
+    };
+  }
+
+  renderModal();
+  document.body.appendChild(modal);
 }
 function toggleSelectionRecette(id, event) {
   event.stopPropagation();
