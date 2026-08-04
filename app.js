@@ -4640,7 +4640,7 @@ async function ouvrirBilanVoyage() {
         </div>
       `).join('')}
 
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px">
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
         <button class="btn-primary" style="width:100%;padding:12px" 
           onclick="appliquerBilanVoyage(${JSON.stringify(lignes.map((l, idx) => ({ itemId: l.b.item_cave_id, idx })))})">
           ✅ Appliquer à ma cave et terminer
@@ -4654,6 +4654,8 @@ async function ouvrirBilanVoyage() {
           Annuler — continuer le voyage
         </button>
       </div>
+
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:10px">🍾 Bouteilles</div>
     </div>
   `;
   document.body.appendChild(modal);
