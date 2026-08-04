@@ -473,6 +473,14 @@ function calculerDisponibiliteOpportunite(recette, dispoTextes) {
   });
   return manquants.length;
 }
+function calculerDisponibiliteVoyage(recette) {
+  const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
+  const manquants = ingredientsRequis.filter(i => {
+    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(i.item_cave_id))) return false;
+    return !voyageBouteillesActives.some(b => b.item_cave_id === i.item_cave_id);
+  });
+  return manquants.length;
+}
 function badgeDisponibilite(nbManquants) {
   if (nbManquants === 0) return '<span class="badge-dispo badge-ok">✅ Réalisable</span>';
   if (nbManquants === 1) return '<span class="badge-dispo badge-1">1 manquant</span>';
@@ -1337,7 +1345,7 @@ function lancerSoireeDepuisSelection() {
   ouvrirChoixTypeSession();
 }
 function renderCarteRecette(r) {
-  const nbManquants = calculerDisponibilite(r);
+  const nbManquants = voyageActif ? calculerDisponibiliteVoyage(r) : calculerDisponibilite(r);
   const diffLabel   = { facile: 'Facile', moyen: 'Moyen', avance: 'Avancé' }[r.difficulte] || r.difficulte;
   const diffClass   = { facile: 'diff-facile', moyen: 'diff-moyen', avance: 'diff-avance' }[r.difficulte] || '';
  
@@ -1374,11 +1382,17 @@ const selectionnee = recettesSelectionneesSoiree.has(r.id);
 <div class="carte-footer">
           ${r.prix_portion ? `<span class="carte-prix">~${r.prix_portion.toFixed(2)}€</span>` : ''}
 ${(() => {
-            const vp = calculerVerresPossibles(r);
-            if (!vp) return '';
-            const couleur = vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
-            return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''}${vp.partiel ? '*' : ''}</span>`;
-          })()}
+  if (voyageActif) {
+    const vpv = calculerVerresPossiblesVoyage(r);
+    if (!vpv) return '';
+    const couleur = vpv.max === 0 ? 'var(--text-danger)' : vpv.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
+    return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🧳 ${vpv.max} verre${vpv.max > 1 ? 's' : ''}</span>`;
+  }
+  const vp = calculerVerresPossibles(r);
+  if (!vp) return '';
+  const couleur = vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
+  return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''}${vp.partiel ? '*' : ''}</span>`;
+})()}
           ${(() => {
   const aLier = (r.ingredients || []).some(i =>
     !i.item_cave_id && !i.optionnel &&
@@ -1387,17 +1401,12 @@ ${(() => {
   );
   return aLier ? `<span style="font-size:0.72rem;color:var(--text-warning);font-weight:600;margin-left:4px" title="Ingrédient(s) non lié(s) à Ma Cave">⚠️ lier</span>` : '';
 })()}
-          ${(() => {
-            const vpv = calculerVerresPossiblesVoyage(r);
-            if (!vpv || vpv.max === 0) return '';
-            return `<span style="font-size:0.72rem;color:var(--accent);font-weight:600;margin-left:6px">🧳 ${vpv.max}</span>`;
-          })()}
         </div>
       </div>
     </div>
   `;
 }
- 
+
 function changerSection(section) {
   sectionRecette = section;
   filtreBase = ''; filtreGout = ''; filtreDiff = '';
