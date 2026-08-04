@@ -460,7 +460,9 @@ const { data: recettesData } = await db.from('recettes')
     .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage, anecdote, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi_invite')
     .in('id', ids);
 
-  const { data: verresData } = await db.rpc('verres_possibles_public', { p_recette_ids: ids });
+  const { data: verresData } = session.voyage_id
+  ? await db.rpc('verres_possibles_voyage_public', { p_recette_ids: ids, p_voyage_id: session.voyage_id })
+  : await db.rpc('verres_possibles_public', { p_recette_ids: ids });
   const verresMap = {};
   (verresData || []).forEach(v => { verresMap[v.recette_id] = v; });
 
