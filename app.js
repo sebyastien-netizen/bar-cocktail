@@ -1852,8 +1852,10 @@ ${r.photo_url ? `<div class="fiche-img-wrap" style="${r.photo_cadrage ? 'positio
       <div class="fiche-ing-liste">
 ${ingsEffectifs.map(ing => {
           const enCave = ing.item_cave_id ? caveIds.has(ing.item_cave_id) : null; // null = non lié à Ma Cave, statut inconnu
-          const qteBase = ing.cl_ajuste !== undefined ? ing.cl_ajuste : ing.quantite;
-          const qte = qteBase ? Math.round(qteBase * portions * 10) / 10 : null;
+const qteBase = ing.cl_ajuste !== undefined ? ing.cl_ajuste : ing.quantite;
+const qteConverti = (ing.unite === 'ml' && qteBase) ? qteBase / 10 : qteBase;
+const qte = qteConverti ? Math.round(qteConverti * portions * 10) / 10 : null;
+const uniteAffichee = (ing.unite === 'ml') ? 'cl' : (ing.unite || '');
           const qteModif = ing.cl_ajuste !== undefined && Math.abs((ing.cl_ajuste || 0) - (ing.quantite || 0)) > 0.05;
           const pct = ing.quantite && r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0) > 0
             ? Math.round((ing.quantite / r.ingredients.reduce((s, i) => s + (i.quantite || 0), 0)) * 100)
@@ -1867,7 +1869,7 @@ ${ingsEffectifs.map(ing => {
               <div class="fiche-ing-body">
                 <div class="fiche-ing-header">
                   <span class="fiche-ing-nom ${enCave === false && !ing.optionnel ? 'fiche-ing-nom--manquant' : ''}">${ing.nom}${ing.optionnel ? ' <span class="fiche-ing-opt">optionnel</span>' : ''}</span>
-                  <span class="fiche-ing-qte">${qte ? qte + ' ' + (ing.unite || '') : ''}</span>
+                  <span class="fiche-ing-qte">${qte ? qte + ' ' + uniteAffichee : ''}</span>
                 </div>
                 ${pct > 0 ? `<div class="fiche-ing-barre"><div class="fiche-ing-barre-fill fiche-ing-barre-fill--${couleur}" style="width:${pct}%"></div></div>` : ''}
                 ${enCave === false && !ing.optionnel ? `<div class="fiche-ing-warn">Manquant — voir À acheter</div>` : ''}
