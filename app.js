@@ -170,8 +170,16 @@ searchBar.innerHTML = `
   <input type="text" id="search-input" placeholder="Rechercher un alcool ou ingrédient…" oninput="onSearch(this.value)" value="${searchVal}">
   <button class="btn btn-outline" onclick="ouvrirModalAjout()">+ Ajouter</button>
 `;
-container.appendChild(searchBar); 
-  renderConservations();
+container.appendChild(searchBar);
+
+const barreVoyage = document.createElement('div');
+barreVoyage.style.cssText = 'margin:10px 0';
+barreVoyage.innerHTML = voyageActif
+  ? `<button class="btn btn-outline" style="width:100%;padding:10px;border-color:var(--accent);color:var(--accent)" onclick="ouvrirTableauBordVoyage()">🧳 Mode Voyage actif — voir le tableau de bord</button>`
+  : `<button class="btn btn-outline" style="width:100%;padding:10px" onclick="${modeSelectionVoyage ? 'lancerModeVoyageDepuisSelection()' : 'toggleModeSelectionVoyage()'}">${modeSelectionVoyage ? `🧳 Activer avec ${bouteillesSelectionneesVoyage.size} bouteille(s)` : '🧳 Activer le Mode Voyage'}</button>`;
+container.appendChild(barreVoyage);
+
+renderConservations();
  
   const navCats = document.createElement('div');
   navCats.className = 'cave-nav-cats';
@@ -289,9 +297,12 @@ function renderItem(item, catId) {
   const dotClass = !detenu ? 'non-detenu'
     : item.ouvert ? 'ouvert' : '';
  
+const selectionneVoyage = bouteillesSelectionneesVoyage.has(item.id);
+
 return `
-    <div class="item-cave ${!detenu ? 'item-non-detenu' : ''}" onclick="ouvrirModalItem('${item.id}', '${catId}')">
-      <div class="item-photo-vignette" onclick="event.stopPropagation(); ouvrirPhotoItem('${item.id}', '${catId}')" style="width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer">
+    <div class="item-cave ${!detenu ? 'item-non-detenu' : ''}" onclick="${modeSelectionVoyage ? `toggleSelectionBouteilleVoyage('${item.id}', event)` : `ouvrirModalItem('${item.id}', '${catId}')`}" style="${modeSelectionVoyage && selectionneVoyage ? 'outline:2px solid var(--accent);outline-offset:-2px' : ''}">
+      ${modeSelectionVoyage ? `<div style="width:20px;height:20px;border-radius:5px;background:${selectionneVoyage ? 'var(--accent)' : 'transparent'};border:1px solid ${selectionneVoyage ? 'var(--accent)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;color:#000;font-size:0.75rem;flex-shrink:0">${selectionneVoyage ? '✓' : ''}</div>` : ''}
+      <div class="item-photo-vignette" onclick="event.stopPropagation(); ${modeSelectionVoyage ? '' : `ouvrirPhotoItem('${item.id}', '${catId}')`}" style="width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer">
         ${item.photo_url ? `<img src="${item.photo_url}" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:0.85rem;opacity:0.3">🍾</span>`}
       </div>
       <div class="item-ouverture-dot ${dotClass}"></div>
@@ -935,7 +946,59 @@ function toggleModeSelectionSoiree() {
   if (!modeSelectionSoiree) recettesSelectionneesSoiree.clear();
   renderRecettes();
 }
+let voyageActif = null;
+let modeSelectionVoyage = false;
+let bouteillesSelectionneesVoyage = new Set();
 
+async function chargerVoyageActif() {
+  const { data } = await db.from('mode_voyage').select('*').eq('user_id', currentUser.id).eq('statut', 'actif').maybeSingle();
+  voyageActif = data || null;
+}
+
+function toggleModeSelectionVoyage() {
+  modeSelectionVoyage = !modeSelectionVoyage;
+  if (!modeSelectionVoyage) bouteillesSelectionneesVoyage.clear();
+  renderCave();
+}
+function toggleSelectionBouteilleVoyage(itemId, event) {
+  event.stopPropagation();
+  if (bouteillesSelectionneesVoyage.has(itemId)) bouteillesSelectionneesVoyage.delete(itemId);
+  else bouteillesSelectionneesVoyage.add(itemId);
+  renderCave();
+}
+async function lancerModeVoyageDepuisSelection() {
+  if (bouteillesSelectionneesVoyage.size === 0) { alert('Sélectionne au moins une bouteille.'); return; }
+  const nom = prompt('Nom du voyage ?', 'Mon voyage');
+  if (!nom || !nom.trim()) return;
+
+  const { data: voyage, error } = await db.from('mode_voyage').insert({
+    id: 'voyage-' + Date.now(),
+    user_id: currentUser.id,
+    nom: nom.trim()
+  }).select().single();
+
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  const toutesItems = cave.categories.flatMap(c => c.items);
+  for (const itemId of bouteillesSelectionneesVoyage) {
+    const item = toutesItems.find(i => i.id === itemId);
+    if (!item) continue;
+    await db.from('mode_voyage_bouteilles').insert({
+      id: 'mvb-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+      mode_voyage_id: voyage.id,
+      item_cave_id: itemId,
+      nom: item.nom,
+      cl_restants_voyage: item.cl_restants,
+      cl_restants_origine: item.cl_restants
+    });
+  }
+
+  voyageActif = voyage;
+  modeSelectionVoyage = false;
+  bouteillesSelectionneesVoyage.clear();
+  renderCave();
+  ouvrirTableauBordVoyage();
+}
 function toggleSelectionRecette(id, event) {
   event.stopPropagation();
   if (recettesSelectionneesSoiree.has(id)) recettesSelectionneesSoiree.delete(id);
