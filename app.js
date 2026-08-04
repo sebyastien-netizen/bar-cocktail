@@ -890,9 +890,9 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
         <option value="moyen" ${filtreDiff==='moyen'?'selected':''}>Moyen</option>
         <option value="avance" ${filtreDiff==='avance'?'selected':''}>Avancé</option>
       </select>
-      <button class="btn-filtre-dispo ${filtreDisponible ? 'active' : ''}" onclick="filtreDisponible=!filtreDisponible; renderRecettes()">
-        ✅ Réalisables en premier
-      </button>
+<button class="btn-filtre-dispo ${filtreDisponible ? 'active' : ''}" onclick="filtreDisponible=!filtreDisponible; renderRecettes()">
+  ${voyageActif ? '🧳 Réalisables voyage' : '✅ Réalisables en premier'}
+</button>
     </div>
  
 ${voyageActif && modeSelectionSoiree ? `
