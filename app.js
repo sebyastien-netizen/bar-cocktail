@@ -1060,8 +1060,7 @@ async function ouvrirTableauBordVoyage() {
   if (!voyageActif) return;
 
   const { data: bouteilles } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
-  const { data: achats } = await db.from('mode_voyage_achats').select('*').eq('mode_voyage_id', voyageActif.id);
-  const { data: soirees } = await db.from('soiree_menu').select('*').eq('voyage_id', voyageActif.id).order('created_at');
+    const { data: soirees } = await db.from('soiree_menu').select('*').eq('voyage_id', voyageActif.id).order('created_at');
 
   let modal = document.getElementById('modal-tableau-bord-voyage');
   if (!modal) {
@@ -1109,14 +1108,7 @@ async function ouvrirTableauBordVoyage() {
       `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille.</div>'}
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:0.8rem" onclick="ouvrirAjoutBouteilleVoyage()">+ Ajouter une bouteille</button>
 
-      <div style="font-size:0.85rem;font-weight:600;margin:16px 0 8px">🛒 Achats sur place</div>
-      ${(achats || []).map(a => `
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
-          <span>${a.nom}</span>
-          <span style="color:var(--text-accent)">${a.cl_restants ?? '—'} cl</span>
-        </div>
-      `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucun achat enregistré.</div>'}
-      <button class="btn-outline" style="width:100%;margin-top:14px" onclick="ouvrirAjoutAchatVoyage()">+ Achat sur place</button>
+
 
       <button class="btn-outline" style="width:100%;margin-top:20px;border-color:var(--text-danger);color:var(--text-danger)" onclick="ouvrirBilanVoyage()">🏁 Terminer le voyage</button>
     </div>
@@ -1125,19 +1117,7 @@ async function ouvrirTableauBordVoyage() {
 
 
 
-function ouvrirAjoutAchatVoyage() {
-  const nom = prompt('Nom de l\'achat ?');
-  if (!nom || !nom.trim()) return;
-  const cl = parseFloat((prompt('Contenance en cl ?') || '').replace(',', '.'));
 
-  db.from('mode_voyage_achats').insert({
-    id: 'mva-' + Date.now(),
-    mode_voyage_id: voyageActif.id,
-    nom: nom.trim(),
-    cl_total: isNaN(cl) ? null : cl,
-    cl_restants: isNaN(cl) ? null : cl
-  }).then(() => ouvrirTableauBordVoyage());
-}
 async function retirerBouteilleVoyage(mvbId) {
   if (!confirm('Retirer cette bouteille du voyage ?')) return;
   await db.from('mode_voyage_bouteilles').delete().eq('id', mvbId);
