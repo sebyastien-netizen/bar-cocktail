@@ -1084,6 +1084,7 @@ async function ouvrirTableauBordVoyage() {
 
   const { data: bouteilles } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
   const { data: achats } = await db.from('mode_voyage_achats').select('*').eq('mode_voyage_id', voyageActif.id);
+  const { data: soirees } = await db.from('soiree_menu').select('*').eq('voyage_id', voyageActif.id).order('created_at');
 
   let modal = document.getElementById('modal-tableau-bord-voyage');
   if (!modal) {
@@ -1101,7 +1102,22 @@ async function ouvrirTableauBordVoyage() {
       </div>
       <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px">Actif depuis le ${new Date(voyageActif.date_debut).toLocaleDateString('fr-FR')}</div>
 
-<div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🎉 Soirées</div>
+      ${(soirees || []).length === 0
+        ? '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Aucune soirée pour ce voyage.</div>'
+        : (soirees || []).map((s, idx) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="document.getElementById('modal-tableau-bord-voyage').remove(); ouvrirTableauBordSoiree('${s.id}')">
+            <div>
+              <div style="font-size:0.88rem;font-weight:600">Soirée ${idx + 1} — ${s.nom}</div>
+              <div style="font-size:0.72rem;color:var(--text-muted)">${s.date_evenement ? new Date(s.date_evenement).toLocaleDateString('fr-FR') : 'Sans date'} · ${s.statut || 'planification'}</div>
+            </div>
+            <span style="color:var(--text-muted);font-size:1rem">›</span>
+          </div>
+        `).join('')
+      }
+      <button class="btn-outline" style="width:100%;margin-bottom:20px;font-size:0.85rem" onclick="document.getElementById('modal-tableau-bord-voyage').remove(); creerSoireeMenuSolo('${voyageActif.id}')">+ Nouvelle soirée</button>
+
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
       ${(bouteilles || []).map(b => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
           <span>${b.nom}</span>
@@ -1120,16 +1136,12 @@ async function ouvrirTableauBordVoyage() {
           <span style="color:var(--text-accent)">${a.cl_restants ?? '—'} cl</span>
         </div>
       `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucun achat enregistré.</div>'}
-
       <button class="btn-outline" style="width:100%;margin-top:14px" onclick="ouvrirAjoutAchatVoyage()">+ Achat sur place</button>
-      <button class="btn-primary" style="width:100%;margin-top:8px" onclick="ouvrirPlanificationVoyage()">🎯 Planifier la suite</button>
 
-      <button class="btn-outline" style="width:100%;margin-top:20px;border-color:var(--text-danger);color:var(--text-danger)" onclick="alert('La désactivation avec bilan arrive dans la prochaine brique.')">🏁 Terminer le voyage</button>
+      <button class="btn-outline" style="width:100%;margin-top:20px;border-color:var(--text-danger);color:var(--text-danger)" onclick="ouvrirBilanVoyage()">🏁 Terminer le voyage</button>
     </div>
   `;
 }
-let voyageQueue = [];
-let voyageQueueIndex = 0;
 
 function ouvrirPlanificationVoyage() {
   if (!voyageActif) return;
@@ -4502,16 +4514,18 @@ function ouvrirChoixTypeSession() {
   `;
   document.body.appendChild(modal);
 }
-async function creerSoireeMenuSolo() {
+async function creerSoireeMenuSolo(voyageId = null) {
   const id = 'soiree-' + Date.now();
-  const { data, error } = await db.from('soiree_menu').insert({
+  const payload = {
     id,
     user_id: currentUser.id,
-    nom: 'Ma soirée',
+    nom: voyageId ? 'Soirée voyage' : 'Ma soirée',
     mode: 'solo'
-  }).select().single();
+  };
+  if (voyageId) payload.voyage_id = voyageId;
 
-if (error) { alert('Erreur : ' + error.message); return; }
+  const { data, error } = await db.from('soiree_menu').insert(payload).select().single();
+  if (error) { alert('Erreur : ' + error.message); return; }
 
   if (selectionPourSoireeEnAttente) {
     for (const recetteId of selectionPourSoireeEnAttente) {
@@ -4523,6 +4537,7 @@ if (error) { alert('Erreur : ' + error.message); return; }
     selectionPourSoireeEnAttente = null;
   }
 
+  if (voyageId) document.getElementById('modal-tableau-bord-voyage')?.remove();
   ouvrirTableauBordSoiree(id);
 }
 
