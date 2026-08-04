@@ -821,7 +821,7 @@ function renderRecettes() {
   if (!container) return;
  
   let liste = recettes.filter(r => r.type === sectionRecette);
-  if (modeSelectionSoiree) liste = liste.filter(r => voyageActif ? (calculerVerresPossiblesVoyage(r)?.max > 0) : calculerDisponibilite(r) === 0);
+  if (modeSelectionSoiree && !voyageActif) liste = liste.filter(r => calculerDisponibilite(r) === 0);
  
   if (filtreBase) liste = liste.filter(r => r.base_alcool === filtreBase);
   if (filtreGout) liste = liste.filter(r => r.gouts && r.gouts.includes(filtreGout));
