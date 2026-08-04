@@ -4372,16 +4372,45 @@ function ouvrirChoixTypeSession() {
   document.body.appendChild(modal);
 }
 async function creerSoireeMenuSolo(voyageId = null) {
+  if (voyageId) {
+    // Depuis le voyage : choix de type simplifié
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:24px';
+    modal.innerHTML = `
+      <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:380px;width:100%">
+        <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">🧳 Nouvelle soirée voyage</div>
+        <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:18px">Quel type de soirée ?</div>
+        <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:10px;text-align:left;display:flex;align-items:center;gap:12px"
+          onclick="this.closest('div[style*=fixed]').remove(); ouvrirModalNouvelleSession('${voyageId}')">
+          <span style="font-size:1.4rem">🎉</span>
+          <span>
+            <div style="font-weight:600">Soirée programmée</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">QR code, invités, choix de cocktails</div>
+          </span>
+        </button>
+        <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:20px;text-align:left;display:flex;align-items:center;gap:12px"
+          onclick="this.closest('div[style*=fixed]').remove(); creerSoireeVoyageSolo('${voyageId}')">
+          <span style="font-size:1.4rem">🧑‍🍳</span>
+          <span>
+            <div style="font-weight:600">Je sers moi-même</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400">Batch imposé, tableau de bord de stock</div>
+          </span>
+        </button>
+        <button class="btn-outline" style="width:100%;padding:10px" onclick="this.closest('div[style*=fixed]').remove(); ouvrirTableauBordVoyage()">Annuler</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return;
+  }
+
+  // Hors voyage : comportement original
   const id = 'soiree-' + Date.now();
-  const payload = {
+  const { data, error } = await db.from('soiree_menu').insert({
     id,
     user_id: currentUser.id,
-    nom: voyageId ? 'Soirée voyage' : 'Ma soirée',
+    nom: 'Ma soirée',
     mode: 'solo'
-  };
-  if (voyageId) payload.voyage_id = voyageId;
-
-  const { data, error } = await db.from('soiree_menu').insert(payload).select().single();
+  }).select().single();
   if (error) { alert('Erreur : ' + error.message); return; }
 
   if (selectionPourSoireeEnAttente) {
@@ -4394,10 +4423,23 @@ async function creerSoireeMenuSolo(voyageId = null) {
     selectionPourSoireeEnAttente = null;
   }
 
-  if (voyageId) document.getElementById('modal-tableau-bord-voyage')?.remove();
   ouvrirTableauBordSoiree(id);
 }
 
+async function creerSoireeVoyageSolo(voyageId) {
+  const nom = prompt('Nom de la soirée ?', 'Soirée 1');
+  if (!nom) return;
+  const id = 'soiree-' + Date.now();
+  const { data, error } = await db.from('soiree_menu').insert({
+    id,
+    user_id: currentUser.id,
+    nom,
+    mode: 'solo',
+    voyage_id: voyageId
+  }).select().single();
+  if (error) { alert('Erreur : ' + error.message); return; }
+  ouvrirTableauBordSoiree(id);
+}
 let soireeMenuActive = null;
 let soireeMenuRecettesActives = [];
 
