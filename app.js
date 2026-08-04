@@ -856,9 +856,9 @@ if (filtreDisponible) {
       </button>
 </div>
 
-    <button class="btn-outline" style="margin:8px 0" onclick="toggleModeSelectionSoiree()">
-      ${modeSelectionSoiree ? '✕ Annuler la sélection' : '☑️ Sélectionner pour une soirée'}
-    </button>
+<button class="btn-outline" style="margin:8px 0${voyageActif ? ';border-color:var(--accent);color:var(--accent)' : ''}" onclick="toggleModeSelectionSoiree()">
+  ${modeSelectionSoiree ? '✕ Annuler la sélection' : `☑️ Sélectionner pour une soirée${voyageActif ? ' 🧳' : ''}`}
+</button>
 
 <div style="padding:0 0 10px 0;">
 <input type="text" id="recherche-recettes"
@@ -887,6 +887,10 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
       </button>
     </div>
  
+${voyageActif && modeSelectionSoiree ? `
+  <div style="background:var(--bg-accent);border:1px solid var(--border-accent);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:0.78rem;color:var(--text-accent)">
+    🧳 Sélection filtrée sur ta cave <strong>${voyageActif.nom}</strong> — ${liste.length} recette${liste.length > 1 ? 's' : ''} réalisable${liste.length > 1 ? 's' : ''}
+  </div>` : ''}
 <div class="recettes-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune recette trouvée.</div>' : ''}
       ${liste.map(r => renderCarteRecette(r)).join('')}
