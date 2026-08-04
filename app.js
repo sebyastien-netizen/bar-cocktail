@@ -942,6 +942,54 @@ tousIngs.forEach(ing => {
   if (max === Infinity) return null;
   return { max, partiel: inconnu };
 }
+function calculerVerresPossiblesVoyage(recette) {
+  if (!voyageActif) return null;
+  const tousIngs = (recette.ingredients || []).filter(i =>
+    i.quantite && (i.unite === 'cl' || i.unite === 'ml') && !i.optionnel
+  );
+  if (tousIngs.length === 0) return null;
+
+  let max = Infinity;
+  let horsVoyage = false;
+
+  tousIngs.forEach(ing => {
+    if (!ing.item_cave_id) { horsVoyage = true; return; }
+    const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
+    if (!bouteille || bouteille.cl_restants_voyage === null) { horsVoyage = true; return; }
+    const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+    if (qteCl <= 0) return;
+    const possibles = Math.floor(bouteille.cl_restants_voyage / qteCl);
+    if (possibles < max) max = possibles;
+  });
+
+  if (max === Infinity || horsVoyage) return { max: 0, indisponible: true };
+  return { max, indisponible: false };
+}
+
+function calculerPriorisationVoyage(recettesCandidates) {
+  if (!voyageActif) return [];
+  const joursEcoules = Math.max(1, Math.ceil((new Date() - new Date(voyageActif.date_debut)) / 86400000));
+
+  return recettesCandidates.map(r => {
+    const vp = calculerVerresPossiblesVoyage(r);
+    // Nombre de recettes candidates qui partagent au moins une bouteille avec celle-ci
+    const idsUtilises = (r.ingredients || []).map(i => i.item_cave_id).filter(Boolean);
+    const partagesAvec = recettesCandidates.filter(autre => {
+      if (autre.id === r.id) return false;
+      const idsAutre = (autre.ingredients || []).map(i => i.item_cave_id).filter(Boolean);
+      return idsUtilises.some(id => idsAutre.includes(id));
+    }).length;
+
+    return { ...r, verresVoyage: vp?.max ?? 0, partagesAvec };
+  })
+  .filter(r => r.verresVoyage > 0)
+  .sort((a, b) => {
+    // Priorité aux recettes qui dépendent de bouteilles très partagées (à consommer avant qu'elles manquent ailleurs)
+    // et à celles avec peu de verres restants (risque d'épuisement proche)
+    if (b.partagesAvec !== a.partagesAvec) return b.partagesAvec - a.partagesAvec;
+    return a.verresVoyage - b.verresVoyage;
+  });
+}
 function toggleModeSelectionSoiree() {
   modeSelectionSoiree = !modeSelectionSoiree;
   if (!modeSelectionSoiree) recettesSelectionneesSoiree.clear();
@@ -951,9 +999,19 @@ let voyageActif = null;
 let modeSelectionVoyage = false;
 let bouteillesSelectionneesVoyage = new Set();
 
+let voyageBouteillesActives = [];
+
 async function chargerVoyageActif() {
   const { data } = await db.from('mode_voyage').select('*').eq('user_id', currentUser.id).eq('statut', 'actif').maybeSingle();
   voyageActif = data || null;
+
+  if (voyageActif) {
+    const { data: bouteilles } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
+    voyageBouteillesActives = bouteilles || [];
+  } else {
+    voyageBouteillesActives = [];
+  }
+
   renderBandeauVoyageGlobal();
 }
 
@@ -999,20 +1057,21 @@ async function lancerModeVoyageDepuisSelection() {
 
   if (error) { alert('Erreur : ' + error.message); return; }
 
-  const toutesItems = cave.categories.flatMap(c => c.items);
+const toutesItems = cave.categories.flatMap(c => c.items);
+  voyageBouteillesActives = [];
   for (const itemId of bouteillesSelectionneesVoyage) {
     const item = toutesItems.find(i => i.id === itemId);
     if (!item) continue;
-    await db.from('mode_voyage_bouteilles').insert({
+    const { data: bouteilleCreee } = await db.from('mode_voyage_bouteilles').insert({
       id: 'mvb-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
       mode_voyage_id: voyage.id,
       item_cave_id: itemId,
       nom: item.nom,
       cl_restants_voyage: item.cl_restants,
       cl_restants_origine: item.cl_restants
-    });
+    }).select().single();
+    if (bouteilleCreee) voyageBouteillesActives.push(bouteilleCreee);
   }
-
 voyageActif = voyage;
   renderBandeauVoyageGlobal();
   modeSelectionVoyage = false;
@@ -1149,11 +1208,16 @@ const selectionnee = recettesSelectionneesSoiree.has(r.id);
         </div>
 <div class="carte-footer">
           ${r.prix_portion ? `<span class="carte-prix">~${r.prix_portion.toFixed(2)}€</span>` : ''}
-          ${(() => {
+${(() => {
             const vp = calculerVerresPossibles(r);
             if (!vp) return '';
             const couleur = vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
             return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''}${vp.partiel ? '*' : ''}</span>`;
+          })()}
+          ${(() => {
+            const vpv = calculerVerresPossiblesVoyage(r);
+            if (!vpv || vpv.max === 0) return '';
+            return `<span style="font-size:0.72rem;color:var(--accent);font-weight:600;margin-left:6px">🧳 ${vpv.max}</span>`;
           })()}
         </div>
       </div>
