@@ -4605,21 +4605,18 @@ async function supprimerSoireeVoyage(soireeId) {
 }
 async function ouvrirBilanVoyage() {
   if (!voyageActif) return;
-  if (!confirm('Terminer le voyage et appliquer le bilan à ta cave ?')) return;
 
-  const { data: bouteilles } = await db.from('mode_voyage_bouteilles')
-    .select('*').eq('mode_voyage_id', voyageActif.id);
+  const { data: bouteilles } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
 
   const modal = document.createElement('div');
   modal.id = 'modal-bilan-voyage';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9500;overflow-y:auto;padding:20px';
 
   const lignes = (bouteilles || []).map(b => {
-    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === b.item_cave_id);
-    const clDepart = item?.cl_restants ?? b.cl_restants_voyage;
-    const clRestant = b.cl_restants_voyage ?? 0;
-    const consomme = Math.max(0, clDepart - clRestant);
-    return { b, item, clDepart, clRestant, consomme };
+    const clRestant = parseFloat(b.cl_restants_voyage ?? 0);
+    const clOrigine = parseFloat(b.cl_restants_origine ?? clRestant);
+    const consomme = Math.max(0, clOrigine - clRestant);
+    return { b, clRestant, clOrigine, consomme };
   });
 
   modal.innerHTML = `
@@ -4632,28 +4629,123 @@ async function ouvrirBilanVoyage() {
         <div style="padding:10px 0;border-bottom:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <span style="font-size:0.9rem;font-weight:600">${l.b.nom}</span>
-            <span style="font-size:0.75rem;color:var(--text-muted)">Départ : ${l.clDepart ?? '—'} cl</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">Départ : ${l.clOrigine} cl</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:0.82rem;color:var(--text-secondary);min-width:100px">Restant après voyage :</span>
-            <input type="number" id="bilan-cl-${idx}" value="${l.clRestant}" min="0" max="${l.clDepart ?? 9999}" step="0.5"
+            <input type="number" id="bilan-cl-${idx}" value="${l.clRestant}" min="0" max="${l.clOrigine}" step="0.5"
               style="width:80px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem">
             <span style="font-size:0.78rem;color:var(--text-muted)">cl</span>
           </div>
         </div>
       `).join('')}
 
-      <button class="btn-primary" style="width:100%;margin-top:20px;padding:12px" onclick="appliquerBilanVoyage(${JSON.stringify(lignes.map((l, idx) => ({ itemId: l.b.item_cave_id, idx })))})">
-        ✅ Appliquer à ma cave et terminer
-      </button>
-      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="document.getElementById('modal-bilan-voyage').remove()">
-        Annuler
-      </button>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px">
+        <button class="btn-primary" style="width:100%;padding:12px" 
+          onclick="appliquerBilanVoyage(${JSON.stringify(lignes.map((l, idx) => ({ itemId: l.b.item_cave_id, idx })))})">
+          ✅ Appliquer à ma cave et terminer
+        </button>
+        <button class="btn-outline" style="width:100%;padding:12px" 
+          onclick="document.getElementById('modal-bilan-voyage').remove(); ouvrirDecrementationParCocktail()">
+          🍸 Décrémenter par cocktail puis terminer
+        </button>
+        <button class="btn-outline" style="width:100%;padding:10px;color:var(--text-muted)" 
+          onclick="document.getElementById('modal-bilan-voyage').remove()">
+          Annuler — continuer le voyage
+        </button>
+      </div>
     </div>
   `;
   document.body.appendChild(modal);
 }
+async function ouvrirDecrementationParCocktail() {
+  const modal = document.createElement('div');
+  modal.id = 'modal-decrement-cocktail';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9600;overflow-y:auto;padding:20px';
 
+  const cocktailsDispos = recettes.filter(r => r.type === 'cocktail' || r.type === 'mocktail');
+
+  modal.innerHTML = `
+    <div style="max-width:500px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🍸 Décrémenter par cocktail</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:16px">
+        Sélectionne chaque cocktail réalisé et le nombre de portions pour mettre à jour ta cave voyage.
+      </div>
+
+      <div id="liste-decrement-cocktails" style="max-height:50vh;overflow-y:auto;margin-bottom:12px">
+        <div id="decrement-rows"></div>
+        <button class="btn-outline" style="width:100%;margin-top:8px" onclick="ajouterLigneDecrement()">+ Ajouter un cocktail</button>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-decrement-cocktail').remove(); ouvrirBilanVoyage()">← Retour</button>
+        <button class="btn-primary" style="flex:1" onclick="appliquerDecrementParCocktail()">✅ Appliquer et terminer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Ajouter une première ligne
+  window._decrementRecettes = recettes.filter(r => r.type === 'cocktail' || r.type === 'mocktail');
+  window._decrementRows = [];
+  ajouterLigneDecrement();
+}
+
+function ajouterLigneDecrement() {
+  const rows = document.getElementById('decrement-rows');
+  if (!rows) return;
+  const idx = window._decrementRows.length;
+  window._decrementRows.push({ recetteId: null, portions: 1 });
+
+  const div = document.createElement('div');
+  div.id = `decrement-row-${idx}`;
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+  div.innerHTML = `
+    <select style="flex:1;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem"
+      onchange="window._decrementRows[${idx}].recetteId = this.value">
+      <option value="">Choisir un cocktail...</option>
+      ${window._decrementRecettes.map(r => `<option value="${r.id}">${r.nom}</option>`).join('')}
+    </select>
+    <input type="number" value="1" min="1" max="20" style="width:55px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);text-align:center"
+      onchange="window._decrementRows[${idx}].portions = parseInt(this.value) || 1">
+    <span style="font-size:0.78rem;color:var(--text-muted)">v.</span>
+    <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:1rem" 
+      onclick="document.getElementById('decrement-row-${idx}').remove()">🗑</button>
+  `;
+  rows.appendChild(div);
+}
+
+async function appliquerDecrementParCocktail() {
+  const conso = {};
+
+  for (const row of window._decrementRows) {
+    if (!row.recetteId) continue;
+    const recette = recettes.find(r => r.id === row.recetteId);
+    if (!recette) continue;
+    (recette.ingredients || []).forEach(ing => {
+      if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
+      if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+      if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
+      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+      conso[ing.item_cave_id] = (conso[ing.item_cave_id] || 0) + qteCl * row.portions;
+    });
+  }
+
+  // Appliquer les décrements sur cave voyage
+  for (const [itemId, cl] of Object.entries(conso)) {
+    const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+    if (!bouteille) continue;
+    const nouveau = Math.max(0, parseFloat(bouteille.cl_restants_voyage ?? 0) - cl);
+    await db.from('mode_voyage_bouteilles')
+      .update({ cl_restants_voyage: nouveau })
+      .eq('item_cave_id', itemId)
+      .eq('mode_voyage_id', voyageActif.id);
+    bouteille.cl_restants_voyage = nouveau;
+  }
+
+  document.getElementById('modal-decrement-cocktail')?.remove();
+  ouvrirBilanVoyage();
+}
 async function appliquerBilanVoyage(lignesRef) {
   for (const { itemId, idx } of lignesRef) {
     if (!itemId) continue;
