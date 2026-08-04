@@ -1101,13 +1101,17 @@ async function ouvrirTableauBordVoyage() {
       </div>
       <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px">Actif depuis le ${new Date(voyageActif.date_debut).toLocaleDateString('fr-FR')}</div>
 
-      <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
+<div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
       ${(bouteilles || []).map(b => `
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
           <span>${b.nom}</span>
-          <span style="color:var(--text-accent)">${b.cl_restants_voyage ?? '—'} cl</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="color:var(--text-accent)">${b.cl_restants_voyage ?? '—'} cl</span>
+            <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerBouteilleVoyage('${b.id}')">🗑</button>
+          </div>
         </div>
       `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille.</div>'}
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:0.8rem" onclick="ouvrirAjoutBouteilleVoyage()">+ Ajouter une bouteille</button>
 
       <div style="font-size:0.85rem;font-weight:600;margin:16px 0 8px">🛒 Achats sur place</div>
       ${(achats || []).map(a => `
@@ -1261,6 +1265,37 @@ function ouvrirAjoutAchatVoyage() {
     cl_total: isNaN(cl) ? null : cl,
     cl_restants: isNaN(cl) ? null : cl
   }).then(() => ouvrirTableauBordVoyage());
+}
+async function retirerBouteilleVoyage(mvbId) {
+  if (!confirm('Retirer cette bouteille du voyage ?')) return;
+  await db.from('mode_voyage_bouteilles').delete().eq('id', mvbId);
+  voyageBouteillesActives = voyageBouteillesActives.filter(b => b.id !== mvbId);
+  ouvrirTableauBordVoyage();
+}
+
+function ouvrirAjoutBouteilleVoyage() {
+  const idsDejaVoyage = voyageBouteillesActives.map(b => b.item_cave_id);
+  const disponibles = cave.categories.flatMap(c => c.items).filter(i => i.detenu !== false && !idsDejaVoyage.includes(i.id));
+
+  if (disponibles.length === 0) { alert('Toutes tes bouteilles détenues sont déjà dans le voyage.'); return; }
+
+  const nom = prompt('Tape le nom exact de la bouteille à ajouter (ou une partie) :\n\n' + disponibles.map(i => '• ' + i.nom).join('\n'));
+  if (!nom) return;
+
+  const trouve = disponibles.find(i => i.nom.toLowerCase().includes(nom.toLowerCase()));
+  if (!trouve) { alert('Bouteille non trouvée.'); return; }
+
+  db.from('mode_voyage_bouteilles').insert({
+    id: 'mvb-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+    mode_voyage_id: voyageActif.id,
+    item_cave_id: trouve.id,
+    nom: trouve.nom,
+    cl_restants_voyage: trouve.cl_restants,
+    cl_restants_origine: trouve.cl_restants
+  }).select().single().then(({ data }) => {
+    if (data) voyageBouteillesActives.push(data);
+    ouvrirTableauBordVoyage();
+  });
 }
 function toggleSelectionRecette(id, event) {
   event.stopPropagation();
