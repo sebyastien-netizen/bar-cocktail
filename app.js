@@ -821,15 +821,20 @@ function renderRecettes() {
   if (!container) return;
  
   let liste = recettes.filter(r => r.type === sectionRecette);
-  if (modeSelectionSoiree) liste = liste.filter(r => calculerDisponibilite(r) === 0);
+  if (modeSelectionSoiree) liste = liste.filter(r => voyageActif ? (calculerVerresPossiblesVoyage(r)?.max > 0) : calculerDisponibilite(r) === 0);
  
   if (filtreBase) liste = liste.filter(r => r.base_alcool === filtreBase);
   if (filtreGout) liste = liste.filter(r => r.gouts && r.gouts.includes(filtreGout));
   if (filtreDiff) liste = liste.filter(r => r.difficulte === filtreDiff);
  
-  if (filtreDisponible) {
+if (filtreDisponible) {
+  if (voyageActif) {
+    liste = liste.filter(r => (calculerVerresPossiblesVoyage(r)?.max ?? 0) > 0);
+    liste = [...liste].sort((a, b) => (calculerVerresPossiblesVoyage(b)?.max ?? 0) - (calculerVerresPossiblesVoyage(a)?.max ?? 0));
+  } else {
     liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
   }
+}
  if (rechercheRecette) liste = liste.filter(r => 
   r.nom.toLowerCase().includes(rechercheRecette.toLowerCase()) ||
   (r.base_alcool && r.base_alcool.toLowerCase().includes(rechercheRecette.toLowerCase()))
