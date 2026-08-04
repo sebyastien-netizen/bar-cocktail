@@ -4687,6 +4687,25 @@ async function ouvrirTableauBordSoiree(soireeMenuId) {
   soireeMenuActive = menu;
   soireeMenuRecettesActives = menuRecettes || [];
 
+  // Détecter les ingrédients trackables sans contenance
+  const ingsSansContenance = [];
+  soireeMenuRecettesActives.forEach(mr => {
+    const recette = recettes.find(r => r.id === mr.recette_id);
+    (recette?.ingredients || []).forEach(ing => {
+      if (!ing.item_cave_id || ing.optionnel) return;
+      if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+      if (/glace|glaçon/i.test(ing.nom || '')) return;
+      if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
+      const item = voyageActif
+        ? voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id)
+        : cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
+      const clRestants = voyageActif ? item?.cl_restants_voyage : item?.cl_restants;
+      if (item && (clRestants === null || clRestants === undefined) && !ingsSansContenance.some(i => i.itemId === ing.item_cave_id)) {
+        ingsSansContenance.push({ itemId: ing.item_cave_id, nom: item?.nom || ing.nom });
+      }
+    });
+  });
+
   let modal = document.getElementById('modal-tableau-bord-soiree');
   if (!modal) {
     modal = document.createElement('div');
@@ -4695,9 +4714,65 @@ async function ouvrirTableauBordSoiree(soireeMenuId) {
     document.body.appendChild(modal);
   }
 
+  // Écran intermédiaire si ingrédients sans contenance
+  if (ingsSansContenance.length > 0) {
+    modal.innerHTML = `
+      <div style="max-width:500px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px;margin-top:40px">
+        <div style="font-size:1rem;font-weight:700;margin-bottom:4px">⚠️ Contenances manquantes</div>
+        <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:16px">
+          Ces ingrédients n'ont pas de contenance définie. Renseigne les quantités disponibles pour un suivi précis en soirée.
+        </div>
+        <div id="liste-contenances-manquantes">
+          ${ingsSansContenance.map(i => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:0.88rem;font-weight:600">${i.nom}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input type="number" id="cl-${i.itemId}" placeholder="cl" min="0" step="0.5"
+                  style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem;text-align:right">
+                <span style="font-size:0.82rem;color:var(--text-muted)">cl</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn-outline" style="flex:1" onclick="renderTableauBordSoiree()">Passer</button>
+          <button class="btn-primary" style="flex:1" onclick="validerContenancesManquantes(${JSON.stringify(ingsSansContenance.map(i => i.itemId))})">
+            ✅ Valider et continuer
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   renderTableauBordSoiree();
 }
 
+async function validerContenancesManquantes(itemIds) {
+  for (const itemId of itemIds) {
+    const input = document.getElementById('cl-' + itemId);
+    if (!input || !input.value) continue;
+    const cl = parseFloat(input.value);
+    if (isNaN(cl)) continue;
+
+    if (voyageActif) {
+      await db.from('mode_voyage_bouteilles')
+        .update({ cl_restants_voyage: cl })
+        .eq('item_cave_id', itemId)
+        .eq('mode_voyage_id', voyageActif.id);
+      const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+      if (b) b.cl_restants_voyage = cl;
+    } else {
+      await db.from('items')
+        .update({ cl_restants: cl })
+        .eq('id', itemId)
+        .eq('user_id', currentUser.id);
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
+      if (item) item.cl_restants = cl;
+    }
+  }
+  renderTableauBordSoiree();
+}
 function calculerConsommationAgregee() {
   // Pour chaque item_cave_id apparaissant dans au moins une recette du menu,
   // additionne la consommation projetée sur toutes les recettes qui l'utilisent.
