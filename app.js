@@ -1126,7 +1126,8 @@ async function ouvrirTableauBordVoyage() {
       }
       <button class="btn-outline" style="width:100%;margin-bottom:20px;font-size:0.85rem" onclick="document.getElementById('modal-tableau-bord-voyage').remove(); creerSoireeMenuSolo('${voyageActif.id}')">+ Nouvelle soirée</button>
 
-      <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
+<div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
+      <button class="btn-outline" style="width:100%;margin-bottom:10px;font-size:0.85rem" onclick="ouvrirAjoutBouteilleVoyage()">+ Ajouter une bouteille</button>
       ${(bouteilles || []).map(b => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
           <span>${b.nom}</span>
@@ -1136,10 +1137,6 @@ async function ouvrirTableauBordVoyage() {
           </div>
         </div>
       `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille.</div>'}
-      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:0.8rem" onclick="ouvrirAjoutBouteilleVoyage()">+ Ajouter une bouteille</button>
-
-
-
       <button class="btn-outline" style="width:100%;margin-top:20px;border-color:var(--text-danger);color:var(--text-danger)" onclick="ouvrirBilanVoyage()">🏁 Terminer le voyage</button>
     </div>
   `;
