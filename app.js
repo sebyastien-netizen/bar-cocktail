@@ -4509,7 +4509,16 @@ function renderTableauBordSoiree() {
   const stockInsuffisant = consommation.some(c => c.suffisant === false);
   const peutVerrouiller = ingredientsNonLies.length === 0 && !stockInsuffisant && soireeMenuRecettesActives.length > 0;
 
-  const recettesDispo = recettes.filter(r => r.type === 'cocktail' && !soireeMenuRecettesActives.some(mr => mr.recette_id === r.id));
+const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+const recettesDispo = recettes.filter(r => {
+  if (r.type !== 'cocktail') return false;
+  if (soireeMenuRecettesActives.some(mr => mr.recette_id === r.id)) return false;
+  if (estEnVoyage) {
+    const vpv = calculerVerresPossiblesVoyage(r);
+    return vpv && vpv.max > 0;
+  }
+  return true;
+});
 
   modal.innerHTML = `
     <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
