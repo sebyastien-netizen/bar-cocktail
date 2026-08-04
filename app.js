@@ -1375,6 +1375,14 @@ ${(() => {
             return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''}${vp.partiel ? '*' : ''}</span>`;
           })()}
           ${(() => {
+  const aLier = (r.ingredients || []).some(i =>
+    !i.item_cave_id && !i.optionnel &&
+    i.quantite && (i.unite === 'cl' || i.unite === 'ml') &&
+    !/glace|glaçon/i.test(i.nom || '')
+  );
+  return aLier ? `<span style="font-size:0.72rem;color:var(--text-warning);font-weight:600;margin-left:4px" title="Ingrédient(s) non lié(s) à Ma Cave">⚠️ lier</span>` : '';
+})()}
+          ${(() => {
             const vpv = calculerVerresPossiblesVoyage(r);
             if (!vpv || vpv.max === 0) return '';
             return `<span style="font-size:0.72rem;color:var(--accent);font-weight:600;margin-left:6px">🧳 ${vpv.max}</span>`;
