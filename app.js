@@ -954,12 +954,31 @@ let bouteillesSelectionneesVoyage = new Set();
 async function chargerVoyageActif() {
   const { data } = await db.from('mode_voyage').select('*').eq('user_id', currentUser.id).eq('statut', 'actif').maybeSingle();
   voyageActif = data || null;
+  renderBandeauVoyageGlobal();
 }
 
 function toggleModeSelectionVoyage() {
   modeSelectionVoyage = !modeSelectionVoyage;
   if (!modeSelectionVoyage) bouteillesSelectionneesVoyage.clear();
   renderCave();
+}
+function renderBandeauVoyageGlobal() {
+  const el = document.getElementById('bandeau-voyage-global');
+  if (!el) return;
+
+  if (!voyageActif) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <div onclick="ouvrirTableauBordVoyage()" style="cursor:pointer;background:linear-gradient(90deg,#d9a441,#f2c464);color:#10141f;padding:10px 16px;text-align:center;font-weight:700;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:8px;animation:pulseVoyage 2.2s ease-in-out infinite">
+      <span style="font-size:1.1rem">🧳</span> Mode Voyage actif — ${voyageActif.nom} <span style="font-size:0.75rem;font-weight:400;opacity:0.7">(toucher pour gérer)</span>
+    </div>
+    <style>
+      @keyframes pulseVoyage { 0%,100% { opacity:1 } 50% { opacity:0.75 } }
+    </style>
+  `;
 }
 function toggleSelectionBouteilleVoyage(itemId, event) {
   event.stopPropagation();
@@ -994,7 +1013,8 @@ async function lancerModeVoyageDepuisSelection() {
     });
   }
 
-  voyageActif = voyage;
+voyageActif = voyage;
+  renderBandeauVoyageGlobal();
   modeSelectionVoyage = false;
   bouteillesSelectionneesVoyage.clear();
   renderCave();
