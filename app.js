@@ -4619,10 +4619,25 @@ async function ouvrirBilanVoyage() {
     return { b, clRestant, clOrigine, consomme };
   });
 
-  modal.innerHTML = `
+modal.innerHTML = `
     <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
       <div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:4px">🏁 Bilan du voyage — ${voyageActif.nom}</div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Vérifie et ajuste les quantités consommées avant d'appliquer à ta cave.</div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+        <button class="btn-primary" style="width:100%;padding:12px" 
+          onclick="appliquerBilanVoyage(${JSON.stringify(lignes.map((l, idx) => ({ itemId: l.b.item_cave_id, idx })))})">
+          ✅ Appliquer à ma cave et terminer
+        </button>
+        <button class="btn-outline" style="width:100%;padding:12px" 
+          onclick="document.getElementById('modal-bilan-voyage').remove(); ouvrirDecrementationParCocktail()">
+          🍸 Décrémenter par cocktail puis terminer
+        </button>
+        <button class="btn-outline" style="width:100%;padding:10px;color:var(--text-muted)" 
+          onclick="document.getElementById('modal-bilan-voyage').remove()">
+          Annuler — continuer le voyage
+        </button>
+      </div>
 
       <div style="font-size:0.85rem;font-weight:600;margin-bottom:10px">🍾 Bouteilles</div>
       ${lignes.map((l, idx) => `
@@ -4639,23 +4654,6 @@ async function ouvrirBilanVoyage() {
           </div>
         </div>
       `).join('')}
-
-<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
-        <button class="btn-primary" style="width:100%;padding:12px" 
-          onclick="appliquerBilanVoyage(${JSON.stringify(lignes.map((l, idx) => ({ itemId: l.b.item_cave_id, idx })))})">
-          ✅ Appliquer à ma cave et terminer
-        </button>
-        <button class="btn-outline" style="width:100%;padding:12px" 
-          onclick="document.getElementById('modal-bilan-voyage').remove(); ouvrirDecrementationParCocktail()">
-          🍸 Décrémenter par cocktail puis terminer
-        </button>
-        <button class="btn-outline" style="width:100%;padding:10px;color:var(--text-muted)" 
-          onclick="document.getElementById('modal-bilan-voyage').remove()">
-          Annuler — continuer le voyage
-        </button>
-      </div>
-
-      <div style="font-size:0.85rem;font-weight:600;margin-bottom:10px">🍾 Bouteilles</div>
     </div>
   `;
   document.body.appendChild(modal);
