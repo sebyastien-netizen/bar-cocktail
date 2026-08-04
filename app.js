@@ -4751,29 +4751,7 @@ function ajouterLigneDecrement(recetteId, recetteNom) {
   if (search) { search.value = ''; window._decrementSearch = ''; renderDecrementPicker(); }
 }
 
-function ajouterLigneDecrement() {
-  const rows = document.getElementById('decrement-rows');
-  if (!rows) return;
-  const idx = window._decrementRows.length;
-  window._decrementRows.push({ recetteId: null, portions: 1 });
 
-  const div = document.createElement('div');
-  div.id = `decrement-row-${idx}`;
-  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
-  div.innerHTML = `
-    <select style="flex:1;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem"
-      onchange="window._decrementRows[${idx}].recetteId = this.value">
-      <option value="">Choisir un cocktail...</option>
-      ${window._decrementRecettes.map(r => `<option value="${r.id}">${r.nom}</option>`).join('')}
-    </select>
-    <input type="number" value="1" min="1" max="20" style="width:55px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);text-align:center"
-      onchange="window._decrementRows[${idx}].portions = parseInt(this.value) || 1">
-    <span style="font-size:0.78rem;color:var(--text-muted)">v.</span>
-    <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:1rem" 
-      onclick="document.getElementById('decrement-row-${idx}').remove()">🗑</button>
-  `;
-  rows.appendChild(div);
-}
 
 async function appliquerDecrementParCocktail() {
   const conso = {};
