@@ -966,30 +966,7 @@ function calculerVerresPossiblesVoyage(recette) {
   return { max, indisponible: false };
 }
 
-function calculerPriorisationVoyage(recettesCandidates) {
-  if (!voyageActif) return [];
-  const joursEcoules = Math.max(1, Math.ceil((new Date() - new Date(voyageActif.date_debut)) / 86400000));
 
-  return recettesCandidates.map(r => {
-    const vp = calculerVerresPossiblesVoyage(r);
-    // Nombre de recettes candidates qui partagent au moins une bouteille avec celle-ci
-    const idsUtilises = (r.ingredients || []).map(i => i.item_cave_id).filter(Boolean);
-    const partagesAvec = recettesCandidates.filter(autre => {
-      if (autre.id === r.id) return false;
-      const idsAutre = (autre.ingredients || []).map(i => i.item_cave_id).filter(Boolean);
-      return idsUtilises.some(id => idsAutre.includes(id));
-    }).length;
-
-    return { ...r, verresVoyage: vp?.max ?? 0, partagesAvec };
-  })
-  .filter(r => r.verresVoyage > 0)
-  .sort((a, b) => {
-    // Priorité aux recettes qui dépendent de bouteilles très partagées (à consommer avant qu'elles manquent ailleurs)
-    // et à celles avec peu de verres restants (risque d'épuisement proche)
-    if (b.partagesAvec !== a.partagesAvec) return b.partagesAvec - a.partagesAvec;
-    return a.verresVoyage - b.verresVoyage;
-  });
-}
 function toggleModeSelectionSoiree() {
   modeSelectionSoiree = !modeSelectionSoiree;
   if (!modeSelectionSoiree) recettesSelectionneesSoiree.clear();
@@ -1143,128 +1120,8 @@ async function ouvrirTableauBordVoyage() {
   `;
 }
 
-function ouvrirPlanificationVoyage() {
-  if (!voyageActif) return;
-  const candidats = recettes.filter(r => r.type === 'cocktail');
-  const priorises = calculerPriorisationVoyage(candidats);
 
-  if (priorises.length === 0) {
-    alert('Aucune recette réalisable avec ta cave de voyage actuelle.');
-    return;
-  }
 
-  let ordreActuel = priorises.map(r => r.id);
-  const selection = new Set(ordreActuel);
-
-  const modal = document.createElement('div');
-  modal.id = 'modal-plan-voyage';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px';
-
-  function render() {
-    modal.innerHTML = `
-      <div style="background:var(--bg-card);border-radius:16px;padding:20px;max-width:460px;width:100%;max-height:85vh;overflow-y:auto">
-        <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">🧳 Planifier la suite</div>
-        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px">Ordre suggéré selon priorité — décoche ou réordonne à ta guise</div>
-        ${ordreActuel.map((id, idx) => {
-          const r = priorises.find(x => x.id === id);
-          const coche = selection.has(id);
-          return `
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);opacity:${coche ? 1 : 0.4}">
-            <input type="checkbox" ${coche ? 'checked' : ''} onchange="toggleSelectionPlanVoyage('${id}')">
-            <div style="flex:1">
-              <div style="font-size:0.88rem;font-weight:600">${r.nom}</div>
-              <div style="font-size:0.7rem;color:var(--text-muted)">🍸 ${r.verresVoyage} possible${r.verresVoyage>1?'s':''}${r.partagesAvec>0 ? ` · partage ${r.partagesAvec} bouteille(s)` : ''}</div>
-            </div>
-            <button class="btn-icon" onclick="deplacerPlanVoyage(${idx}, -1)">▲</button>
-            <button class="btn-icon" onclick="deplacerPlanVoyage(${idx}, 1)">▼</button>
-          </div>`;
-        }).join('')}
-        <button class="btn-primary" style="width:100%;margin-top:16px" onclick="demarrerParcoursVoyage()">▶ Démarrer</button>
-        <button class="btn-outline" style="width:100%;margin-top:8px" onclick="document.getElementById('modal-plan-voyage').remove()">Annuler</button>
-      </div>
-    `;
-  }
-
-  window.toggleSelectionPlanVoyage = (id) => {
-    if (selection.has(id)) selection.delete(id); else selection.add(id);
-    render();
-  };
-  window.deplacerPlanVoyage = (idx, delta) => {
-    const nouvelIdx = idx + delta;
-    if (nouvelIdx < 0 || nouvelIdx >= ordreActuel.length) return;
-    [ordreActuel[idx], ordreActuel[nouvelIdx]] = [ordreActuel[nouvelIdx], ordreActuel[idx]];
-    render();
-  };
-  window.demarrerParcoursVoyage = () => {
-    voyageQueue = ordreActuel.filter(id => selection.has(id));
-    voyageQueueIndex = 0;
-    modal.remove();
-    ouvrirEtapeVoyage();
-  };
-
-  render();
-  document.body.appendChild(modal);
-}
-function ouvrirEtapeVoyage() {
-  if (voyageQueueIndex >= voyageQueue.length) { afficherFinParcoursVoyage(); return; }
-  const r = recettes.find(x => x.id === voyageQueue[voyageQueueIndex]);
-  if (!r) { voyageQueueIndex++; ouvrirEtapeVoyage(); return; }
-
-  let modal = document.getElementById('modal-etape-voyage');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'modal-etape-voyage';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9600;display:flex;flex-direction:column';
-    document.body.appendChild(modal);
-  }
-
-  const vpv = calculerVerresPossiblesVoyage(r);
-
-  modal.innerHTML = `
-    <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:0.75rem;color:var(--text-muted)">${voyageQueueIndex + 1}/${voyageQueue.length}</span>
-      <button onclick="document.getElementById('modal-etape-voyage').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem">✕</button>
-    </div>
-    <div style="flex:1;overflow-y:auto;padding:0 20px 20px">
-      ${r.photo_url ? `<div style="width:100%;height:160px;border-radius:12px;overflow:hidden;margin-bottom:14px;background:#000"><img src="${r.photo_url}" style="width:100%;height:100%;object-fit:cover"></div>` : ''}
-      <div style="font-size:1.2rem;font-weight:700;color:var(--accent);margin-bottom:4px">${r.nom}</div>
-      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">🍸 ${vpv?.max ?? 0} verre${(vpv?.max??0)>1?'s':''} restant${(vpv?.max??0)>1?'s':''} avec ta cave de voyage</div>
-      <div style="font-size:0.8rem;font-weight:600;margin-bottom:6px">Ingrédients</div>
-      ${(r.ingredients || []).map(ing => `<div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:4px 0;border-bottom:1px solid var(--border)"><span>${ing.nom}</span><span style="color:var(--text-accent)">${ing.quantite ?? ''} ${ing.unite ?? ''}</span></div>`).join('')}
-    </div>
-    <div style="padding:16px 20px;display:flex;gap:10px">
-      <button class="btn-outline" style="flex:1" onclick="passerEtapeVoyage()">⏭ Passer</button>
-      <button class="btn-primary" style="flex:2" onclick="validerEtapeVoyage()">✅ Recette faite</button>
-    </div>
-  `;
-}
-
-async function validerEtapeVoyage() {
-  const r = recettes.find(x => x.id === voyageQueue[voyageQueueIndex]);
-  if (r) await decrementerBouteillesVoyage(r, 1);
-  voyageQueueIndex++;
-  ouvrirEtapeVoyage();
-}
-
-function passerEtapeVoyage() {
-  voyageQueueIndex++;
-  ouvrirEtapeVoyage();
-}
-
-function afficherFinParcoursVoyage() {
-  const modal = document.getElementById('modal-etape-voyage');
-  if (!modal) return;
-  modal.innerHTML = `
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
-      <div style="font-size:2.5rem;margin-bottom:14px">🥂</div>
-      <div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:8px">Parcours terminé !</div>
-      <div style="display:flex;gap:10px;margin-top:20px">
-        <button class="btn-outline" onclick="document.getElementById('modal-etape-voyage').remove()">Fermer</button>
-        <button class="btn-primary" onclick="document.getElementById('modal-etape-voyage').remove(); ouvrirPlanificationVoyage()">🔄 Replanifier</button>
-      </div>
-    </div>
-  `;
-}
 function ouvrirAjoutAchatVoyage() {
   const nom = prompt('Nom de l\'achat ?');
   if (!nom || !nom.trim()) return;
