@@ -1079,16 +1079,19 @@ async function ouvrirTableauBordVoyage() {
       </div>
       <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px">Actif depuis le ${new Date(voyageActif.date_debut).toLocaleDateString('fr-FR')}</div>
 
-      <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🎉 Soirées</div>
+<div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🎉 Soirées</div>
       ${(soirees || []).length === 0
         ? '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Aucune soirée pour ce voyage.</div>'
         : (soirees || []).map((s, idx) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="document.getElementById('modal-tableau-bord-voyage').remove(); ouvrirTableauBordSoiree('${s.id}')">
-            <div>
-              <div style="font-size:0.88rem;font-weight:600">Soirée ${idx + 1} — ${s.nom}</div>
-              <div style="font-size:0.72rem;color:var(--text-muted)">${s.date_evenement ? new Date(s.date_evenement).toLocaleDateString('fr-FR') : 'Sans date'} · ${s.statut || 'planification'}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="flex:1;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="document.getElementById('modal-tableau-bord-voyage').remove(); ouvrirTableauBordSoiree('${s.id}')">
+              <div>
+                <div style="font-size:0.88rem;font-weight:600">Soirée ${idx + 1} — ${s.nom}</div>
+                <div style="font-size:0.72rem;color:var(--text-muted)">${s.date_evenement ? new Date(s.date_evenement).toLocaleDateString('fr-FR') : 'Sans date'} · ${s.statut || 'planification'}</div>
+              </div>
+              <span style="color:var(--text-muted);font-size:1rem">›</span>
             </div>
-            <span style="color:var(--text-muted);font-size:1rem">›</span>
+            <button style="background:none;border:none;color:var(--text-danger);font-size:1.1rem;cursor:pointer;padding:8px" onclick="supprimerSoireeVoyage('${s.id}')">🗑</button>
           </div>
         `).join('')
       }
@@ -4439,6 +4442,12 @@ async function creerSoireeVoyageSolo(voyageId) {
   }).select().single();
   if (error) { alert('Erreur : ' + error.message); return; }
   ouvrirTableauBordSoiree(id);
+}
+async function supprimerSoireeVoyage(soireeId) {
+  if (!confirm('Supprimer cette soirée ?')) return;
+  await db.from('soiree_menu_recettes').delete().eq('soiree_menu_id', soireeId);
+  await db.from('soiree_menu').delete().eq('id', soireeId);
+  ouvrirTableauBordVoyage();
 }
 let soireeMenuActive = null;
 let soireeMenuRecettesActives = [];
