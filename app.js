@@ -1864,13 +1864,24 @@ function renderBarre(label, valeur) {
 async function marquerRealisee(portions) {
   const r = recetteOuverte;
   const caveIds = getItemsCave();
- 
+
   const updates = [];
+  const updatesVoyage = [];
+
   for (const ing of (r.ingredients || [])) {
     if (!ing.item_cave_id || !ing.quantite || !ing.unite) continue;
-    if (!caveIds.has(ing.item_cave_id)) continue;
     if (ing.unite !== 'cl') continue;
- 
+
+    if (voyageActif) {
+      const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
+      if (bouteille && bouteille.cl_restants_voyage !== null) {
+        const nouveau = Math.max(0, bouteille.cl_restants_voyage - (ing.quantite * portions));
+        updatesVoyage.push({ bouteille, nouveau });
+      }
+      continue;
+    }
+
+    if (!caveIds.has(ing.item_cave_id)) continue;
     for (const cat of cave.categories) {
       const item = cat.items.find(i => i.id === ing.item_cave_id);
       if (item && item.cl_restants !== null) {
@@ -1879,24 +1890,32 @@ async function marquerRealisee(portions) {
       }
     }
   }
- 
+
   for (const { item, nouveau } of updates) {
     await db.from('items').update({ cl_restants: nouveau }).eq('id', item.id).eq('user_id', currentUser.id);
     item.cl_restants = nouveau;
   }
- 
+
+  for (const { bouteille, nouveau } of updatesVoyage) {
+    await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau }).eq('id', bouteille.id);
+    bouteille.cl_restants_voyage = nouveau;
+  }
+
   fermerModal('modal-fiche-recette');
- 
+
+  const nbTouches = updates.length + updatesVoyage.length;
   const feedback = document.createElement('div');
   feedback.className = 'toast-feedback';
-  feedback.textContent = updates.length > 0
-    ? `✓ Cave mise à jour (${updates.length} bouteille${updates.length > 1 ? 's' : ''} décrémentée${updates.length > 1 ? 's' : ''})`
-    : '✓ Recette marquée comme réalisée';
+  feedback.textContent = voyageActif
+    ? `✓ Cave voyage mise à jour (${updatesVoyage.length} bouteille${updatesVoyage.length > 1 ? 's' : ''})`
+    : nbTouches > 0
+      ? `✓ Cave mise à jour (${nbTouches} bouteille${nbTouches > 1 ? 's' : ''} décrémentée${nbTouches > 1 ? 's' : ''})`
+      : '✓ Recette marquée comme réalisée';
   document.body.appendChild(feedback);
   setTimeout(() => feedback.classList.add('visible'), 50);
   setTimeout(() => { feedback.classList.remove('visible'); setTimeout(() => feedback.remove(), 300); }, 2500);
- 
-  renderCave();
+
+  if (!voyageActif) renderCave();
 }
  
 // =============================================
