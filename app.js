@@ -4718,14 +4718,18 @@ function calculerConsommationAgregee() {
   });
 
   return Object.entries(conso).map(([itemId, c]) => {
-    const item = cave?.categories?.flatMap(cat => cat.items).find(i => i.id === itemId);
-    const disponibleReel = item ? Math.max(0, item.cl_restants - clReserveePour(itemId)) : null;
-    return {
+const item = voyageActif
+  ? voyageBouteillesActives.find(b => b.item_cave_id === itemId)
+  : cave?.categories?.flatMap(cat => cat.items).find(i => i.id === itemId);
+const disponibleReel = voyageActif
+  ? (item ? Math.max(0, parseFloat(item.cl_restants_voyage ?? 0)) : null)
+  : (item ? Math.max(0, item.cl_restants - clReserveePour(itemId)) : null);
+return {
       itemId,
       nomItem: item?.nom || c.nom,
       besoinCl: Math.round(c.totalCl * 10) / 10,
       disponibleReel,
-      inconnu: !item || item.cl_restants === null,
+      inconnu: voyageActif ? (!item || item.cl_restants_voyage === null) : (!item || item.cl_restants === null),
       suffisant: disponibleReel !== null ? disponibleReel >= c.totalCl : null
     };
   });
