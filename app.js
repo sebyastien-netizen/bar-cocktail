@@ -4938,21 +4938,27 @@ async function creerSessionVoteRestreint(soireeMenuId) {
 
   chargerSessions();
 }
-function ouvrirModalNouvelleSession() {
+let voyageIdPourSession = null;
+
+function ouvrirModalNouvelleSession(voyageId = null) {
+  voyageIdPourSession = voyageId || null;
   modeSessionActif = 'libre';
   document.getElementById('session-nom').value = '';
   document.getElementById('btn-mode-libre').classList.add('active');
- document.getElementById('bloc-recettes-liste').style.display = 'none';
+  document.getElementById('bloc-recettes-liste').style.display = 'none';
   document.getElementById('btn-mode-verrouille').classList.remove('active');
 
   quizActif = true;
   document.getElementById('btn-quiz-oui').classList.add('active');
   document.getElementById('btn-quiz-non').classList.remove('active');
 
-// Liste recettes réalisables — si une sélection vient de l'onglet Recettes, on ne montre qu'elle
+  // En mode voyage : filtrer sur cave voyage, sinon comportement normal
   const realisables = selectionPourSoireeEnAttente
     ? recettes.filter(r => selectionPourSoireeEnAttente.includes(r.id))
-    : recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
+    : voyageId
+      ? recettes.filter(r => r.type === 'cocktail' && calculerVerresPossiblesVoyage(r)?.max > 0)
+      : recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0);
+
   const liste = document.getElementById('session-recettes-liste');
   liste.innerHTML = realisables.map(r => `
     <div class="session-recette-item" onclick="this.querySelector('input').click()">
@@ -4964,17 +4970,20 @@ function ouvrirModalNouvelleSession() {
     </div>
   `).join('');
   document.getElementById('modal-nouvelle-session').classList.add('visible');
-} 
+}
 async function creerSession() {
-const nom = document.getElementById('session-nom').value.trim();
+  const nom = document.getElementById('session-nom').value.trim();
   if (!nom) {
     alert('Donne un nom à ta soirée avant de lancer.');
     document.getElementById('session-nom').focus();
     return;
   }
-let recettesDisponibles;
+
+  let recettesDisponibles;
   if (modeSessionActif === 'libre') {
-    recettesDisponibles = recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0).map(r => r.id);
+    recettesDisponibles = voyageIdPourSession
+      ? recettes.filter(r => r.type === 'cocktail' && calculerVerresPossiblesVoyage(r)?.max > 0).map(r => r.id)
+      : recettes.filter(r => r.type === 'cocktail' && calculerDisponibilite(r) === 0).map(r => r.id);
   } else {
     const checks = document.querySelectorAll('#session-recettes-liste input[type=checkbox]:checked');
     recettesDisponibles = Array.from(checks).map(c => c.value);
@@ -4983,21 +4992,24 @@ let recettesDisponibles;
   const token = Math.random().toString(36).substring(2, 10);
   const expiresAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
 
- const { error } = await db.from('sessions_invites').insert({
+  const payload = {
     user_id: currentUser.id,
     token,
     nom_session: nom,
-mode_choix: modeSessionActif,
+    mode_choix: modeSessionActif,
     quiz_actif: quizActif,
     recettes_disponibles: recettesDisponibles,
     expires_at: expiresAt,
     is_master: true
-  });
+  };
+  if (voyageIdPourSession) payload.voyage_id = voyageIdPourSession;
 
+  const { error } = await db.from('sessions_invites').insert(payload);
   if (error) { alert('Erreur création session : ' + error.message); return; }
 
-document.getElementById('modal-nouvelle-session').classList.remove('visible');
- chargerSessions();
+  voyageIdPourSession = null;
+  document.getElementById('modal-nouvelle-session').classList.remove('visible');
+  chargerSessions();
 }
 
 async function ouvrirSession(id) {
