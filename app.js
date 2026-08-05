@@ -861,7 +861,7 @@ function renderRecettes() {
   const bases = [...new Set(recettes.filter(r => r.type === sectionRecette && r.base_alcool).map(r => r.base_alcool))].sort();
   const gouts = [...new Set(recettes.filter(r => r.type === sectionRecette).flatMap(r => r.gouts || []))].sort();
  
-  container.innerHTML = `
+container.innerHTML = `
     <div class="recettes-sections">
       <button class="section-btn ${sectionRecette === 'cocktail' ? 'active' : ''}" onclick="changerSection('cocktail')">
         🍹 Cocktails <span class="section-count">${recettes.filter(r=>r.type==='cocktail').length}</span>
@@ -872,11 +872,14 @@ function renderRecettes() {
       <button class="section-btn ${sectionRecette === 'preparation' ? 'active' : ''}" onclick="changerSection('preparation')">
         ⚗️ Préparations <span class="section-count">${recettes.filter(r=>r.type==='preparation').length}</span>
       </button>
-</div>
-
-<button class="btn-outline" style="margin:8px 0${voyageActif ? ';border-color:var(--accent);color:var(--accent)' : ''}" onclick="toggleModeSelectionSoiree()">
-  ${modeSelectionSoiree ? '✕ Annuler la sélection' : `☑️ Sélectionner pour une soirée${voyageActif ? ' 🧳' : ''}`}
-</button>
+    </div>
+    <button class="btn-outline" style="margin:8px 0${voyageActif ? ';border-color:var(--accent);color:var(--accent)' : ''}" onclick="toggleModeSelectionSoiree()">
+      ${modeSelectionSoiree ? '✕ Annuler la sélection' : `☑️ Sélectionner pour une soirée${voyageActif ? ' 🧳' : ''}`}
+    </button>
+    ${voyageActif ? `
+    <button class="btn-outline" style="margin:0 0 8px 0;border-color:var(--accent);color:var(--accent);width:100%" onclick="ouvrirGenerateurRecettes()">
+      ✨ Générer avec ma cave voyage
+    </button>` : ''}
 
 <div style="padding:0 0 10px 0;">
 <input type="text" id="recherche-recettes"
@@ -5614,6 +5617,141 @@ async function ajouterRecetteMenu(recetteId) {
   }).select().single();
   if (data) soireeMenuRecettesActives.push(data);
   renderTableauBordSoiree();
+}
+async function ouvrirGenerateurRecettes() {
+  if (!voyageActif || voyageBouteillesActives.length === 0) {
+    alert('Active le mode voyage avec des bouteilles pour générer des recettes.');
+    return;
+  }
+  const modal = document.createElement('div');
+  modal.id = 'modal-generateur';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9800;overflow-y:auto;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:560px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:1rem;font-weight:700">✨ Générer des recettes voyage</div>
+        <button onclick="document.getElementById('modal-generateur').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px">
+        🧳 ${voyageBouteillesActives.length} bouteilles — ${voyageBouteillesActives.map(b => b.nom).join(', ')}
+      </div>
+      <input type="text" id="gen-style" placeholder="Style souhaité (optionnel) — ex: fruité, sec, apéritif..."
+        style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn-outline active" id="gen-nb-2" style="flex:1" onclick="window._genNb=2;['2','3','5'].forEach(n=>document.getElementById('gen-nb-'+n)?.classList.remove('active'));this.classList.add('active')">2 recettes</button>
+        <button class="btn-outline" id="gen-nb-3" style="flex:1" onclick="window._genNb=3;['2','3','5'].forEach(n=>document.getElementById('gen-nb-'+n)?.classList.remove('active'));this.classList.add('active')">3 recettes</button>
+        <button class="btn-outline" id="gen-nb-5" style="flex:1" onclick="window._genNb=5;['2','3','5'].forEach(n=>document.getElementById('gen-nb-'+n)?.classList.remove('active'));this.classList.add('active')">5 recettes</button>
+      </div>
+      <button class="btn-primary" style="width:100%;padding:12px" onclick="lancerGenerateur()">✨ Générer</button>
+      <div id="gen-resultats" style="margin-top:16px"></div>
+    </div>
+  `;
+  window._genNb = 2;
+  document.body.appendChild(modal);
+}
+
+async function lancerGenerateur() {
+  const style = document.getElementById('gen-style')?.value.trim() || '';
+  const nb = window._genNb || 2;
+  const resultats = document.getElementById('gen-resultats');
+  if (!resultats) return;
+  resultats.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">⏳ Génération en cours...</div>';
+  const ingredients = voyageBouteillesActives
+    .filter(b => parseFloat(b.cl_restants_voyage) > 0)
+    .map(b => ({ nom: b.nom, cl_restants: b.cl_restants_voyage }));
+  const response = await fetch('/api/generer-recette', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredients, style, nb_propositions: nb })
+  });
+  if (!response.ok) {
+    resultats.innerHTML = '<div style="color:var(--text-danger)">Erreur lors de la génération.</div>';
+    return;
+  }
+  const data = await response.json();
+  const propositions = data.propositions || [];
+  if (propositions.length === 0) {
+    resultats.innerHTML = '<div style="color:var(--text-muted)">Aucune proposition générée.</div>';
+    return;
+  }
+  resultats.innerHTML = propositions.map((p, idx) => `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div>
+          <span style="font-size:0.95rem;font-weight:700">${p.nom}</span>
+          <span style="font-size:0.72rem;padding:2px 8px;border-radius:20px;margin-left:8px;${p.badge === 'classique' ? 'background:var(--bg-success);color:var(--text-success)' : 'background:var(--bg-accent);color:var(--text-accent)'}">${p.badge}</span>
+        </div>
+        <span style="font-size:0.75rem;color:var(--text-muted)">${p.confiance}% confiance</span>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px">${p.famille} · ${p.technique} · ${p.verre}</div>
+      <div style="margin-bottom:8px">
+        ${(p.dosages || []).map(d => `
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:3px 0;border-bottom:1px solid var(--border)">
+            <span>${d.nom}</span>
+            <span style="color:var(--text-muted)">${d.quantite} ${d.unite}</span>
+          </div>
+        `).join('')}
+      </div>
+      ${p.note_bartender ? `<div style="font-size:0.78rem;color:var(--text-accent);margin-bottom:10px">💡 ${p.note_bartender}</div>` : ''}
+      ${soireeMenuActive ? `
+      <button class="btn-outline" style="width:100%;font-size:0.82rem" onclick="ajouterRecetteGenereeASoiree(${idx})">
+        🎉 Ajouter à "${soireeMenuActive.nom}"
+      </button>` : ''}
+    </div>
+  `).join('');
+  window._genPropositions = propositions;
+}
+
+async function ajouterRecetteGenereeASoiree(idx) {
+  const p = window._genPropositions?.[idx];
+  if (!p || !soireeMenuActive) return;
+  const recetteId = 'gen-' + Date.now();
+  const { data, error } = await db.from('recettes').insert({
+    id: recetteId,
+    user_id: currentUser.id,
+    nom: p.nom,
+    type: 'cocktail',
+    base_alcool: p.dosages?.[0]?.nom || '',
+    difficulte: p.difficulte || 'facile',
+    verre: p.verre || '',
+    description: p.note_bartender || '',
+    famille: p.famille || '',
+    categorie: 'Short drink',
+    gout_sucre: p.profil?.gout_sucre || 0,
+    gout_amer: p.profil?.gout_amer || 0,
+    gout_acide: p.profil?.gout_acide || 0,
+    gout_fruite: p.profil?.gout_fruite || 0,
+    gout_fume: p.profil?.gout_fume || 0,
+    gout_floral: p.profil?.gout_floral || 0,
+    gout_epice: p.profil?.gout_epice || 0,
+    gout_cremeux: p.profil?.gout_cremeux || 0
+  }).select().single();
+  if (error) { alert('Erreur création recette : ' + error.message); return; }
+  for (const d of (p.dosages || [])) {
+    await db.from('recette_ingredients').insert({
+      user_id: currentUser.id,
+      recette_id: recetteId,
+      nom: d.nom,
+      quantite: d.unite === 'cl' ? d.quantite * 10 : d.quantite,
+      unite: d.unite === 'cl' ? 'ml' : d.unite,
+      optionnel: false
+    });
+  }
+  const { data: mr } = await db.from('soiree_menu_recettes').insert({
+    id: 'smr-' + Date.now(),
+    soiree_menu_id: soireeMenuActive.id,
+    recette_id: recetteId,
+    portions_prevues: 1,
+    ordre: soireeMenuRecettesActives.length
+  }).select().single();
+  if (mr) soireeMenuRecettesActives.push(mr);
+  const { data: nouvelleRecette } = await db.from('recettes')
+    .select('*, ingredients:recette_ingredients(*)')
+    .eq('id', recetteId).single();
+  if (nouvelleRecette) recettes.push(nouvelleRecette);
+  document.getElementById('modal-generateur')?.remove();
+  alert(`"${p.nom}" ajouté à la soirée !`);
+  await renderTableauBordSoiree();
 }
 async function supprimerSoireeMenu(soireeId) {
   if (!confirm('Supprimer cette soirée ?')) return;
