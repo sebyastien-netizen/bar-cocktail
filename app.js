@@ -5196,13 +5196,13 @@ async function renderTableauBordSoiree() {
                 <div style="font-size:0.75rem;color:var(--text-muted)">${recetteInv?.nom || (inv.mode_choix === 'libre' ? 'Choisit lui-même' : 'En attente')}</div>
               </div>
               <div style="display:flex;gap:6px">
-                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" onclick="navigator.clipboard.writeText('${lienQR}').then(()=>alert('Lien copié !'))">🔗</button>
+               <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" title="Copier le lien défi gustatif" onclick="navigator.clipboard.writeText('${lienQR}').then(()=>alert('Lien défi copié !'))">🍷</button>
                 <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;color:var(--text-danger)" onclick="supprimerInviteService('${inv.id}')">🗑</button>
               </div>
             </div>`;
         }).join('')}
 <div style="display:flex;gap:8px;margin-top:8px">
-  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('liste')">👤 + Invité</button>
+  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ouvrirAssignationInvite()">🍸 Assigner</button>
   <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">🍸 + Assigner</button>
   <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">📱 + QR</button>
 </div>
@@ -5315,7 +5315,55 @@ async function confirmerAjoutInvite(modeChoix) {
   document.getElementById('modal-ajout-invite')?.remove();
   await renderTableauBordSoiree();
 }
+async function ouvrirAssignationInvite() {
+  const { data: invites } = await db.from('sessions_invites')
+    .select('*')
+    .eq('soiree_menu_id', soireeMenuActive.id)
+    .eq('is_master', false)
+    .order('created_at');
 
+  const sansAssignation = (invites || []).filter(i => !i.recette_id);
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-assignation';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:16px">🍸 Assigner un cocktail</div>
+      ${sansAssignation.length === 0 ? '<div style="font-size:0.85rem;color:var(--text-muted)">Tous les invités ont déjà un cocktail assigné.</div>' : `
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">Invité :</div>
+      <select id="assign-invite" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:12px">
+        <option value="">— Choisir un invité —</option>
+        ${sansAssignation.map(i => `<option value="${i.id}">${i.nom_invite}</option>`).join('')}
+      </select>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">Cocktail :</div>
+      <select id="assign-cocktail" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:16px">
+        <option value="">— Choisir un cocktail —</option>
+        ${soireeMenuRecettesActives.map(mr => {
+          const r = recettes.find(rec => rec.id === mr.recette_id);
+          return `<option value="${mr.recette_id}">${r?.nom || mr.recette_id}</option>`;
+        }).join('')}
+      </select>`}
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-assignation').remove()">Annuler</button>
+        ${sansAssignation.length > 0 ? `<button class="btn-primary" style="flex:1" onclick="confirmerAssignation()">✅ Assigner</button>` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function confirmerAssignation() {
+  const inviteId = document.getElementById('assign-invite')?.value;
+  const recetteId = document.getElementById('assign-cocktail')?.value;
+  if (!inviteId || !recetteId) { alert('Sélectionne un invité et un cocktail.'); return; }
+  await db.from('sessions_invites').update({
+    recette_id: recetteId,
+    statut: 'recette_choisie'
+  }).eq('id', inviteId);
+  document.getElementById('modal-assignation')?.remove();
+  await renderTableauBordSoiree();
+}
 async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
   portions = portions || 1;
   const recette = recettes.find(r => r.id === recetteId);
