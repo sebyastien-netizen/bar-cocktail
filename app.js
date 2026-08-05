@@ -999,7 +999,50 @@ function calculerVerresPossiblesVoyage(recette) {
 
 function toggleModeSelectionSoiree() {
   modeSelectionSoiree = !modeSelectionSoiree;
-  if (!modeSelectionSoiree) recettesSelectionneesSoiree.clear();
+  if (!modeSelectionSoiree) {
+    recettesSelectionneesSoiree.clear();
+  } else if (soireeMenuActive) {
+    // Soirée en cours — proposer d'y ajouter directement
+    const div = document.createElement('div');
+    div.id = 'bandeau-soiree-active';
+    div.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--bg-accent);border-top:2px solid var(--border-accent);padding:10px 16px;z-index:500;display:flex;justify-content:space-between;align-items:center';
+    div.innerHTML = `
+      <span style="font-size:0.85rem;color:var(--text-accent);font-weight:600">🎉 Soirée en cours : ${soireeMenuActive.nom}</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="font-size:0.8rem;padding:4px 10px" onclick="ajouterSelectionASoireeActive()">+ Ajouter au menu</button>
+        <button style="background:none;border:none;color:var(--text-muted);cursor:pointer" onclick="document.getElementById('bandeau-soiree-active')?.remove()">✕</button>
+      </div>
+    `;
+    document.body.appendChild(div);
+  }
+  renderRecettes();
+}
+
+async function ajouterSelectionASoireeActive() {
+  if (!soireeMenuActive) return;
+  // Chercher les recettes cochées ou toutes si aucune sélection
+  const ids = recettesSelectionneesSoiree.size > 0
+    ? [...recettesSelectionneesSoiree]
+    : null;
+  if (!ids) { alert('Sélectionne d\'abord des recettes à ajouter.'); return; }
+
+  for (const recetteId of ids) {
+    const dejaPresente = soireeMenuRecettesActives.some(mr => mr.recette_id === recetteId);
+    if (dejaPresente) continue;
+    const { data } = await db.from('soiree_menu_recettes').insert({
+      id: 'smr-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      soiree_menu_id: soireeMenuActive.id,
+      recette_id: recetteId,
+      portions_prevues: 1,
+      ordre: soireeMenuRecettesActives.length
+    }).select().single();
+    if (data) soireeMenuRecettesActives.push(data);
+  }
+
+  recettesSelectionneesSoiree.clear();
+  modeSelectionSoiree = false;
+  document.getElementById('bandeau-soiree-active')?.remove();
+  alert(`${ids.length} cocktail${ids.length > 1 ? 's' : ''} ajouté${ids.length > 1 ? 's' : ''} à ${soireeMenuActive.nom}`);
   renderRecettes();
 }
 let voyageActif = null;
@@ -5211,107 +5254,7 @@ async function renderTableauBordSoiree() {
     await ajouterRecetteMenu(e.target.value);
   };
 }
-async function renderModeService(modal, consommation) {
-  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
 
-  // Charger les invités
-  const { data: invites } = await db.from('sessions_invites')
-    .select('*')
-    .eq('soiree_menu_id', soireeMenuActive.id)
-    .eq('is_master', false)
-    .order('created_at');
-
-  modal.innerHTML = `
-    <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <div style="font-size:1.1rem;font-weight:700">🎉 ${soireeMenuActive.nom}</div>
-        <button onclick="document.getElementById('modal-tableau-bord-soiree').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer">✕</button>
-      </div>
-      <div style="font-size:0.75rem;color:var(--text-accent);margin-bottom:16px">Mode service actif</div>
-
-      <!-- COCKTAILS EN SERVICE -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍸 Cocktails en service</div>
-        ${soireeMenuRecettesActives.map(mr => {
-          const recette = recettes.find(r => r.id === mr.recette_id);
-          const vp = estEnVoyage ? calculerVerresPossiblesVoyage(recette) : calculerVerresPossibles(recette);
-          const verresCouleur = !vp ? 'var(--text-muted)' : vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
-          return `
-            <div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div>
-                  <span style="font-size:0.9rem;font-weight:600">${recette?.nom || '—'}</span>
-                  ${vp ? `<span style="font-size:0.75rem;color:${verresCouleur};margin-left:8px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max} verres</span>` : ''}
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;align-items:center">
-                <button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
-onclick="let s=document.getElementById('sp-${mr.id}'); s.textContent=Math.max(1,parseInt(s.textContent)-1)">−</button>
-<span id="sp-${mr.id}" style="min-width:20px;text-align:center">1</span>
-<button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
-  onclick="let s=document.getElementById('sp-${mr.id}'); s.textContent=parseInt(s.textContent)+1">+</button>
-                <button class="btn-primary" style="flex:1;padding:6px 12px;font-size:0.82rem"
-                  onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}', parseInt(document.getElementById('sp-${mr.id}')?.textContent)||1)">
-                  🍸 Servir
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-
-      <!-- INVITÉS -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">👥 Invités (${(invites||[]).length})</div>
-        ${(invites||[]).length === 0 ? '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Aucun invité ajouté.</div>' : ''}
-        ${(invites||[]).map(inv => {
-          const recetteInv = recettes.find(r => r.id === inv.recette_id);
-          const statutLabel = inv.statut === 'termine' ? '✅' : inv.statut === 'degustation' ? '🍷' : inv.statut === 'recette_choisie' ? '🟢' : '🟡';
-          const lienQR = `${window.location.origin}/guest.html?invite=${inv.token}`;
-          return `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
-              <div>
-                <div style="font-size:0.88rem;font-weight:600">${statutLabel} ${inv.nom_invite || 'Invité'}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted)">${recetteInv?.nom || (inv.mode_choix === 'libre' ? 'Choisit lui-même' : 'En attente')}</div>
-              </div>
-              <div style="display:flex;gap:6px">
-                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" onclick="navigator.clipboard.writeText('${lienQR}').then(()=>alert('Lien copié !'))">🔗</button>
-                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;color:var(--text-danger)" onclick="supprimerInviteService('${inv.id}')">🗑</button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">👤 + Invité (j\'assigne)</button>
-          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">👤 + Invité (choisit)</button>
-        </div>
-      </div>
-
-      <!-- STOCK EN TEMPS RÉEL -->
-      ${consommation.length > 0 ? `
-      <div style="margin-bottom:16px">
-        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">📦 Stock en temps réel</div>
-        ${consommation.map(c => {
-          const pct = c.disponibleReel !== null ? Math.min(100, Math.round((c.besoinCl / Math.max(c.disponibleReel, 0.01)) * 100)) : null;
-          const couleur = c.inconnu ? 'var(--text-muted)' : c.suffisant === false ? 'var(--text-danger)' : pct > 80 ? 'var(--text-warning)' : 'var(--text-success)';
-          return `<div style="margin-bottom:6px">
-            <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:2px">
-              <span>${c.nomItem}</span>
-              <span style="color:${couleur}">${c.inconnu ? '?' : `${c.disponibleReel}cl restants`}</span>
-            </div>
-            ${!c.inconnu ? `<div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden">
-              <div style="height:100%;width:${Math.min(100, Math.round((c.disponibleReel/Math.max(c.disponibleReel+c.besoinCl,0.01))*100))}%;background:${couleur}"></div>
-            </div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>` : ''}
-
-      <button class="btn-outline" style="width:100%;margin-top:8px;border-color:var(--text-danger);color:var(--text-danger)" onclick="terminerSoireeService()">
-        🏁 Terminer la soirée
-      </button>
-    </div>
-  `;
-}
 
 async function ajouterInviteService(modeChoix) {
   const nom = prompt('Prénom de l\'invité ?');
