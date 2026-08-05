@@ -5196,7 +5196,7 @@ async function renderTableauBordSoiree() {
                 <div style="font-size:0.75rem;color:var(--text-muted)">${recetteInv?.nom || (inv.mode_choix === 'libre' ? 'Choisit lui-même' : 'En attente')}</div>
               </div>
               <div style="display:flex;gap:6px">
-               <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" title="Copier le lien défi gustatif" onclick="navigator.clipboard.writeText('${lienQR}').then(()=>alert('Lien défi copié !'))">🍷</button>
+               <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" title="QR défi gustatif" onclick="afficherQRInvite('${lienQR}', '${inv.nom_invite}')">📱</button>
                 <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;color:var(--text-danger)" onclick="supprimerInviteService('${inv.id}')">🗑</button>
               </div>
             </div>`;
