@@ -1054,21 +1054,27 @@ let voyageBouteillesActives = [];
 async function chargerVoyageActif() {
   const { data } = await db.from('mode_voyage').select('*').eq('user_id', currentUser.id).eq('statut', 'actif').maybeSingle();
   voyageActif = data || null;
-
   if (voyageActif) {
     const { data: bouteilles } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
     voyageBouteillesActives = bouteilles || [];
   } else {
     voyageBouteillesActives = [];
   }
-
   renderBandeauVoyageGlobal();
-}
 
-function toggleModeSelectionVoyage() {
-  modeSelectionVoyage = !modeSelectionVoyage;
-  if (!modeSelectionVoyage) bouteillesSelectionneesVoyage.clear();
-  renderCave();
+  // Restaurer la dernière soirée active en mémoire
+  const { data: dernieresSoirees } = await db.from('soiree_menu')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .not('statut', 'eq', 'termine')
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (dernieresSoirees?.length > 0) {
+    soireeMenuActive = dernieresSoirees[0];
+    const { data: mrs } = await db.from('soiree_menu_recettes')
+      .select('*').eq('soiree_menu_id', soireeMenuActive.id).order('ordre');
+    soireeMenuRecettesActives = mrs || [];
+  }
 }
 function renderBandeauVoyageGlobal() {
   const el = document.getElementById('bandeau-voyage-global');
@@ -1475,35 +1481,11 @@ function ouvrirFicheRecette(id) {
   if (!recetteOuverte) return;
   renderFiche(1);
   afficherModal('modal-fiche-recette');
-}
-function getConseilBartender(r, p) {
-  if (p === 1) return null;
-  const nom = r.nom;
-  if (p === 2) return {
-    icon: '💡', titre: 'Pour 2 verres',
-    texte: `Préparez les deux en une seule passe. Stirred : 30 tours puis filtrez les deux immédiatement. Shaké : shakez en une seule fois, filtrez vite. Un ${nom} attend mal — servez ensemble.`,
-    bg: 'var(--bg-accent)', color: 'var(--text-accent)'
-  };
-  if (p <= 3) return {
-    icon: '⚠️', titre: `Pour ${p} verres — 2 passes`,
-    texte: `Maximum 2 cocktails par passe dans un shaker ou verre à mélange standard. Préparez en ${Math.ceil(p/2)} lots de 2. Commencez le second lot pendant que le premier est servi.`,
-    bg: 'var(--bg-warning)', color: 'var(--text-warning)'
-  };
-  if (p <= 6) return {
-    icon: '🍶', titre: `Pour ${p} verres — batch recommandé`,
-    texte: `Mélangez tous les spiritueux à l'avance avec 20% d'eau pour simuler la dilution. Réfrigérez minimum 1h. Versez au service sur cube ou dans le shaker pour les cocktails citrus. Constant et rapide.`,
-    bg: 'var(--bg-success)', color: 'var(--text-success)'
-  };
-  if (p <= 8) return {
-    icon: '🍶', titre: `Pour ${p} verres — batch la veille`,
-    texte: `Préparez le batch la veille avec 25% d'eau ajoutée. Le repos 12h unifie les arômes. Étiquetez la bouteille avec la date et le contenu. Sortez du frigo 5 min avant le service.`,
-    bg: 'var(--bg-success)', color: 'var(--text-success)'
-  };
-  return {
-    icon: '🎯', titre: `Pour ${p} verres — mode événement`,
-    texte: `Batch obligatoire. Bouteille étiquetée au frigo. Verres au congélateur 10 min avant. Service : cube + ${Math.round(r.ingredients?.reduce((s,i) => s + (i.quantite||0), 0) * 1.25 * 10)/10}cl batch + garniture = 20 secondes par verre. Préparez les garnitures à l'avance.`,
-    bg: 'rgba(83,74,183,0.1)', color: '#7F77DD'
-  };
+  // Si modal soirée ouvert, passer la fiche par-dessus
+  const ficheEl = document.getElementById('modal-fiche-recette');
+  if (ficheEl && document.getElementById('modal-tableau-bord-soiree')) {
+    ficheEl.style.zIndex = '9500';
+  }
 }
 
 // =============================================
@@ -4632,7 +4614,7 @@ async function creerSoireeMenuSolo(voyageId = null) {
   const { data, error } = await db.from('soiree_menu').insert({
     id,
     user_id: currentUser.id,
-    nom: 'Ma soirée',
+    nom: prompt('Nom de la soirée ?', 'Soirée du ' + new Date().toLocaleDateString('fr-FR')) || 'Ma soirée',
     mode: 'solo'
   }).select().single();
   if (error) { alert('Erreur : ' + error.message); return; }
