@@ -5351,15 +5351,25 @@ async function renommerSoireeMenu(nom) {
 }
 
 async function verrouillerSoireeMenu() {
-  if (!confirm('Verrouiller ce menu ? Le stock nécessaire sera réservé jusqu\'à la date de l\'événement.')) return;
+  const estVoyageOuSolo = (voyageActif && soireeMenuActive?.voyage_id === voyageActif.id) || soireeMenuActive?.mode === 'solo';
 
+  if (estVoyageOuSolo) {
+    // Verrouillage immédiat sans réservation de stock
+    await db.from('soiree_menu').update({ statut: 'verrouille' }).eq('id', soireeMenuActive.id);
+    soireeMenuActive.statut = 'verrouille';
+    renderTableauBordSoiree();
+    return;
+  }
+
+  // Mode normal avec date et réservation stock
+  if (!confirm('Verrouiller ce menu ? Le stock nécessaire sera réservé jusqu\'à la date de l\'événement.')) return;
   const dateEvenement = prompt('Date de la soirée (AAAA-MM-JJ) ?', new Date().toISOString().slice(0, 10));
   if (!dateEvenement) return;
 
   const consommation = calculerConsommationAgregee();
   for (const c of consommation) {
     if (c.inconnu) continue;
-await db.from('stock_reserve').insert({
+    await db.from('stock_reserve').insert({
       id: 'reserve-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
       user_id: currentUser.id,
       item_id: c.itemId,
@@ -5368,12 +5378,10 @@ await db.from('stock_reserve').insert({
       date_evenement: dateEvenement
     });
   }
-
   await db.from('soiree_menu').update({ statut: 'verrouille', date_evenement: dateEvenement }).eq('id', soireeMenuActive.id);
   await chargerStockReserve();
-
-  document.getElementById('modal-tableau-bord-soiree').remove();
-  alert('✅ Menu verrouillé — le stock nécessaire est réservé jusqu\'au ' + dateEvenement + '.');
+  soireeMenuActive.statut = 'verrouille';
+  renderTableauBordSoiree();
 }
 async function chargerResumeDefiSolo() {
   const el = document.getElementById('resume-defi-solo');
