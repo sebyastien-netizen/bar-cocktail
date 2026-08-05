@@ -4729,22 +4729,57 @@ function ajouterLigneDecrement(recetteId, recetteNom) {
   const rows = document.getElementById('decrement-rows');
   if (!rows) return;
   const idx = Date.now();
-  window._decrementRows.push({ recetteId, portions: 1, idx });
+  const recette = recettes.find(r => r.id === recetteId);
+  const subs = {};
+  (recette?.ingredients || []).forEach(ing => {
+    if (ing.item_cave_id) subs[ing.item_cave_id] = ing.item_cave_id;
+  });
+  window._decrementRows.push({ recetteId, portions: 1, idx, subs });
+  const ingsTrackables = (recette?.ingredients || []).filter(ing =>
+    ing.item_cave_id && ing.quantite &&
+    (ing.unite === 'cl' || ing.unite === 'ml') &&
+    !ing.optionnel &&
+    !CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))
+  );
+  const bouteillesVoyage = voyageActif
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
   const div = document.createElement('div');
   div.id = `decrement-row-${idx}`;
-  div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;border:1px solid var(--border);margin-bottom:6px';
+  div.style.cssText = 'padding:10px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px';
   div.innerHTML = `
-    <span style="font-size:0.85rem;flex:1">${recetteNom}</span>
-    <div style="display:flex;align-items:center;gap:6px">
-      <button style="background:none;border:1px solid var(--border);border-radius:4px;width:24px;height:24px;cursor:pointer;color:var(--text-primary)"
-        onclick="window._decrementRows.find(r=>r.idx===${idx}).portions=Math.max(1,window._decrementRows.find(r=>r.idx===${idx}).portions-1); document.getElementById('dec-qty-${idx}').textContent=window._decrementRows.find(r=>r.idx===${idx}).portions">−</button>
-      <span id="dec-qty-${idx}" style="min-width:20px;text-align:center;font-size:0.9rem">1</span>
-      <button style="background:none;border:1px solid var(--border);border-radius:4px;width:24px;height:24px;cursor:pointer;color:var(--text-primary)"
-        onclick="window._decrementRows.find(r=>r.idx===${idx}).portions++; document.getElementById('dec-qty-${idx}').textContent=window._decrementRows.find(r=>r.idx===${idx}).portions">+</button>
-      <span style="font-size:0.75rem;color:var(--text-muted)">v.</span>
-      <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:1rem;margin-left:4px"
-        onclick="document.getElementById('decrement-row-${idx}').remove(); window._decrementRows=window._decrementRows.filter(r=>r.idx!==${idx})">🗑</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:0.88rem;font-weight:600">${recetteNom}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button style="background:none;border:1px solid var(--border);border-radius:4px;width:24px;height:24px;cursor:pointer;color:var(--text-primary)"
+          onclick="window._decrementRows.find(r=>r.idx===${idx}).portions=Math.max(1,window._decrementRows.find(r=>r.idx===${idx}).portions-1); document.getElementById('dec-qty-${idx}').textContent=window._decrementRows.find(r=>r.idx===${idx}).portions">−</button>
+        <span id="dec-qty-${idx}" style="min-width:20px;text-align:center;font-size:0.9rem">1</span>
+        <button style="background:none;border:1px solid var(--border);border-radius:4px;width:24px;height:24px;cursor:pointer;color:var(--text-primary)"
+          onclick="window._decrementRows.find(r=>r.idx===${idx}).portions++; document.getElementById('dec-qty-${idx}').textContent=window._decrementRows.find(r=>r.idx===${idx}).portions">+</button>
+        <span style="font-size:0.75rem;color:var(--text-muted)">v.</span>
+        <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:1rem;margin-left:4px"
+          onclick="document.getElementById('decrement-row-${idx}').remove(); window._decrementRows=window._decrementRows.filter(r=>r.idx!==${idx})">🗑</button>
+      </div>
     </div>
+    ${ingsTrackables.map(ing => {
+      const nomItem = voyageActif
+        ? (bouteillesVoyage.find(b => b.item_cave_id === ing.item_cave_id)?.nom || ing.nom)
+        : (cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id)?.nom || ing.nom);
+      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.8rem;border-top:1px solid var(--border)">
+          <select style="flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.78rem;margin-right:8px"
+            onchange="window._decrementRows.find(r=>r.idx===${idx}).subs['${ing.item_cave_id}']=this.value">
+            ${bouteillesVoyage.map(b => {
+              const bId = voyageActif ? b.item_cave_id : b.id;
+              const bNom = b.nom;
+              return `<option value="${bId}" ${bId === ing.item_cave_id ? 'selected' : ''}>${bNom}</option>`;
+            }).join('')}
+          </select>
+          <span style="color:var(--text-muted);white-space:nowrap">${qteCl}cl</span>
+        </div>
+      `;
+    }).join('')}
   `;
   rows.appendChild(div);
   const search = document.getElementById('dec-search');
@@ -4755,7 +4790,6 @@ function ajouterLigneDecrement(recetteId, recetteNom) {
 
 async function appliquerDecrementParCocktail() {
   const conso = {};
-
   for (const row of window._decrementRows) {
     if (!row.recetteId) continue;
     const recette = recettes.find(r => r.id === row.recetteId);
@@ -4765,22 +4799,28 @@ async function appliquerDecrementParCocktail() {
       if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
       if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
       const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
-      conso[ing.item_cave_id] = (conso[ing.item_cave_id] || 0) + qteCl * row.portions;
+      const itemId = (row.subs && row.subs[ing.item_cave_id]) || ing.item_cave_id;
+      conso[itemId] = (conso[itemId] || 0) + qteCl * row.portions;
     });
   }
-
-  // Appliquer les décrements sur cave voyage
   for (const [itemId, cl] of Object.entries(conso)) {
-    const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
-    if (!bouteille) continue;
-    const nouveau = Math.max(0, parseFloat(bouteille.cl_restants_voyage ?? 0) - cl);
-    await db.from('mode_voyage_bouteilles')
-      .update({ cl_restants_voyage: nouveau })
-      .eq('item_cave_id', itemId)
-      .eq('mode_voyage_id', voyageActif.id);
-    bouteille.cl_restants_voyage = nouveau;
+    if (voyageActif) {
+      const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+      if (!bouteille) continue;
+      const nouveau = Math.max(0, parseFloat(bouteille.cl_restants_voyage ?? 0) - cl);
+      await db.from('mode_voyage_bouteilles')
+        .update({ cl_restants_voyage: nouveau })
+        .eq('item_cave_id', itemId)
+        .eq('mode_voyage_id', voyageActif.id);
+      bouteille.cl_restants_voyage = nouveau;
+    } else {
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
+      if (!item) continue;
+      const nouveau = Math.max(0, (item.cl_restants ?? 0) - cl);
+      await db.from('items').update({ cl_restants: nouveau }).eq('id', itemId).eq('user_id', currentUser.id);
+      item.cl_restants = nouveau;
+    }
   }
-
   document.getElementById('modal-decrement-cocktail')?.remove();
   ouvrirBilanVoyage();
 }
