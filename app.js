@@ -5103,7 +5103,8 @@ async function renderTableauBordSoiree() {
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
               <div>
-                <span style="font-size:0.9rem;font-weight:600">${recette?.nom || '—'}</span>
+                <span style="font-size:0.9rem;font-weight:600;cursor:pointer" onclick="ouvrirFicheRecette && ouvrirFicheRecette('${recette?.id}')">${recette?.nom || '—'}</span>
+<button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0 4px" onclick="ouvrirFicheRecette && ouvrirFicheRecette('${recette?.id}')">ℹ️</button>
                 ${vp ? `<span style="font-size:0.72rem;color:${vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)'};margin-left:6px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max}v</span>` : ''}
                 ${nbServis > 0 ? `<span style="font-size:0.72rem;color:var(--text-danger);margin-left:6px">✓ ${nbServis} servi${nbServis > 1 ? 's' : ''}</span>` : ''}
               </div>
