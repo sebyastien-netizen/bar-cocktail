@@ -5706,16 +5706,15 @@ async function ajouterRecetteGenereeASoiree(idx) {
   const p = window._genPropositions?.[idx];
   if (!p || !soireeMenuActive) return;
   const recetteId = 'gen-' + Date.now();
-  const { data, error } = await db.from('recettes').insert({
+ const { data, error } = await db.from('recettes').insert({
     id: recetteId,
     user_id: currentUser.id,
     nom: p.nom,
     type: 'cocktail',
     base_alcool: p.dosages?.[0]?.nom || '',
     difficulte: p.difficulte || 'facile',
-    verre: p.verre || '',
-    description: p.note_bartender || '',
-    famille: p.famille || '',
+    verre_type: p.verre || '',
+    description_courte: p.note_bartender || '',
     gout_sucre: p.profil?.gout_sucre || 0,
     gout_amer: p.profil?.gout_amer || 0,
     gout_acide: p.profil?.gout_acide || 0,
