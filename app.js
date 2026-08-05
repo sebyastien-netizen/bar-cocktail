@@ -5716,7 +5716,6 @@ async function ajouterRecetteGenereeASoiree(idx) {
     verre: p.verre || '',
     description: p.note_bartender || '',
     famille: p.famille || '',
-    categorie: 'Short drink',
     gout_sucre: p.profil?.gout_sucre || 0,
     gout_amer: p.profil?.gout_amer || 0,
     gout_acide: p.profil?.gout_acide || 0,
