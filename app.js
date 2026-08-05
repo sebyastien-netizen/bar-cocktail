@@ -1393,7 +1393,13 @@ function ouvrirBarreSelectionSoiree() {
   }
   barre.innerHTML = `
     <span style="font-size:0.85rem">${recettesSelectionneesSoiree.size} sélectionnée${recettesSelectionneesSoiree.size > 1 ? 's' : ''}</span>
-    <button class="btn-primary" style="padding:8px 16px" onclick="lancerSoireeDepuisSelection()">🎉 Nouvelle soirée avec ces recettes</button>
+    <div style="display:flex;gap:8px">
+      ${soireeMenuActive ? `
+      <button class="btn-outline" style="padding:8px 12px;font-size:0.82rem;border-color:var(--accent);color:var(--accent)" onclick="ajouterSelectionASoireeActive()">
+        + "${soireeMenuActive.nom}"
+      </button>` : ''}
+      <button class="btn-primary" style="padding:8px 16px;font-size:0.82rem" onclick="lancerSoireeDepuisSelection()">🎉 Nouvelle soirée</button>
+    </div>
   `;
 }
 
