@@ -310,7 +310,7 @@ async function init() {
   const inviteId = paramsInvite.get('invite');
 
   if (inviteId) {
-    const { data, error } = await db.from('sessions_invites').select('*').eq('id', inviteId).single();
+   const { data, error } = await db.from('sessions_invites').select('*').eq('token', inviteId).single();
     if (error || !data) { afficherErreur('Lien invalide ou expiré.'); return; }
     session = data;
 
