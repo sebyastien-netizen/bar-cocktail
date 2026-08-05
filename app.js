@@ -4984,6 +4984,13 @@ function renderTableauBordSoiree() {
   const modal = document.getElementById('modal-tableau-bord-soiree');
   const consommation = calculerConsommationAgregee();
 
+  // Mode Service si verrouillé
+  if (soireeMenuActive?.statut === 'verrouille') {
+    renderModeService(modal, consommation);
+    return;
+  }
+
+  // Mode Planification
   const ingredientsNonLies = [];
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
@@ -4995,16 +5002,16 @@ function renderTableauBordSoiree() {
   const stockInsuffisant = consommation.some(c => c.suffisant === false);
   const peutVerrouiller = ingredientsNonLies.length === 0 && !stockInsuffisant && soireeMenuRecettesActives.length > 0;
 
-const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
-const recettesDispo = recettes.filter(r => {
-  if (r.type !== 'cocktail') return false;
-  if (soireeMenuRecettesActives.some(mr => mr.recette_id === r.id)) return false;
-  if (estEnVoyage) {
-    const vpv = calculerVerresPossiblesVoyage(r);
-    return vpv && vpv.max > 0;
-  }
-  return true;
-});
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+  const recettesDispo = recettes.filter(r => {
+    if (r.type !== 'cocktail') return false;
+    if (soireeMenuRecettesActives.some(mr => mr.recette_id === r.id)) return false;
+    if (estEnVoyage) {
+      const vpv = calculerVerresPossiblesVoyage(r);
+      return vpv && vpv.max > 0;
+    }
+    return true;
+  });
 
   modal.innerHTML = `
     <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
@@ -5016,7 +5023,7 @@ const recettesDispo = recettes.filter(r => {
 
       ${ingredientsNonLies.length > 0 ? `
       <div style="background:var(--bg-danger);border-left:3px solid var(--border-danger);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:14px;font-size:0.82rem;color:var(--text-danger)">
-        🔗 ${ingredientsNonLies.length} ingrédient(s) non lié(s) — ${ingredientsNonLies.map(i => i.nom).join(', ')}. Lie-les depuis chaque fiche recette avant de verrouiller.
+        🔗 ${ingredientsNonLies.length} ingrédient(s) non lié(s) — ${ingredientsNonLies.map(i => i.nom).join(', ')}
       </div>` : ''}
 
       <div style="margin-bottom:16px">
@@ -5024,8 +5031,12 @@ const recettesDispo = recettes.filter(r => {
         ${soireeMenuRecettesActives.length === 0 ? `<div style="font-size:0.8rem;color:var(--text-muted)">Aucun cocktail ajouté.</div>` : ''}
         ${soireeMenuRecettesActives.map(mr => {
           const recette = recettes.find(r => r.id === mr.recette_id);
+          const vp = estEnVoyage ? calculerVerresPossiblesVoyage(recette) : calculerVerresPossibles(recette);
           return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:0.9rem">${recette?.nom || '—'}</span>
+            <div>
+              <span style="font-size:0.9rem">${recette?.nom || '—'}</span>
+              ${vp ? `<span style="font-size:0.75rem;color:${vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)'};margin-left:8px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max} verres</span>` : ''}
+            </div>
             <div style="display:flex;align-items:center;gap:8px">
               <button class="btn-outline" style="padding:2px 10px" onclick="ajusterPortionsMenu('${mr.id}', -1)">−</button>
               <span style="min-width:24px;text-align:center">${mr.portions_prevues}</span>
@@ -5042,7 +5053,7 @@ const recettesDispo = recettes.filter(r => {
 
       ${consommation.length > 0 ? `
       <div style="margin-bottom:16px">
-        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">📦 Stock partagé</div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">📦 Stock projeté</div>
         ${consommation.map(c => {
           const pct = c.disponibleReel !== null ? Math.min(100, Math.round((c.besoinCl / Math.max(c.disponibleReel, 0.01)) * 100)) : null;
           const couleur = c.inconnu ? 'var(--text-muted)' : c.suffisant === false ? 'var(--text-danger)' : pct > 80 ? 'var(--text-warning)' : 'var(--text-success)';
@@ -5058,18 +5069,9 @@ const recettesDispo = recettes.filter(r => {
         }).join('')}
       </div>` : ''}
 
-<button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
-        🔒 Verrouiller le menu (réserve le stock)
+      <button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
+        🔒 Verrouiller et passer en mode service
       </button>
-
-${soireeMenuRecettesActives.length > 0 ? `
-      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="ouvrirAjoutInviteManuel()">👤 + Invité (verre déjà servi)</button>
-      <div id="resume-defi-solo" style="margin-top:8px"></div>
-      ` : ''}
-      ${peutVerrouiller ? `
-      <button class="btn-outline" style="width:100%;padding:12px;margin-top:8px" onclick="creerSessionVoteRestreint(soireeMenuActive.id)">
-        🗳️ Publier comme vote pour les invités
-      </button>` : ''}
       ${!peutVerrouiller && soireeMenuRecettesActives.length > 0 ? `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:6px">Résous les points ci-dessus pour verrouiller</div>` : ''}
     </div>
   `;
@@ -5078,10 +5080,244 @@ ${soireeMenuRecettesActives.length > 0 ? `
     if (!e.target.value) return;
     await ajouterRecetteMenu(e.target.value);
   };
- chargerResumeDefiSolo();
+  chargerResumeDefiSolo();
+}
+async function renderModeService(modal, consommation) {
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+
+  // Charger les invités
+  const { data: invites } = await db.from('sessions_invites')
+    .select('*')
+    .eq('soiree_menu_id', soireeMenuActive.id)
+    .eq('is_master', false)
+    .order('created_at');
+
+  modal.innerHTML = `
+    <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:1.1rem;font-weight:700">🎉 ${soireeMenuActive.nom}</div>
+        <button onclick="document.getElementById('modal-tableau-bord-soiree').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-accent);margin-bottom:16px">Mode service actif</div>
+
+      <!-- COCKTAILS EN SERVICE -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍸 Cocktails en service</div>
+        ${soireeMenuRecettesActives.map(mr => {
+          const recette = recettes.find(r => r.id === mr.recette_id);
+          const vp = estEnVoyage ? calculerVerresPossiblesVoyage(recette) : calculerVerresPossibles(recette);
+          const verresCouleur = !vp ? 'var(--text-muted)' : vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
+          return `
+            <div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div>
+                  <span style="font-size:0.9rem;font-weight:600">${recette?.nom || '—'}</span>
+                  ${vp ? `<span style="font-size:0.75rem;color:${verresCouleur};margin-left:8px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max} verres</span>` : ''}
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
+                  onclick="window._servicePortion_${mr.id} = Math.max(1, (window._servicePortion_${mr.id}||1)-1); document.getElementById('sp-${mr.id}').textContent=window._servicePortion_${mr.id}">−</button>
+                <span id="sp-${mr.id}" style="min-width:20px;text-align:center">1</span>
+                <button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
+                  onclick="window._servicePortion_${mr.id} = (window._servicePortion_${mr.id}||1)+1; document.getElementById('sp-${mr.id}').textContent=window._servicePortion_${mr.id}">+</button>
+                <button class="btn-primary" style="flex:1;padding:6px 12px;font-size:0.82rem"
+                  onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}')">
+                  🍸 Servir
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- INVITÉS -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">👥 Invités (${(invites||[]).length})</div>
+        ${(invites||[]).length === 0 ? '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Aucun invité ajouté.</div>' : ''}
+        ${(invites||[]).map(inv => {
+          const recetteInv = recettes.find(r => r.id === inv.recette_id);
+          const statutLabel = inv.statut === 'termine' ? '✅' : inv.statut === 'degustation' ? '🍷' : inv.statut === 'recette_choisie' ? '🟢' : '🟡';
+          const lienQR = `${window.location.origin}/guest.html?invite=${inv.token}`;
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+              <div>
+                <div style="font-size:0.88rem;font-weight:600">${statutLabel} ${inv.nom_invite || 'Invité'}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">${recetteInv?.nom || (inv.mode_choix === 'libre' ? 'Choisit lui-même' : 'En attente')}</div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" onclick="navigator.clipboard.writeText('${lienQR}').then(()=>alert('Lien copié !'))">🔗</button>
+                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;color:var(--text-danger)" onclick="supprimerInviteService('${inv.id}')">🗑</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">👤 + Invité (j\'assigne)</button>
+          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">👤 + Invité (choisit)</button>
+        </div>
+      </div>
+
+      <!-- STOCK EN TEMPS RÉEL -->
+      ${consommation.length > 0 ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">📦 Stock en temps réel</div>
+        ${consommation.map(c => {
+          const pct = c.disponibleReel !== null ? Math.min(100, Math.round((c.besoinCl / Math.max(c.disponibleReel, 0.01)) * 100)) : null;
+          const couleur = c.inconnu ? 'var(--text-muted)' : c.suffisant === false ? 'var(--text-danger)' : pct > 80 ? 'var(--text-warning)' : 'var(--text-success)';
+          return `<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:2px">
+              <span>${c.nomItem}</span>
+              <span style="color:${couleur}">${c.inconnu ? '?' : `${c.disponibleReel}cl restants`}</span>
+            </div>
+            ${!c.inconnu ? `<div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(100, Math.round((c.disponibleReel/Math.max(c.disponibleReel+c.besoinCl,0.01))*100))}%;background:${couleur}"></div>
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+
+      <button class="btn-outline" style="width:100%;margin-top:8px;border-color:var(--text-danger);color:var(--text-danger)" onclick="terminerSoireeService()">
+        🏁 Terminer la soirée
+      </button>
+    </div>
+  `;
 }
 
+async function ajouterInviteService(modeChoix) {
+  const nom = prompt('Prénom de l\'invité ?');
+  if (!nom) return;
 
+  let recetteId = null;
+  if (modeChoix === 'assigne') {
+    const choix = prompt('Cocktail assigné :\n' + soireeMenuRecettesActives.map((mr, i) => {
+      const r = recettes.find(rec => rec.id === mr.recette_id);
+      return `${i+1}. ${r?.nom || mr.recette_id}`;
+    }).join('\n') + '\n\nTape le numéro :');
+    const idx = parseInt(choix) - 1;
+    if (idx >= 0 && idx < soireeMenuRecettesActives.length) {
+      recetteId = soireeMenuRecettesActives[idx].recette_id;
+    }
+  }
+
+  const token = Math.random().toString(36).substring(2, 10);
+  const { error } = await db.from('sessions_invites').insert({
+    user_id: currentUser.id,
+    token,
+    nom_invite: nom,
+    nom_session: soireeMenuActive.nom,
+    soiree_menu_id: soireeMenuActive.id,
+    is_master: false,
+    mode_choix: modeChoix === 'libre' ? 'libre' : 'manuel',
+    recette_id: recetteId,
+    statut: recetteId ? 'recette_choisie' : 'en_attente',
+    recettes_disponibles: soireeMenuRecettesActives.map(mr => mr.recette_id)
+  });
+  if (error) { alert('Erreur : ' + error.message); return; }
+  renderModeService(document.getElementById('modal-tableau-bord-soiree'), calculerConsommationAgregee());
+}
+
+async function servirCocktail(menuRecetteId, recetteId, recetteNom) {
+  const portions = window[`_servicePortion_${menuRecetteId}`] || 1;
+  const recette = recettes.find(r => r.id === recetteId);
+  if (!recette) return;
+
+  // Ouvrir modal substitution avant décrémentation
+  const modal = document.createElement('div');
+  modal.id = 'modal-servir-cocktail';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+  const bouteilles = estEnVoyage
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
+
+  const ingsTrackables = (recette.ingredients || []).filter(ing =>
+    ing.item_cave_id && ing.quantite &&
+    (ing.unite === 'cl' || ing.unite === 'ml') &&
+    !ing.optionnel &&
+    !CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))
+  );
+
+  const subs = {};
+  ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
+
+  modal.innerHTML = `
+    <div style="max-width:440px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🍸 Servir ${recetteNom}</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">${portions} portion${portions > 1 ? 's' : ''} — vérifie les bouteilles utilisées</div>
+      ${ingsTrackables.map(ing => {
+        const nomDefaut = bouteilles.find(b => (estEnVoyage ? b.item_cave_id : b.id) === ing.item_cave_id)?.nom || ing.nom;
+        const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <select style="flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.8rem;margin-right:8px"
+              onchange="window._servir_subs = window._servir_subs||{}; window._servir_subs['${ing.item_cave_id}']=this.value">
+              ${bouteilles.map(b => {
+                const bId = estEnVoyage ? b.item_cave_id : b.id;
+                return `<option value="${bId}" ${bId === ing.item_cave_id ? 'selected' : ''}>${b.nom}</option>`;
+              }).join('')}
+            </select>
+            <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${Math.round(qteCl*10)/10}cl</span>
+          </div>
+        `;
+      }).join('')}
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-servir-cocktail').remove()">Annuler</button>
+        <button class="btn-primary" style="flex:1" onclick="confirmerServir('${recetteId}', ${portions})">✅ Confirmer</button>
+      </div>
+    </div>
+  `;
+  window._servir_subs = { ...subs };
+  document.body.appendChild(modal);
+}
+
+async function confirmerServir(recetteId, portions) {
+  const recette = recettes.find(r => r.id === recetteId);
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+  const subs = window._servir_subs || {};
+
+  for (const ing of (recette?.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+    if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
+    const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+    const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
+
+    if (estEnVoyage) {
+      const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+      if (!b) continue;
+      const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
+      await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+        .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
+      b.cl_restants_voyage = nouveau;
+    } else {
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
+      if (!item) continue;
+      const nouveau = Math.max(0, (item.cl_restants ?? 0) - qteCl);
+      await db.from('items').update({ cl_restants: nouveau }).eq('id', itemId).eq('user_id', currentUser.id);
+      item.cl_restants = nouveau;
+    }
+  }
+
+  document.getElementById('modal-servir-cocktail')?.remove();
+  const consommation = calculerConsommationAgregee();
+  renderModeService(document.getElementById('modal-tableau-bord-soiree'), consommation);
+}
+
+async function supprimerInviteService(inviteId) {
+  if (!confirm('Supprimer cet invité ?')) return;
+  await db.from('sessions_invites').delete().eq('id', inviteId);
+  renderModeService(document.getElementById('modal-tableau-bord-soiree'), calculerConsommationAgregee());
+}
+
+async function terminerSoireeService() {
+  if (!confirm('Terminer la soirée ?')) return;
+  await db.from('soiree_menu').update({ statut: 'termine' }).eq('id', soireeMenuActive.id);
+  soireeMenuActive.statut = 'termine';
+  document.getElementById('modal-tableau-bord-soiree')?.remove();
+  if (voyageActif) ouvrirTableauBordVoyage();
+}
 async function ajouterRecetteMenu(recetteId) {
   const { data } = await db.from('soiree_menu_recettes').insert({
     id: 'smr-' + Date.now(),
