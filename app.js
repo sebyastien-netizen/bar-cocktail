@@ -5117,10 +5117,10 @@ async function renderModeService(modal, consommation) {
               </div>
               <div style="display:flex;gap:8px;align-items:center">
                 <button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
-                  onclick="window._servicePortion_${mr.id} = Math.max(1, (window._servicePortion_${mr.id}||1)-1); document.getElementById('sp-${mr.id}').textContent=window._servicePortion_${mr.id}">−</button>
-                <span id="sp-${mr.id}" style="min-width:20px;text-align:center">1</span>
-                <button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
-                  onclick="window._servicePortion_${mr.id} = (window._servicePortion_${mr.id}||1)+1; document.getElementById('sp-${mr.id}').textContent=window._servicePortion_${mr.id}">+</button>
+onclick="let s=document.getElementById('sp-${mr.id}'); s.textContent=Math.max(1,parseInt(s.textContent)-1)">−</button>
+<span id="sp-${mr.id}" style="min-width:20px;text-align:center">1</span>
+<button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
+  onclick="let s=document.getElementById('sp-${mr.id}'); s.textContent=parseInt(s.textContent)+1">+</button>
                 <button class="btn-primary" style="flex:1;padding:6px 12px;font-size:0.82rem"
                   onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}')">
                   🍸 Servir
@@ -5218,7 +5218,7 @@ async function ajouterInviteService(modeChoix) {
 }
 
 async function servirCocktail(menuRecetteId, recetteId, recetteNom) {
-  const portions = window[`_servicePortion_${menuRecetteId}`] || 1;
+ const portions = parseInt(document.getElementById('sp-' + menuRecetteId)?.textContent) || 1;
   const recette = recettes.find(r => r.id === recetteId);
   if (!recette) return;
 
