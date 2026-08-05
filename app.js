@@ -4097,7 +4097,7 @@ async function chargerSessions() {
   const container = document.getElementById('sessions-container');
   if (!container) return;
 
-  const [{ data: sessions }, { data: sessionsOpp }] = await Promise.all([
+  const [{ data: sessions }, { data: sessionsOpp }, { data: soireesMenu }] = await Promise.all([
     db.from('sessions_invites')
       .select('*')
       .eq('user_id', currentUser.id)
@@ -4106,17 +4106,22 @@ async function chargerSessions() {
     db.from('sessions_opportunite')
       .select('*')
       .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false }),
+    db.from('soiree_menu')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .in('statut', ['planification', 'verrouille'])
       .order('created_at', { ascending: false })
   ]);
 
-  renderSessions(sessions || [], sessionsOpp || []);
+  renderSessions(sessions || [], sessionsOpp || [], soireesMenu || []);
 }
 
-function renderSessions(sessions, sessionsOpp = []) {
+function renderSessions(sessions, sessionsOpp = [], soireesMenu = []) {
   const container = document.getElementById('sessions-container');
   const actives = sessions.filter(s => new Date(s.expires_at) > new Date());
   const passees = sessions.filter(s => new Date(s.expires_at) <= new Date());
-container.innerHTML = `
+  container.innerHTML = `
     <div class="cave-header">
       <h2>🎉 Soirées cocktail</h2>
       <div style="display:flex;gap:8px">
@@ -4131,6 +4136,25 @@ container.innerHTML = `
       <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">Actif depuis le ${new Date(voyageActif.date_debut).toLocaleDateString('fr-FR')}</div>
     </div>
     ` : ''}
+
+    ${soireesMenu.length > 0 ? `
+    <div class="section-label">🍸 MES SOIRÉES</div>
+    ${soireesMenu.map(s => `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+        onclick="ouvrirTableauBordSoiree('${s.id}')">
+        <div>
+          <div style="font-weight:600;font-size:0.9rem">${s.nom}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">
+            ${s.statut === 'verrouille' ? '🟢 En service' : '🟡 En planification'}
+            ${s.voyage_id ? ' · 🧳 Voyage' : ''}
+          </div>
+        </div>
+        <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:1rem;padding:4px 8px"
+          onclick="event.stopPropagation(); supprimerSoireeMenu('${s.id}')">🗑</button>
+      </div>
+    `).join('')}
+    ` : ''}
+
     ${sessionsOpp.length > 0 ? `
     <div class="section-label">🆘 FIN DU MONDE</div>
     ${sessionsOpp.map(s => renderCarteSessionOpportunite(s)).join('')}
@@ -4139,7 +4163,7 @@ container.innerHTML = `
     <div class="section-label" style="margin-top:1.5rem">EN COURS</div>
     ${actives.map(s => renderCarteSession(s)).join('')}
     ` : `
-<div class="empty-state">
+    <div class="empty-state">
       <p>Aucune soirée active</p>
     </div>
     `}
@@ -5329,7 +5353,13 @@ async function ajouterRecetteMenu(recetteId) {
   if (data) soireeMenuRecettesActives.push(data);
   renderTableauBordSoiree();
 }
-
+async function supprimerSoireeMenu(soireeId) {
+  if (!confirm('Supprimer cette soirée ?')) return;
+  await db.from('soiree_menu_recettes').delete().eq('soiree_menu_id', soireeId);
+  await db.from('stock_reserve').delete().eq('soiree_menu_id', soireeId);
+  await db.from('soiree_menu').delete().eq('id', soireeId);
+  chargerSessions();
+}
 async function ajusterPortionsMenu(id, delta) {
   const mr = soireeMenuRecettesActives.find(m => m.id === id);
   if (!mr) return;
