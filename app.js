@@ -1779,6 +1779,25 @@ async function partagerRecette(id, nom) {
     alert('Lien copié ! ' + url);
   }
 }
+function getConseilBartender(r, p) {
+  if (p === 1) return null;
+  const nom = r.nom;
+  if (p === 2) return {
+    icon: '💡', titre: 'Pour 2 verres',
+    texte: `Préparez les deux en une seule passe. Stirred : 30 tours puis filtrez les deux immédiatement. Shaké : shakez en une seule fois, filtrez vite. Un ${nom} attend mal — servez ensemble.`,
+    bg: 'var(--bg-accent)', color: 'var(--text-accent)'
+  };
+  if (p <= 3) return {
+    icon: '⚠️', titre: `Pour ${p} verres — 2 passes`,
+    texte: `Divisez en 2 passes maximum. Ne préparez pas plus de 2 verres à la fois pour maintenir la qualité.`,
+    bg: 'var(--bg-warning)', color: 'var(--text-warning)'
+  };
+  return {
+    icon: '🚨', titre: `Pour ${p} verres — Mode batch`,
+    texte: `Passez en mode batch. Préparez tout le ${nom} en une fois, servez immédiatement.`,
+    bg: 'var(--bg-danger)', color: 'var(--text-danger)'
+  };
+}
 function renderFiche(portions) {
   const r = recetteOuverte;
   const nbManquants = calculerDisponibilite(r);
