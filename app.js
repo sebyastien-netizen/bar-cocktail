@@ -5146,7 +5146,7 @@ onclick="let s=document.getElementById('sp-${mr.id}'); s.textContent=Math.max(1,
 <button style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text-primary)"
   onclick="let s=document.getElementById('sp-${mr.id}'); s.textContent=parseInt(s.textContent)+1">+</button>
                 <button class="btn-primary" style="flex:1;padding:6px 12px;font-size:0.82rem"
-                  onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}')">
+                  onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}', parseInt(document.getElementById('sp-${mr.id}')?.textContent)||1)">
                   🍸 Servir
                 </button>
               </div>
@@ -5241,8 +5241,8 @@ async function ajouterInviteService(modeChoix) {
   renderModeService(document.getElementById('modal-tableau-bord-soiree'), calculerConsommationAgregee());
 }
 
-async function servirCocktail(menuRecetteId, recetteId, recetteNom) {
- const portions = parseInt(document.getElementById('sp-' + menuRecetteId)?.textContent) || 1;
+async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
+  portions = portions || 1;
   const recette = recettes.find(r => r.id === recetteId);
   if (!recette) return;
 
