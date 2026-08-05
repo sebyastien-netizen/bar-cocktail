@@ -5201,10 +5201,11 @@ async function renderTableauBordSoiree() {
               </div>
             </div>`;
         }).join('')}
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">👤 + J\'assigne</button>
-          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">👤 + Choisit</button>
-        </div>
+<div style="display:flex;gap:8px;margin-top:8px">
+  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('liste')">👤 + Invité</button>
+  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">🍸 + Assigner</button>
+  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">📱 + QR</button>
+</div>
       </div>
 
       <!-- SERVICES EFFECTUÉS -->
@@ -5278,9 +5279,25 @@ async function confirmerAjoutInvite(modeChoix) {
   const nom = document.getElementById('invite-prenom')?.value.trim();
   if (!nom) { alert('Prénom obligatoire.'); return; }
   const note = document.getElementById('invite-note')?.value.trim() || null;
-  const recetteId = modeChoix === 'assigne' ? (document.getElementById('invite-cocktail')?.value || null) : null;
-  const token = Math.random().toString(36).substring(2, 10);
+  
+  let recetteId = null;
+  let modeChoixBDD = 'manuel';
+  let statut = 'en_attente';
 
+  if (modeChoix === 'assigne') {
+    recetteId = document.getElementById('invite-cocktail')?.value || null;
+    modeChoixBDD = 'manuel';
+    statut = recetteId ? 'recette_choisie' : 'en_attente';
+  } else if (modeChoix === 'libre') {
+    modeChoixBDD = 'libre';
+    statut = 'en_attente';
+  } else {
+    // 'liste' — juste prénom, pas de cocktail, pas de QR
+    modeChoixBDD = 'manuel';
+    statut = 'en_attente';
+  }
+
+  const token = Math.random().toString(36).substring(2, 10);
   const { error } = await db.from('sessions_invites').insert({
     user_id: currentUser.id,
     token,
@@ -5289,9 +5306,9 @@ async function confirmerAjoutInvite(modeChoix) {
     nom_session: soireeMenuActive.nom,
     soiree_menu_id: soireeMenuActive.id,
     is_master: false,
-    mode_choix: modeChoix === 'libre' ? 'libre' : 'manuel',
+    mode_choix: modeChoixBDD,
     recette_id: recetteId,
-    statut: recetteId ? 'recette_choisie' : 'en_attente',
+    statut,
     recettes_disponibles: soireeMenuRecettesActives.map(mr => mr.recette_id)
   });
   if (error) { alert('Erreur : ' + error.message); return; }
