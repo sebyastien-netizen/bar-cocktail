@@ -5365,6 +5365,50 @@ async function confirmerAssignation() {
   document.getElementById('modal-assignation')?.remove();
   await renderTableauBordSoiree();
 }
+function afficherQRInvite(lien, nomInvite) {
+  const modal = document.createElement('div');
+  modal.id = 'modal-qr-invite';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:24px;text-align:center;max-width:300px;width:100%">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">📱 ${nomInvite}</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Scanne pour le défi gustatif</div>
+      <div id="qr-invite-canvas" style="display:flex;justify-content:center;margin-bottom:16px"></div>
+      <button class="btn-outline" style="width:100%" onclick="document.getElementById('modal-qr-invite').remove()">Fermer</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  new QRCode(document.getElementById('qr-invite-canvas'), {
+    text: lien,
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff'
+  });
+}
+
+function afficherQRChoixMenu() {
+  const lien = `${window.location.origin}/guest.html?session=${soireeMenuActive.id}`;
+  const modal = document.createElement('div');
+  modal.id = 'modal-qr-choix';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:24px;text-align:center;max-width:300px;width:100%">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">📱 Choisir un cocktail</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">L'invité scanne et choisit parmi le menu</div>
+      <div id="qr-choix-canvas" style="display:flex;justify-content:center;margin-bottom:16px"></div>
+      <button class="btn-outline" style="width:100%" onclick="document.getElementById('modal-qr-choix').remove()">Fermer</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  new QRCode(document.getElementById('qr-choix-canvas'), {
+    text: lien,
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff'
+  });
+}
 async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
   portions = portions || 1;
   const recette = recettes.find(r => r.id === recetteId);
