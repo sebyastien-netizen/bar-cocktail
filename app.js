@@ -5202,9 +5202,9 @@ async function renderTableauBordSoiree() {
             </div>`;
         }).join('')}
 <div style="display:flex;gap:8px;margin-top:8px">
+  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('liste')">👤 + Invité</button>
   <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ouvrirAssignationInvite()">🍸 Assigner</button>
-  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">🍸 + Assigner</button>
-  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">📱 + QR</button>
+  <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="afficherQRChoixMenu()">📱 QR Choix</button>
 </div>
       </div>
 
