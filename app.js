@@ -5239,26 +5239,53 @@ async function renderTableauBordSoiree() {
 
 
 async function ajouterInviteService(modeChoix) {
-  const nom = prompt('Prénom de l\'invité ?');
-  if (!nom) return;
+  const modal = document.createElement('div');
+  modal.id = 'modal-ajout-invite';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  
+  modal.innerHTML = `
+    <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:16px">👤 Nouvel invité</div>
+      
+      <input type="text" id="invite-prenom" placeholder="Prénom *" 
+        style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem;box-sizing:border-box;margin-bottom:8px">
+      
+      <textarea id="invite-note" placeholder="Note (optionnel) — goûts, allergies, préférences..."
+        style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;height:70px;resize:none;margin-bottom:12px"></textarea>
 
-  let recetteId = null;
-  if (modeChoix === 'assigne') {
-    const choix = prompt('Cocktail assigné :\n' + soireeMenuRecettesActives.map((mr, i) => {
-      const r = recettes.find(rec => rec.id === mr.recette_id);
-      return `${i+1}. ${r?.nom || mr.recette_id}`;
-    }).join('\n') + '\n\nTape le numéro :');
-    const idx = parseInt(choix) - 1;
-    if (idx >= 0 && idx < soireeMenuRecettesActives.length) {
-      recetteId = soireeMenuRecettesActives[idx].recette_id;
-    }
-  }
+      ${modeChoix === 'assigne' ? `
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">Cocktail assigné :</div>
+      <select id="invite-cocktail" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:12px">
+        <option value="">— Choisir un cocktail —</option>
+        ${soireeMenuRecettesActives.map(mr => {
+          const r = recettes.find(rec => rec.id === mr.recette_id);
+          return `<option value="${mr.recette_id}">${r?.nom || mr.recette_id}</option>`;
+        }).join('')}
+      </select>` : `
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px">L'invité choisira via QR code.</div>`}
 
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-ajout-invite').remove()">Annuler</button>
+        <button class="btn-primary" style="flex:1" onclick="confirmerAjoutInvite('${modeChoix}')">✅ Ajouter</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('invite-prenom')?.focus(), 100);
+}
+
+async function confirmerAjoutInvite(modeChoix) {
+  const nom = document.getElementById('invite-prenom')?.value.trim();
+  if (!nom) { alert('Prénom obligatoire.'); return; }
+  const note = document.getElementById('invite-note')?.value.trim() || null;
+  const recetteId = modeChoix === 'assigne' ? (document.getElementById('invite-cocktail')?.value || null) : null;
   const token = Math.random().toString(36).substring(2, 10);
+
   const { error } = await db.from('sessions_invites').insert({
     user_id: currentUser.id,
     token,
     nom_invite: nom,
+    note,
     nom_session: soireeMenuActive.nom,
     soiree_menu_id: soireeMenuActive.id,
     is_master: false,
@@ -5268,7 +5295,8 @@ async function ajouterInviteService(modeChoix) {
     recettes_disponibles: soireeMenuRecettesActives.map(mr => mr.recette_id)
   });
   if (error) { alert('Erreur : ' + error.message); return; }
-  renderModeService(document.getElementById('modal-tableau-bord-soiree'), calculerConsommationAgregee());
+  document.getElementById('modal-ajout-invite')?.remove();
+  await renderTableauBordSoiree();
 }
 
 async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
@@ -5276,15 +5304,24 @@ async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
   const recette = recettes.find(r => r.id === recetteId);
   if (!recette) return;
 
-  // Ouvrir modal substitution avant décrémentation
-  const modal = document.createElement('div');
-  modal.id = 'modal-servir-cocktail';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
-
   const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
   const bouteilles = estEnVoyage
     ? voyageBouteillesActives
     : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
+
+  // Charger invités pour ce cocktail
+  const { data: tousInvites } = await db.from('sessions_invites')
+    .select('*')
+    .eq('soiree_menu_id', soireeMenuActive.id)
+    .eq('is_master', false)
+    .order('created_at');
+
+  const invitesAvecCecocktail = (tousInvites || []).filter(i =>
+    i.recette_id === recetteId && i.statut !== 'termine'
+  );
+  const invitesSansCommande = (tousInvites || []).filter(i =>
+    !i.recette_id && i.statut !== 'termine'
+  );
 
   const ingsTrackables = (recette.ingredients || []).filter(ing =>
     ing.item_cave_id && ing.quantite &&
@@ -5295,18 +5332,53 @@ async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
 
   const subs = {};
   ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
+  window._servir_subs = { ...subs };
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-servir-cocktail';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
 
   modal.innerHTML = `
     <div style="max-width:440px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
       <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🍸 Servir ${recetteNom}</div>
-      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">${portions} portion${portions > 1 ? 's' : ''} — vérifie les bouteilles utilisées</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">${portions} portion${portions > 1 ? 's' : ''}</div>
+
+      <!-- ASSOCIATION INVITÉ -->
+      <div style="margin-bottom:14px">
+        ${invitesAvecCecocktail.length > 0 ? `
+          <div style="font-size:0.82rem;color:var(--text-success);font-weight:600;margin-bottom:6px">
+            ✅ ${invitesAvecCecocktail.length} invité${invitesAvecCecocktail.length > 1 ? 's' : ''} ont commandé ce cocktail :
+          </div>
+          ${invitesAvecCecocktail.map(i => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border:1px solid var(--border-success);border-radius:6px;margin-bottom:4px;background:var(--bg-success)">
+              <span style="font-size:0.85rem;font-weight:600">${i.nom_invite}</span>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer">
+                <input type="checkbox" id="serv-inv-${i.id}" checked> Servir
+              </label>
+            </div>
+          `).join('')}
+        ` : ''}
+        
+        <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px;margin-top:${invitesAvecCecocktail.length > 0 ? '10px' : '0'}">
+          Autres invités :
+        </div>
+        <select id="serv-autre-invite" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem">
+          <option value="">— Aucun autre invité —</option>
+          ${[...invitesSansCommande, ...(tousInvites||[]).filter(i => i.recette_id && i.recette_id !== recetteId && i.statut !== 'termine')].map(i =>
+            `<option value="${i.id}">${i.nom_invite}${i.recette_id ? ' (a commandé autre chose)' : ''}</option>`
+          ).join('')}
+        </select>
+      </div>
+
+      <!-- SUBSTITUTIONS BOUTEILLES -->
+      ${ingsTrackables.length > 0 ? `
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">Bouteilles utilisées :</div>
       ${ingsTrackables.map(ing => {
-        const nomDefaut = bouteilles.find(b => (estEnVoyage ? b.item_cave_id : b.id) === ing.item_cave_id)?.nom || ing.nom;
         const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
         return `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
-            <select style="flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.8rem;margin-right:8px"
-              onchange="window._servir_subs = window._servir_subs||{}; window._servir_subs['${ing.item_cave_id}']=this.value">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
+            <select style="flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.78rem;margin-right:8px"
+              onchange="window._servir_subs['${ing.item_cave_id}']=this.value">
               ${bouteilles.map(b => {
                 const bId = estEnVoyage ? b.item_cave_id : b.id;
                 return `<option value="${bId}" ${bId === ing.item_cave_id ? 'selected' : ''}>${b.nom}</option>`;
@@ -5315,22 +5387,41 @@ async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
             <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${Math.round(qteCl*10)/10}cl</span>
           </div>
         `;
-      }).join('')}
+      }).join('')}` : ''}
+
       <div style="display:flex;gap:8px;margin-top:16px">
         <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-servir-cocktail').remove()">Annuler</button>
-        <button class="btn-primary" style="flex:1" onclick="confirmerServir('${recetteId}', ${portions})">✅ Confirmer</button>
+        <button class="btn-primary" style="flex:1" onclick="confirmerServir('${recetteId}', ${portions}, ${JSON.stringify(invitesAvecCecocktail.map(i => i.id))})">✅ Confirmer</button>
       </div>
     </div>
   `;
-  window._servir_subs = { ...subs };
   document.body.appendChild(modal);
 }
 
-async function confirmerServir(recetteId, portions) {
+async function confirmerServir(recetteId, portions, inviteIds) {
   const recette = recettes.find(r => r.id === recetteId);
   const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
   const subs = window._servir_subs || {};
 
+  // Marquer les invités cochés comme servis
+  const invitesCochés = (inviteIds || []).filter(id => {
+    const checkbox = document.getElementById('serv-inv-' + id);
+    return checkbox ? checkbox.checked : true;
+  });
+  for (const invId of invitesCochés) {
+    await db.from('sessions_invites').update({ statut: 'degustation' }).eq('id', invId);
+  }
+
+  // Marquer l'invité supplémentaire si sélectionné
+  const autreInviteId = document.getElementById('serv-autre-invite')?.value;
+  if (autreInviteId) {
+    await db.from('sessions_invites').update({
+      statut: 'degustation',
+      recette_id: recetteId
+    }).eq('id', autreInviteId);
+  }
+
+  // Logger et décrémenter
   for (const ing of (recette?.ingredients || [])) {
     if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
     if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
@@ -5338,7 +5429,6 @@ async function confirmerServir(recetteId, portions) {
     const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
     const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
 
-    // Logger le service
     await db.from('soiree_services').insert({
       id: 'srv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
       user_id: currentUser.id,
@@ -5349,7 +5439,6 @@ async function confirmerServir(recetteId, portions) {
       cl_servi: qteCl
     });
 
-    // Décrémenter cave
     if (estEnVoyage) {
       const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
       if (!b) continue;
