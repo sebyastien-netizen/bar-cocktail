@@ -5298,7 +5298,7 @@ async function confirmerAjoutInvite(modeChoix) {
   }
 
   const token = Math.random().toString(36).substring(2, 10);
-  const { error } = await db.from('sessions_invites').insert({
+const { error } = await db.from('sessions_invites').insert({
     user_id: currentUser.id,
     token,
     nom_invite: nom,
@@ -5309,7 +5309,8 @@ async function confirmerAjoutInvite(modeChoix) {
     mode_choix: modeChoixBDD,
     recette_id: recetteId,
     statut,
-    recettes_disponibles: soireeMenuRecettesActives.map(mr => mr.recette_id)
+    recettes_disponibles: soireeMenuRecettesActives.map(mr => mr.recette_id),
+    expires_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString()
   });
   if (error) { alert('Erreur : ' + error.message); return; }
   document.getElementById('modal-ajout-invite')?.remove();
