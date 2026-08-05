@@ -5004,17 +5004,75 @@ return {
   });
 }
 
-function renderTableauBordSoiree() {
+async function renderTableauBordSoiree() {
   const modal = document.getElementById('modal-tableau-bord-soiree');
-  const consommation = calculerConsommationAgregee();
+  if (!modal) return;
 
-  // Mode Service si verrouillé
-  if (soireeMenuActive?.statut === 'verrouille') {
-    renderModeService(modal, consommation);
-    return;
-  }
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
 
-  // Mode Planification
+  // Charger les services déjà effectués
+  const { data: services } = await db.from('soiree_services')
+    .select('*')
+    .eq('soiree_menu_id', soireeMenuActive.id);
+
+  // Charger les invités
+  const { data: invites } = await db.from('sessions_invites')
+    .select('*')
+    .eq('soiree_menu_id', soireeMenuActive.id)
+    .eq('is_master', false)
+    .order('created_at');
+
+  // Calculer consommation projetée par item
+  const consoPrevue = {};
+  soireeMenuRecettesActives.forEach(mr => {
+    const recette = recettes.find(r => r.id === mr.recette_id);
+    (recette?.ingredients || []).forEach(ing => {
+      if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
+      if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+      if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
+      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+      if (!consoPrevue[ing.item_cave_id]) consoPrevue[ing.item_cave_id] = { nom: ing.nom, totalCl: 0 };
+      consoPrevue[ing.item_cave_id].totalCl += qteCl * mr.portions_prevues;
+    });
+  });
+
+  // Calculer consommation réelle par item depuis soiree_services
+  const consoReelle = {};
+  (services || []).forEach(s => {
+    consoReelle[s.item_cave_id] = (consoReelle[s.item_cave_id] || 0) + parseFloat(s.cl_servi || 0);
+  });
+
+  // Construire les données barres tricolores
+  const barres = Object.entries(consoPrevue).map(([itemId, c]) => {
+    const item = estEnVoyage
+      ? voyageBouteillesActives.find(b => b.item_cave_id === itemId)
+      : cave?.categories?.flatMap(cat => cat.items).find(i => i.id === itemId);
+    const clTotal = estEnVoyage
+      ? parseFloat(item?.cl_restants_origine ?? item?.cl_restants_voyage ?? 0)
+      : parseFloat(item?.cl_restants ?? 0) + (consoReelle[itemId] || 0);
+    const clConsomme = consoReelle[itemId] || 0;
+    const clPrevu = c.totalCl;
+    const clRestant = clTotal - clConsomme;
+    const clLibre = Math.max(0, clRestant - clPrevu);
+    const depasse = clConsomme + clPrevu > clTotal;
+
+    const pctConsomme = clTotal > 0 ? Math.min(100, (clConsomme / clTotal) * 100) : 0;
+    const pctPrevu = clTotal > 0 ? Math.min(100 - pctConsomme, (clPrevu / clTotal) * 100) : 0;
+    const pctLibre = Math.max(0, 100 - pctConsomme - pctPrevu);
+
+    return { itemId, nom: item?.nom || c.nom, clTotal, clConsomme, clPrevu, clRestant, clLibre, depasse, pctConsomme, pctPrevu, pctLibre };
+  });
+
+  // Alternatives pour items dépassés
+  const bouteillesDispos = estEnVoyage
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(cat => cat.items).filter(i => i.detenu !== false) || [];
+
+  const recettesDispo = recettes.filter(r => {
+    if (r.type !== 'cocktail') return false;
+    return !soireeMenuRecettesActives.some(mr => mr.recette_id === r.id);
+  });
+
   const ingredientsNonLies = [];
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
@@ -5023,22 +5081,10 @@ function renderTableauBordSoiree() {
     });
   });
 
-  const stockInsuffisant = consommation.some(c => c.suffisant === false);
-  const peutVerrouiller = ingredientsNonLies.length === 0 && !stockInsuffisant && soireeMenuRecettesActives.length > 0;
-
-  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
-  const recettesDispo = recettes.filter(r => {
-    if (r.type !== 'cocktail') return false;
-    if (soireeMenuRecettesActives.some(mr => mr.recette_id === r.id)) return false;
-    if (estEnVoyage) {
-      const vpv = calculerVerresPossiblesVoyage(r);
-      return vpv && vpv.max > 0;
-    }
-    return true;
-  });
-
   modal.innerHTML = `
     <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px">
+
+      <!-- EN-TÊTE -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <input type="text" value="${soireeMenuActive.nom}" style="font-size:1.1rem;font-weight:700;background:none;border:none;border-bottom:1px dashed var(--border);color:inherit;flex:1"
           onblur="renommerSoireeMenu(this.value)">
@@ -5050,24 +5096,29 @@ function renderTableauBordSoiree() {
         🔗 ${ingredientsNonLies.length} ingrédient(s) non lié(s) — ${ingredientsNonLies.map(i => i.nom).join(', ')}
       </div>` : ''}
 
+      <!-- COCKTAILS DU MENU -->
       <div style="margin-bottom:16px">
         <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍸 Cocktails du menu</div>
         ${soireeMenuRecettesActives.length === 0 ? `<div style="font-size:0.8rem;color:var(--text-muted)">Aucun cocktail ajouté.</div>` : ''}
         ${soireeMenuRecettesActives.map(mr => {
           const recette = recettes.find(r => r.id === mr.recette_id);
           const vp = estEnVoyage ? calculerVerresPossiblesVoyage(recette) : calculerVerresPossibles(recette);
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div>
-              <span style="font-size:0.9rem">${recette?.nom || '—'}</span>
-              ${vp ? `<span style="font-size:0.75rem;color:${vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)'};margin-left:8px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max} verres</span>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn-outline" style="padding:2px 10px" onclick="ajusterPortionsMenu('${mr.id}', -1)">−</button>
-              <span style="min-width:24px;text-align:center">${mr.portions_prevues}</span>
-              <button class="btn-outline" style="padding:2px 10px" onclick="ajusterPortionsMenu('${mr.id}', 1)">+</button>
-              <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
-            </div>
-          </div>`;
+          const nbServis = (services || []).filter(s => s.recette_id === mr.recette_id).reduce((acc, s) => acc + (s.portions || 1), 0);
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div>
+                <span style="font-size:0.9rem;font-weight:600">${recette?.nom || '—'}</span>
+                ${vp ? `<span style="font-size:0.72rem;color:${vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)'};margin-left:6px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max}v</span>` : ''}
+                ${nbServis > 0 ? `<span style="font-size:0.72rem;color:var(--text-danger);margin-left:6px">✓ ${nbServis} servi${nbServis > 1 ? 's' : ''}</span>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1)">−</button>
+                <span style="min-width:20px;text-align:center;font-size:0.9rem">${mr.portions_prevues}</span>
+                <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', 1)">+</button>
+                <button class="btn-primary" style="padding:4px 10px;font-size:0.8rem" onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}', ${mr.portions_prevues})">🍸</button>
+                <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
+              </div>
+            </div>`;
         }).join('')}
         <select id="select-ajout-recette" style="width:100%;margin-top:10px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary)">
           <option value="">+ Ajouter un cocktail au menu…</option>
@@ -5075,28 +5126,86 @@ function renderTableauBordSoiree() {
         </select>
       </div>
 
-      ${consommation.length > 0 ? `
+      <!-- BARRES TRICOLORES -->
+      ${barres.length > 0 ? `
       <div style="margin-bottom:16px">
-        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">📦 Stock projeté</div>
-        ${consommation.map(c => {
-          const pct = c.disponibleReel !== null ? Math.min(100, Math.round((c.besoinCl / Math.max(c.disponibleReel, 0.01)) * 100)) : null;
-          const couleur = c.inconnu ? 'var(--text-muted)' : c.suffisant === false ? 'var(--text-danger)' : pct > 80 ? 'var(--text-warning)' : 'var(--text-success)';
-          return `<div style="margin-bottom:8px">
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:2px">
-              <span>${c.nomItem}</span>
-              <span style="color:${couleur}">${c.inconnu ? 'contenance inconnue' : `${c.besoinCl}cl / ${c.disponibleReel}cl`}</span>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:10px">📊 Ingrédients</div>
+        ${barres.map(b => `
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px">
+              <span style="font-weight:600;color:${b.depasse ? 'var(--text-danger)' : 'var(--text-primary)'}">${b.nom}</span>
+              <span style="color:var(--text-muted)">${Math.round(b.clRestant*10)/10}cl restants · ${Math.round(b.clPrevu*10)/10}cl prévus</span>
             </div>
-            ${!c.inconnu ? `<div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
-              <div style="height:100%;width:${Math.min(100, pct)}%;background:${couleur}"></div>
+            <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
+              <div style="height:100%;width:${b.pctConsomme}%;background:#e53e3e;flex-shrink:0"></div>
+              <div style="height:100%;width:${b.pctPrevu}%;background:${b.depasse ? '#e53e3e' : '#ed8936'};flex-shrink:0"></div>
+              <div style="height:100%;width:${b.pctLibre}%;background:#38a169;flex-shrink:0"></div>
+            </div>
+            ${b.depasse ? `
+            <div style="font-size:0.72rem;color:var(--text-danger);margin-top:3px">
+              ⚠️ Dépassement de ${Math.round((b.clConsomme + b.clPrevu - b.clTotal)*10)/10}cl
+              ${(() => {
+                const catId = categorieDeItemGlobal(b.itemId);
+                const alt = bouteillesDispos.find(bt => {
+                  const btId = estEnVoyage ? bt.item_cave_id : bt.id;
+                  if (btId === b.itemId) return false;
+                  const btCat = categorieDeItemGlobal(btId);
+                  return btCat === catId;
+                });
+                return alt ? ` → Alternative : <strong>${alt.nom}</strong>` : '';
+              })()}
             </div>` : ''}
-          </div>`;
-        }).join('')}
+          </div>
+        `).join('')}
       </div>` : ''}
 
-      <button class="btn-primary" style="width:100%;padding:12px" ${peutVerrouiller ? '' : 'disabled'} onclick="verrouillerSoireeMenu()">
-        🔒 Verrouiller et passer en mode service
+      <!-- SERVICE — INVITÉS -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">👥 Service (${(invites||[]).length} invité${(invites||[]).length > 1 ? 's' : ''})</div>
+        ${(invites||[]).length === 0 ? '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Aucun invité.</div>' : ''}
+        ${(invites||[]).map(inv => {
+          const recetteInv = recettes.find(r => r.id === inv.recette_id);
+          const statutLabel = inv.statut === 'termine' ? '✅' : inv.statut === 'degustation' ? '🍷' : inv.statut === 'recette_choisie' ? '🟢' : '🟡';
+          const lienQR = `${window.location.origin}/guest.html?invite=${inv.token}`;
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+              <div>
+                <div style="font-size:0.88rem;font-weight:600">${statutLabel} ${inv.nom_invite || 'Invité'}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">${recetteInv?.nom || (inv.mode_choix === 'libre' ? 'Choisit lui-même' : 'En attente')}</div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" onclick="navigator.clipboard.writeText('${lienQR}').then(()=>alert('Lien copié !'))">🔗</button>
+                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;color:var(--text-danger)" onclick="supprimerInviteService('${inv.id}')">🗑</button>
+              </div>
+            </div>`;
+        }).join('')}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('assigne')">👤 + J\'assigne</button>
+          <button class="btn-outline" style="flex:1;font-size:0.82rem" onclick="ajouterInviteService('libre')">👤 + Choisit</button>
+        </div>
+      </div>
+
+      <!-- SERVICES EFFECTUÉS -->
+      ${(services||[]).length > 0 ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">✅ Services effectués</div>
+        ${Object.entries((services||[]).reduce((acc, s) => {
+          const r = recettes.find(rec => rec.id === s.recette_id);
+          const nom = r?.nom || s.recette_id;
+          if (!acc[nom]) acc[nom] = 0;
+          acc[nom] += s.portions || 1;
+          return acc;
+        }, {})).map(([nom, total]) => `
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:4px 0;border-bottom:1px solid var(--border)">
+            <span>${nom}</span>
+            <span style="color:var(--text-success)">✓ ${total} verre${total > 1 ? 's' : ''}</span>
+          </div>
+        `).join('')}
+      </div>` : ''}
+
+      <button class="btn-outline" style="width:100%;margin-top:8px;border-color:var(--text-danger);color:var(--text-danger)" onclick="terminerSoireeService()">
+        🏁 Terminer la soirée
       </button>
-      ${!peutVerrouiller && soireeMenuRecettesActives.length > 0 ? `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:6px">Résous les points ci-dessus pour verrouiller</div>` : ''}
     </div>
   `;
 
@@ -5104,7 +5213,6 @@ function renderTableauBordSoiree() {
     if (!e.target.value) return;
     await ajouterRecetteMenu(e.target.value);
   };
-  chargerResumeDefiSolo();
 }
 async function renderModeService(modal, consommation) {
   const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
