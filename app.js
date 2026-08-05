@@ -5374,6 +5374,8 @@ function afficherQRInvite(lien, nomInvite) {
       <div style="font-size:1rem;font-weight:700;margin-bottom:4px">📱 ${nomInvite}</div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Scanne pour le défi gustatif</div>
       <div id="qr-invite-canvas" style="display:flex;justify-content:center;margin-bottom:16px"></div>
+      <div style="font-size:0.72rem;color:var(--text-muted);word-break:break-all;margin:8px 0;padding:8px;background:var(--bg);border-radius:6px;text-align:left">${lien}</div>
+      <button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:0.8rem" onclick="navigator.clipboard.writeText('${lien}').then(()=>alert('Lien copié !'))">📋 Copier le lien</button>
       <button class="btn-outline" style="width:100%" onclick="document.getElementById('modal-qr-invite').remove()">Fermer</button>
     </div>
   `;
@@ -5397,6 +5399,8 @@ function afficherQRChoixMenu() {
       <div style="font-size:1rem;font-weight:700;margin-bottom:4px">📱 Choisir un cocktail</div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">L'invité scanne et choisit parmi le menu</div>
       <div id="qr-choix-canvas" style="display:flex;justify-content:center;margin-bottom:16px"></div>
+      <div style="font-size:0.72rem;color:var(--text-muted);word-break:break-all;margin:8px 0;padding:8px;background:var(--bg);border-radius:6px;text-align:left">${lien}</div>
+      <button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:0.8rem" onclick="navigator.clipboard.writeText('${lien}').then(()=>alert('Lien copié !'))">📋 Copier le lien</button>
       <button class="btn-outline" style="width:100%" onclick="document.getElementById('modal-qr-choix').remove()">Fermer</button>
     </div>
   `;
