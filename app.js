@@ -4881,14 +4881,21 @@ async function ouvrirTableauBordSoiree(soireeMenuId) {
   soireeMenuActive = menu;
   soireeMenuRecettesActives = menuRecettes || [];
 
-  // Détecter les ingrédients trackables sans contenance
+  let modal = document.getElementById('modal-tableau-bord-soiree');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-tableau-bord-soiree';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9000;overflow-y:auto;padding:20px';
+    document.body.appendChild(modal);
+  }
+
+  // Vérifier contenances manquantes
   const ingsSansContenance = [];
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
     (recette?.ingredients || []).forEach(ing => {
       if (!ing.item_cave_id || ing.optionnel) return;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
-      if (/glace|glaçon/i.test(ing.nom || '')) return;
       if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
       const item = voyageActif
         ? voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id)
@@ -4900,34 +4907,23 @@ async function ouvrirTableauBordSoiree(soireeMenuId) {
     });
   });
 
-  let modal = document.getElementById('modal-tableau-bord-soiree');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'modal-tableau-bord-soiree';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9000;overflow-y:auto;padding:20px';
-    document.body.appendChild(modal);
-  }
-
-  // Écran intermédiaire si ingrédients sans contenance
   if (ingsSansContenance.length > 0) {
     modal.innerHTML = `
-      <div style="max-width:500px;margin:0 auto;background:var(--bg-card);border-radius:16px;padding:20px;margin-top:40px">
+      <div style="max-width:500px;margin:40px auto;background:var(--bg-card);border-radius:16px;padding:20px">
         <div style="font-size:1rem;font-weight:700;margin-bottom:4px">⚠️ Contenances manquantes</div>
         <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:16px">
-          Ces ingrédients n'ont pas de contenance définie. Renseigne les quantités disponibles pour un suivi précis en soirée.
+          Renseigne les quantités disponibles pour un suivi précis.
         </div>
-        <div id="liste-contenances-manquantes">
-          ${ingsSansContenance.map(i => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-              <span style="font-size:0.88rem;font-weight:600">${i.nom}</span>
-              <div style="display:flex;align-items:center;gap:6px">
-                <input type="number" id="cl-${i.itemId}" placeholder="cl" min="0" step="0.5"
-                  style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem;text-align:right">
-                <span style="font-size:0.82rem;color:var(--text-muted)">cl</span>
-              </div>
+        ${ingsSansContenance.map(i => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:0.88rem;font-weight:600">${i.nom}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" id="cl-${i.itemId}" placeholder="cl" min="0" step="0.5"
+                style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.9rem;text-align:right">
+              <span style="font-size:0.82rem;color:var(--text-muted)">cl</span>
             </div>
-          `).join('')}
-        </div>
+          </div>
+        `).join('')}
         <div style="display:flex;gap:8px;margin-top:16px">
           <button class="btn-outline" style="flex:1" onclick="renderTableauBordSoiree()">Passer</button>
           <button class="btn-primary" style="flex:1" onclick="validerContenancesManquantes(${JSON.stringify(ingsSansContenance.map(i => i.itemId))})">
@@ -4939,7 +4935,7 @@ async function ouvrirTableauBordSoiree(soireeMenuId) {
     return;
   }
 
-  renderTableauBordSoiree();
+  await renderTableauBordSoiree();
 }
 
 async function validerContenancesManquantes(itemIds) {
@@ -5416,6 +5412,18 @@ async function confirmerServir(recetteId, portions) {
     const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
     const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
 
+    // Logger le service
+    await db.from('soiree_services').insert({
+      id: 'srv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      user_id: currentUser.id,
+      soiree_menu_id: soireeMenuActive.id,
+      recette_id: recetteId,
+      portions,
+      item_cave_id: itemId,
+      cl_servi: qteCl
+    });
+
+    // Décrémenter cave
     if (estEnVoyage) {
       const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
       if (!b) continue;
@@ -5433,10 +5441,8 @@ async function confirmerServir(recetteId, portions) {
   }
 
   document.getElementById('modal-servir-cocktail')?.remove();
-  const consommation = calculerConsommationAgregee();
-  renderModeService(document.getElementById('modal-tableau-bord-soiree'), consommation);
+  await renderTableauBordSoiree();
 }
-
 async function supprimerInviteService(inviteId) {
   if (!confirm('Supprimer cet invité ?')) return;
   await db.from('sessions_invites').delete().eq('id', inviteId);
