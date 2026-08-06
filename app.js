@@ -5374,7 +5374,7 @@ async function ouvrirAssignationInvite() {
     .eq('is_master', false)
     .order('created_at');
 
-  const sansAssignation = (invites || []).filter(i => !i.recette_id);
+  const sansAssignation = invites || [];
 
   const modal = document.createElement('div');
   modal.id = 'modal-assignation';
@@ -5382,7 +5382,7 @@ async function ouvrirAssignationInvite() {
   modal.innerHTML = `
     <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
       <div style="font-size:1rem;font-weight:700;margin-bottom:16px">🍸 Assigner un cocktail</div>
-      ${sansAssignation.length === 0 ? '<div style="font-size:0.85rem;color:var(--text-muted)">Tous les invités ont déjà un cocktail assigné.</div>' : `
+      ${(invites||[]).length === 0 ? '<div style="font-size:0.85rem;color:var(--text-muted)">Tous les invités ont déjà un cocktail assigné.</div>' : `
       <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">Invité :</div>
       <select id="assign-invite" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:12px">
         <option value="">— Choisir un invité —</option>
