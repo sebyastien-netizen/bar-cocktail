@@ -5166,7 +5166,11 @@ return `
         <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1); renderTableauBordSoiree()">−</button>
         <span style="min-width:20px;text-align:center;font-size:0.9rem">${mr.portions_prevues}</span>
         <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', 1); renderTableauBordSoiree()">+</button>
-        <button class="btn-primary" style="padding:4px 10px;font-size:0.8rem" onclick="window._servirMR='${mr.id}'; window._servirRId='${recette?.id}'; window._servirNom=${JSON.stringify(recette?.nom || '')}; window._servirPortions=${mr.portions_prevues}; servirCocktail(window._servirMR, window._servirRId, window._servirNom, window._servirPortions)">🍸</button>
+        <button class="btn-primary" style="padding:4px 10px;font-size:0.8rem"
+  data-mr-id="${mr.id}"
+  data-r-id="${recette?.id}"
+  data-portions="${mr.portions_prevues}"
+  onclick="const d=this.dataset; servirCocktail(d.mrId, d.rId, recettes.find(r=>r.id===d.rId)?.nom||'', parseInt(d.portions)||1)">🍸</button>
         <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
       </div>
     </div>
