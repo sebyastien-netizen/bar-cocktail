@@ -5063,6 +5063,7 @@ async function renderTableauBordSoiree() {
   const { data: services } = await db.from('soiree_services')
     .select('*')
     .eq('soiree_menu_id', soireeMenuActive.id);
+ 
 
   // Charger les invités
   const { data: invites } = await db.from('sessions_invites')
@@ -5070,7 +5071,15 @@ async function renderTableauBordSoiree() {
     .eq('soiree_menu_id', soireeMenuActive.id)
     .eq('is_master', false)
     .order('created_at');
-
+// Grouper les services par invite_id
+  const servicesParInvite = {};
+  (services || []).forEach(s => {
+    if (!s.invite_id) return;
+    if (!servicesParInvite[s.invite_id]) servicesParInvite[s.invite_id] = [];
+    if (!servicesParInvite[s.invite_id].some(x => x.recette_id === s.recette_id && x.statut === s.statut)) {
+      servicesParInvite[s.invite_id].push(s);
+    }
+  });
   // Calculer consommation projetée par item
   const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
