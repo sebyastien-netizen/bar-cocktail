@@ -5610,9 +5610,7 @@ document.getElementById('btn-confirmer-marquer').addEventListener('click', async
     const recetteId = window._marquerServiRecetteId;
     const portions = window._marquerServiPortions;
     const recette = recettes.find(r => r.id === recetteId);
-    const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
-    console.log('subs au moment de confirmer:', JSON.stringify(subs));
-    console.log('itemId pour jameson:', subs['jameson']);
+const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
     await db.from('soiree_services').update({ statut: 'servi', substitutions: subs }).eq('id', serviceId);
     for (const ing of (recette?.ingredients || [])) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
@@ -5624,10 +5622,8 @@ document.getElementById('btn-confirmer-marquer').addEventListener('click', async
         const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
         if (!b) continue;
 const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
-        console.log('UPDATE voyage bouteille:', itemId, 'nouveau:', nouveau);
-        const result = await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+        await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
           .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
-        console.log('résultat UPDATE:', JSON.stringify(result));
         b.cl_restants_voyage = nouveau;
       } else {
         const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
