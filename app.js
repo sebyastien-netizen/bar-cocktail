@@ -5250,6 +5250,10 @@ ${cocktailsInvite.map(s => {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
       <span style="font-size:0.78rem;color:${couleur}">${icone} ${r?.nom || s.recette_id}</span>
       ${s.statut === 'assigne' ? `
+  <button style="background:none;border:1px solid var(--text-success);border-radius:6px;padding:2px 8px;font-size:0.75rem;color:var(--text-success);cursor:pointer"
+    onclick="marquerServi(this.dataset.sid, this.dataset.rid, parseInt(this.dataset.portions))"
+    data-sid="${s.id}" data-rid="${s.recette_id}" data-portions="${s.portions || 1}">✅ Servi</button>
+` : ''}`
         <button style="background:none;border:1px solid var(--text-success);border-radius:6px;padding:2px 8px;font-size:0.75rem;color:var(--text-success);cursor:pointer"
           onclick="marquerServi('${s.id}', '${s.recette_id}', ${s.portions || 1})">✅ Servi</button>
       ` : ''}
