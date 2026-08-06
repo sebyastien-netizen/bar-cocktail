@@ -5105,7 +5105,11 @@ const servicesParInvite = {};
 const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
-    const servicesRecette = (services || []).filter(s => s.recette_id === mr.recette_id && s.statut === 'assigne');
+    const servicesRecette = (services || []).filter(s => 
+      s.recette_id === mr.recette_id && 
+      s.statut === 'assigne' && 
+      s.soiree_menu_id === soireeMenuActive.id
+    );
     
     if (servicesRecette.length > 0) {
       // Calculer par service avec ses substitutions propres
@@ -5136,7 +5140,7 @@ const consoPrevue = {};
 
 // Calculer consommation réelle par item depuis les services "servi"
 const consoReelle = {};
-  (services || []).filter(s => s.statut === 'servi').forEach(s => {
+  (services || []).filter(s => s.statut === 'servi' && s.soiree_menu_id === soireeMenuActive.id).forEach(s => {
     if (parseFloat(s.cl_servi || 0) > 0) {
       consoReelle[s.item_cave_id] = (consoReelle[s.item_cave_id] || 0) + parseFloat(s.cl_servi);
     } else {
