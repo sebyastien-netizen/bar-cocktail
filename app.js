@@ -5261,9 +5261,20 @@ return `
         🏁 Terminer la soirée
       </button>
     </div>
-  `;
-
-
+`;
+  document.getElementById('select-ajout-recette').onchange = async (e) => {
+    if (!e.target.value) return;
+    await ajouterRecetteMenu(e.target.value);
+  };
+  soireeMenuRecettesActives.forEach(mr => {
+    const btn = document.getElementById('btn-servir-' + mr.id);
+    if (!btn) return;
+    const recette = recettes.find(r => r.id === mr.recette_id);
+    btn.addEventListener('click', () => {
+      servirCocktail(mr.id, mr.recette_id, recette?.nom || '', mr.portions_prevues);
+    });
+  });
+}
 async function ajouterInviteService(modeChoix) {
   const modal = document.createElement('div');
   modal.id = 'modal-ajout-invite';
