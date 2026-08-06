@@ -5072,14 +5072,20 @@ async function renderTableauBordSoiree() {
     .eq('is_master', false)
     .order('created_at');
 // Grouper les services par invite_id
-  const servicesParInvite = {};
-  (services || []).forEach(s => {
-    if (!s.invite_id) return;
-    if (!servicesParInvite[s.invite_id]) servicesParInvite[s.invite_id] = [];
-    if (!servicesParInvite[s.invite_id].some(x => x.recette_id === s.recette_id && x.statut === s.statut)) {
-      servicesParInvite[s.invite_id].push(s);
-    }
-  });
+const servicesParInvite = {};
+(services || []).forEach(s => {
+  if (!s.invite_id) return;
+  if (!servicesParInvite[s.invite_id]) servicesParInvite[s.invite_id] = [];
+  // Garder une seule ligne par recette — préférer 'servi' sur 'assigne'
+  const existing = servicesParInvite[s.invite_id].find(x => x.recette_id === s.recette_id);
+  if (!existing) {
+    servicesParInvite[s.invite_id].push(s);
+  } else if (s.statut === 'servi' && existing.statut === 'assigne') {
+    // Remplacer assigne par servi
+    const idx = servicesParInvite[s.invite_id].indexOf(existing);
+    servicesParInvite[s.invite_id][idx] = s;
+  }
+});
   // Calculer consommation projetée par item
   const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
