@@ -5564,7 +5564,7 @@ async function marquerServi(serviceId, recetteId, portions) {
   }
 
   // Afficher modal substitution
-const subs = {};
+  const subs = {};
   ingsTrackables.forEach(ing => { 
     subs[ing.item_cave_id] = subsPredef[ing.item_cave_id] || ing.item_cave_id; 
   });
@@ -5589,7 +5589,7 @@ const subs = {};
               ${bouteilles.map(b => {
                 const bId = estEnVoyage ? b.item_cave_id : b.id;
                 const defaultId = subsPredef[ing.item_cave_id] || ing.item_cave_id;
-return `<option value="${bId}" ${bId === defaultId ? 'selected' : ''}>${b.nom}</option>`;
+                return `<option value="${bId}" ${bId === defaultId ? 'selected' : ''}>${b.nom}</option>`;
               }).join('')}
             </select>
             <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${Math.round(qteCl*10)/10}cl</span>
@@ -5604,13 +5604,13 @@ return `<option value="${bId}" ${bId === defaultId ? 'selected' : ''}>${b.nom}</
   `;
   document.body.appendChild(modal);
 
-document.getElementById('btn-confirmer-marquer').addEventListener('click', async () => {
+  document.getElementById('btn-confirmer-marquer').addEventListener('click', async () => {
     const subs = window._marquerServiSubs;
     const serviceId = window._marquerServiId;
     const recetteId = window._marquerServiRecetteId;
     const portions = window._marquerServiPortions;
     const recette = recettes.find(r => r.id === recetteId);
-const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+    const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
     await db.from('soiree_services').update({ statut: 'servi', substitutions: subs }).eq('id', serviceId);
     for (const ing of (recette?.ingredients || [])) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
@@ -5621,7 +5621,7 @@ const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.i
       if (estEnVoyage) {
         const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
         if (!b) continue;
-const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
+        const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
         await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
           .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
         b.cl_restants_voyage = nouveau;
