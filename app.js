@@ -5178,10 +5178,9 @@ return `
         ${nbServis > 0 ? `<span style="font-size:0.72rem;color:var(--text-danger);margin-left:6px">✓ ${nbServis} servi${nbServis > 1 ? 's' : ''}</span>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1); renderTableauBordSoiree()">−</button>
+<button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1); renderTableauBordSoiree()">−</button>
         <span style="min-width:20px;text-align:center;font-size:0.9rem">${mr.portions_prevues}</span>
         <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', 1); renderTableauBordSoiree()">+</button>
-<button class="btn-primary" style="padding:4px 10px;font-size:0.8rem" id="btn-servir-${mr.id}">🍸</button>
         <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
       </div>
     </div>
@@ -5252,7 +5251,7 @@ ${cocktailsInvite.map(s => {
       <span style="font-size:0.78rem;color:${couleur}">${icone} ${r?.nom || s.recette_id}</span>
       ${s.statut === 'assigne' ? `
         <button style="background:none;border:1px solid var(--text-success);border-radius:6px;padding:2px 8px;font-size:0.75rem;color:var(--text-success);cursor:pointer"
-          id="btn-servir-invite-${s.id}">🍸</button>
+          onclick="marquerServi('${s.id}', '${s.recette_id}', ${s.portions || 1}, '${inv.nom_invite}')">✅ Servi</button>
       ` : ''}
     </div>
   `;
@@ -5295,53 +5294,6 @@ ${cocktailsInvite.map(s => {
     if (!e.target.value) return;
     await ajouterRecetteMenu(e.target.value);
   };
-  soireeMenuRecettesActives.forEach(mr => {
-    const btn = document.getElementById('btn-servir-' + mr.id);
-    if (!btn) return;
-    const recette = recettes.find(r => r.id === mr.recette_id);
-    btn.addEventListener('click', () => {
-      servirCocktail(mr.id, mr.recette_id, recette?.nom || '', mr.portions_prevues);
-    });
-  });
- // Boutons servir par invité
-(invites || []).forEach(inv => {
-  console.log('inv:', inv.nom_invite, 'cocktails:', (servicesParInvite[inv.id] || []).length);
-  const cocktailsInv = servicesParInvite[inv.id] || [];
-cocktailsInv.forEach(s => {
-    const btn = document.getElementById('btn-servir-invite-' + s.id);
-    console.log('cherche btn:', 'btn-servir-invite-' + s.id, 'trouvé:', !!btn);
-    if (!btn) return;
-    btn.onclick = async () => {
-      if (!confirm(`Servir ${recettes.find(r=>r.id===s.recette_id)?.nom || s.recette_id} à ${inv.nom_invite} ?`)) return;
-      // Passer en servi
-      await db.from('soiree_services').update({ statut: 'servi' }).eq('id', s.id);
-      // Décrémenter cave
-      const recette = recettes.find(r => r.id === s.recette_id);
-      const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
-      for (const ing of (recette?.ingredients || [])) {
-        if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
-        if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
-        if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
-        const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * (s.portions || 1);
-        if (estEnVoyage) {
-          const b = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
-          if (!b) continue;
-          const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
-          await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
-            .eq('item_cave_id', ing.item_cave_id).eq('mode_voyage_id', voyageActif.id);
-          b.cl_restants_voyage = nouveau;
-        } else {
-          const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
-          if (!item) continue;
-          const nouveau = Math.max(0, (item.cl_restants ?? 0) - qteCl);
-          await db.from('items').update({ cl_restants: nouveau }).eq('id', ing.item_cave_id).eq('user_id', currentUser.id);
-          item.cl_restants = nouveau;
-        }
-      }
-      await renderTableauBordSoiree();
-};
-  });
-});
 }
 async function ajouterInviteService(modeChoix) {
   const modal = document.createElement('div');
@@ -5435,7 +5387,7 @@ async function ouvrirAssignationInvite() {
   modal.innerHTML = `
     <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
       <div style="font-size:1rem;font-weight:700;margin-bottom:16px">🍸 Assigner un cocktail</div>
-      ${(invites||[]).length === 0 ? '<div style="font-size:0.85rem;color:var(--text-muted)">Tous les invités ont déjà un cocktail assigné.</div>' : `
+      ${(invites||[]).length === 0 ? '<div style="font-size:0.85rem;color:var(--text-muted)">Aucun invité dans la soirée.</div>' : `
       <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">Invité :</div>
       <select id="assign-invite" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:12px">
         <option value="">— Choisir un invité —</option>
@@ -5476,6 +5428,36 @@ async function confirmerAssignation() {
   });
 
   document.getElementById('modal-assignation')?.remove();
+  await renderTableauBordSoiree();
+}
+async function marquerServi(serviceId, recetteId, portions, nomInvite) {
+  if (!confirm(`Servir ${recettes.find(r=>r.id===recetteId)?.nom || recetteId} à ${nomInvite} ?`)) return;
+  
+  await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
+  
+  const recette = recettes.find(r => r.id === recetteId);
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+  
+  for (const ing of (recette?.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+    if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
+    const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+    if (estEnVoyage) {
+      const b = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
+      if (!b) continue;
+      const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
+      await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+        .eq('item_cave_id', ing.item_cave_id).eq('mode_voyage_id', voyageActif.id);
+      b.cl_restants_voyage = nouveau;
+    } else {
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
+      if (!item) continue;
+      const nouveau = Math.max(0, (item.cl_restants ?? 0) - qteCl);
+      await db.from('items').update({ cl_restants: nouveau }).eq('id', ing.item_cave_id).eq('user_id', currentUser.id);
+      item.cl_restants = nouveau;
+    }
+  }
   await renderTableauBordSoiree();
 }
 function afficherQRInvite(lien, nomInvite) {
