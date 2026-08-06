@@ -9487,3 +9487,35 @@ function renderRevelation() {
     </div>
   `;
 }
+async function annulerService(serviceId, recetteId, portions) {
+  if (!confirm('Annuler ce service et remettre les cl en cave ?')) return;
+
+  const recette = recettes.find(r => r.id === recetteId);
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+
+  for (const ing of (recette?.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+    if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
+    const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+    const itemId = ing.item_cave_id;
+
+    if (estEnVoyage) {
+      const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+      if (!b) continue;
+      const nouveau = parseFloat(b.cl_restants_voyage ?? 0) + qteCl;
+      await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+        .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
+      b.cl_restants_voyage = nouveau;
+    } else {
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
+      if (!item) continue;
+      const nouveau = (item.cl_restants ?? 0) + qteCl;
+      await db.from('items').update({ cl_restants: nouveau }).eq('id', itemId).eq('user_id', currentUser.id);
+      item.cl_restants = nouveau;
+    }
+  }
+
+  await db.from('soiree_services').delete().eq('id', serviceId);
+  await renderTableauBordSoiree();
+}
