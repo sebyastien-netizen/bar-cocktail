@@ -5311,7 +5311,7 @@ cocktailsInv.forEach(s => {
     const btn = document.getElementById('btn-servir-invite-' + s.id);
     console.log('cherche btn:', 'btn-servir-invite-' + s.id, 'trouvé:', !!btn);
     if (!btn) return;
-    btn.addEventListener('click', async () => {
+    btn.onclick = async () => {
       if (!confirm(`Servir ${recettes.find(r=>r.id===s.recette_id)?.nom || s.recette_id} à ${inv.nom_invite} ?`)) return;
       // Passer en servi
       await db.from('soiree_services').update({ statut: 'servi' }).eq('id', s.id);
