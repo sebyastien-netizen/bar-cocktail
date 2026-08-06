@@ -5237,12 +5237,20 @@ ${(invites||[]).map(inv => {
         </div>
       </div>
       ${cocktailsInvite.length === 0 ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Aucun cocktail assigné</div>` : ''}
-      ${cocktailsInvite.map(s => {
-        const r = recettes.find(rec => rec.id === s.recette_id);
-        const couleur = s.statut === 'servi' ? 'var(--text-success)' : 'var(--text-warning)';
-        const icone = s.statut === 'servi' ? '✅' : '🟡';
-        return `<div style="font-size:0.78rem;color:${couleur};margin-top:3px">${icone} ${r?.nom || s.recette_id}</div>`;
-      }).join('')}
+${cocktailsInvite.map(s => {
+  const r = recettes.find(rec => rec.id === s.recette_id);
+  const couleur = s.statut === 'servi' ? 'var(--text-success)' : 'var(--text-warning)';
+  const icone = s.statut === 'servi' ? '✅' : '🟡';
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+      <span style="font-size:0.78rem;color:${couleur}">${icone} ${r?.nom || s.recette_id}</span>
+      ${s.statut === 'assigne' ? `
+        <button style="background:none;border:1px solid var(--text-success);border-radius:6px;padding:2px 8px;font-size:0.75rem;color:var(--text-success);cursor:pointer"
+          id="btn-servir-invite-${s.id}">🍸</button>
+      ` : ''}
+    </div>
+  `;
+}).join('')}
     </div>
   `;
 }).join('')}
@@ -5289,6 +5297,43 @@ ${(invites||[]).map(inv => {
       servirCocktail(mr.id, mr.recette_id, recette?.nom || '', mr.portions_prevues);
     });
   });
+ // Boutons servir par invité
+(invites || []).forEach(inv => {
+  const cocktailsInv = servicesParInvite[inv.id] || [];
+  cocktailsInv.forEach(s => {
+    const btn = document.getElementById('btn-servir-invite-' + s.id);
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Servir ${recettes.find(r=>r.id===s.recette_id)?.nom || s.recette_id} à ${inv.nom_invite} ?`)) return;
+      // Passer en servi
+      await db.from('soiree_services').update({ statut: 'servi' }).eq('id', s.id);
+      // Décrémenter cave
+      const recette = recettes.find(r => r.id === s.recette_id);
+      const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+      for (const ing of (recette?.ingredients || [])) {
+        if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+        if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+        if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
+        const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * (s.portions || 1);
+        if (estEnVoyage) {
+          const b = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
+          if (!b) continue;
+          const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
+          await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+            .eq('item_cave_id', ing.item_cave_id).eq('mode_voyage_id', voyageActif.id);
+          b.cl_restants_voyage = nouveau;
+        } else {
+          const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
+          if (!item) continue;
+          const nouveau = Math.max(0, (item.cl_restants ?? 0) - qteCl);
+          await db.from('items').update({ cl_restants: nouveau }).eq('id', ing.item_cave_id).eq('user_id', currentUser.id);
+          item.cl_restants = nouveau;
+        }
+      }
+      await renderTableauBordSoiree();
+    });
+  });
+});
 }
 async function ajouterInviteService(modeChoix) {
   const modal = document.createElement('div');
