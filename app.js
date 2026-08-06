@@ -5301,8 +5301,9 @@ ${cocktailsInvite.map(s => {
 (invites || []).forEach(inv => {
   console.log('inv:', inv.nom_invite, 'cocktails:', (servicesParInvite[inv.id] || []).length);
   const cocktailsInv = servicesParInvite[inv.id] || [];
-  cocktailsInv.forEach(s => {
+cocktailsInv.forEach(s => {
     const btn = document.getElementById('btn-servir-invite-' + s.id);
+    console.log('cherche btn:', 'btn-servir-invite-' + s.id, 'trouvé:', !!btn);
     if (!btn) return;
     btn.addEventListener('click', async () => {
       if (!confirm(`Servir ${recettes.find(r=>r.id===s.recette_id)?.nom || s.recette_id} à ${inv.nom_invite} ?`)) return;
