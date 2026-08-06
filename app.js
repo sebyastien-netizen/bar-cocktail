@@ -5280,7 +5280,7 @@ ${(invites||[]).map(inv => {
   const lienQR = `${window.location.origin}/guest.html?invite=${inv.token}`;
   const cocktailsInvite = servicesParInvite[inv.id] || [];
   return `
-    <div style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+<div style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:0.88rem;font-weight:600">👤 ${inv.nom_invite || 'Invité'}</div>
         <div style="display:flex;gap:6px">
@@ -5288,6 +5288,7 @@ ${(invites||[]).map(inv => {
           <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;color:var(--text-danger)" onclick="supprimerInviteService('${inv.id}')">🗑</button>
         </div>
       </div>
+      ${inv.note ? `<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:3px;font-style:italic">📝 ${inv.note}</div>` : ''}
       ${cocktailsInvite.length === 0 ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Aucun cocktail assigné</div>` : ''}
 ${cocktailsInvite.map(s => {
   const r = recettes.find(rec => rec.id === s.recette_id);
