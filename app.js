@@ -5100,10 +5100,23 @@ const servicesParInvite = {};
     });
   });
 
-  // Calculer consommation réelle par item depuis soiree_services
+// Calculer consommation réelle par item depuis les services "servi"
   const consoReelle = {};
-  (services || []).forEach(s => {
-    consoReelle[s.item_cave_id] = (consoReelle[s.item_cave_id] || 0) + parseFloat(s.cl_servi || 0);
+  (services || []).filter(s => s.statut === 'servi').forEach(s => {
+    if (parseFloat(s.cl_servi || 0) > 0) {
+      // Service avec cl_servi (ancien flux confirmerServir)
+      consoReelle[s.item_cave_id] = (consoReelle[s.item_cave_id] || 0) + parseFloat(s.cl_servi);
+    } else {
+      // Service via marquerServi — recalculer depuis la recette
+      const recette = recettes.find(r => r.id === s.recette_id);
+      (recette?.ingredients || []).forEach(ing => {
+        if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
+        if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+        if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
+        const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * (s.portions || 1);
+        consoReelle[ing.item_cave_id] = (consoReelle[ing.item_cave_id] || 0) + qteCl;
+      });
+    }
   });
 
   // Construire les données barres tricolores
@@ -5433,34 +5446,101 @@ async function confirmerAssignation() {
 }
 async function marquerServi(serviceId, recetteId, portions) {
   console.log('marquerServi appelé', serviceId, recetteId, portions);
-  if (!confirm(`Servir ce cocktail ?`)) return;
-  
-  await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
-  
   const recette = recettes.find(r => r.id === recetteId);
   const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
   
-  for (const ing of (recette?.ingredients || [])) {
-    if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
-    if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
-    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
-    const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
-    if (estEnVoyage) {
-      const b = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
-      if (!b) continue;
-      const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
-      await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
-        .eq('item_cave_id', ing.item_cave_id).eq('mode_voyage_id', voyageActif.id);
-      b.cl_restants_voyage = nouveau;
-    } else {
-      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
-      if (!item) continue;
-      const nouveau = Math.max(0, (item.cl_restants ?? 0) - qteCl);
-      await db.from('items').update({ cl_restants: nouveau }).eq('id', ing.item_cave_id).eq('user_id', currentUser.id);
-      item.cl_restants = nouveau;
-    }
+  const bouteilles = estEnVoyage
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
+
+  const ingsTrackables = (recette?.ingredients || []).filter(ing =>
+    ing.item_cave_id && ing.quantite &&
+    (ing.unite === 'cl' || ing.unite === 'ml') &&
+    !ing.optionnel &&
+    !CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))
+  );
+
+  if (ingsTrackables.length === 0) {
+    // Pas d'ingrédients trackables — confirmer directement
+    if (!confirm('Servir ce cocktail ?')) return;
+    await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
+    await renderTableauBordSoiree();
+    return;
   }
-  await renderTableauBordSoiree();
+
+  // Afficher modal substitution
+  const subs = {};
+  ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
+  window._marquerServiSubs = { ...subs };
+  window._marquerServiId = serviceId;
+  window._marquerServiRecetteId = recetteId;
+  window._marquerServiPortions = portions;
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-marquer-servi';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🍸 ${recette?.nom || recetteId}</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">${portions} portion${portions > 1 ? 's' : ''} — vérifie les bouteilles</div>
+      ${ingsTrackables.map(ing => {
+        const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <select style="flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.78rem;margin-right:8px"
+              onchange="window._marquerServiSubs['${ing.item_cave_id}']=this.value">
+              ${bouteilles.map(b => {
+                const bId = estEnVoyage ? b.item_cave_id : b.id;
+                return `<option value="${bId}" ${bId === ing.item_cave_id ? 'selected' : ''}>${b.nom}</option>`;
+              }).join('')}
+            </select>
+            <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${Math.round(qteCl*10)/10}cl</span>
+          </div>
+        `;
+      }).join('')}
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-marquer-servi').remove()">Annuler</button>
+        <button class="btn-primary" style="flex:1" id="btn-confirmer-marquer">✅ Servir</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('btn-confirmer-marquer').addEventListener('click', async () => {
+    const subs = window._marquerServiSubs;
+    const serviceId = window._marquerServiId;
+    const recetteId = window._marquerServiRecetteId;
+    const portions = window._marquerServiPortions;
+    const recette = recettes.find(r => r.id === recetteId);
+
+    await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
+
+    for (const ing of (recette?.ingredients || [])) {
+      if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+      if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+      if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
+      const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+      const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
+
+      if (estEnVoyage) {
+        const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+        if (!b) continue;
+        const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
+        await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+          .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
+        b.cl_restants_voyage = nouveau;
+      } else {
+        const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
+        if (!item) continue;
+        const nouveau = Math.max(0, (item.cl_restants ?? 0) - qteCl);
+        await db.from('items').update({ cl_restants: nouveau }).eq('id', itemId).eq('user_id', currentUser.id);
+        item.cl_restants = nouveau;
+      }
+    }
+
+    document.getElementById('modal-marquer-servi')?.remove();
+    await renderTableauBordSoiree();
+  });
 }
 function afficherQRInvite(lien, nomInvite) {
   const modal = document.createElement('div');
@@ -5876,7 +5956,7 @@ async function supprimerSoireeMenu(soireeId) {
 async function ajusterPortionsMenu(id, delta) {
   const mr = soireeMenuRecettesActives.find(m => m.id === id);
   if (!mr) return;
-  mr.portions_prevues = Math.max(1, mr.portions_prevues + delta);
+  mr.portions_prevues = Math.max(0, mr.portions_prevues + delta);
   await db.from('soiree_menu_recettes').update({ portions_prevues: mr.portions_prevues }).eq('id', id);
   renderTableauBordSoiree();
 }
