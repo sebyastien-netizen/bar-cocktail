@@ -5511,9 +5511,9 @@ async function marquerServi(serviceId, recetteId, portions) {
     const serviceId = window._marquerServiId;
     const recetteId = window._marquerServiRecetteId;
     const portions = window._marquerServiPortions;
-    const recette = recettes.find(r => r.id === recetteId);
-
-    await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
+const recette = recettes.find(r => r.id === recetteId);
+    const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+    await db.from('soiree_services')
 
     for (const ing of (recette?.ingredients || [])) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
