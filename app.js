@@ -5238,43 +5238,30 @@ return `
 </div>
       </div>
 
-      <!-- SERVICES EFFECTUÉS -->
+     <!-- SERVICES EFFECTUÉS -->
       ${(services||[]).length > 0 ? `
       <div style="margin-bottom:16px">
         <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">✅ Services effectués</div>
-        ${Object.entries((services||[]).reduce((acc, s) => {
+        ${(services||[]).map(s => {
           const r = recettes.find(rec => rec.id === s.recette_id);
           const nom = r?.nom || s.recette_id;
-          if (!acc[nom]) acc[nom] = 0;
-          acc[nom] += s.portions || 1;
-          return acc;
-        }, {})).map(([nom, total]) => `
-          <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:4px 0;border-bottom:1px solid var(--border)">
-            <span>${nom}</span>
-            <span style="color:var(--text-success)">✓ ${total} verre${total > 1 ? 's' : ''}</span>
-          </div>
-        `).join('')}
+          const heure = new Date(s.created_at).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:6px 0;border-bottom:1px solid var(--border)">
+              <div>
+                <span style="font-weight:600">${nom}</span>
+                <span style="color:var(--text-muted);margin-left:6px">${s.portions} verre${s.portions > 1 ? 's' : ''} · ${heure}</span>
+              </div>
+              <button style="background:none;border:none;color:var(--text-danger);cursor:pointer;font-size:0.9rem" onclick="annulerService('${s.id}', '${s.recette_id}', ${s.portions})">🗑</button>
+            </div>
+          `;
+        }).join('')}
       </div>` : ''}
-
       <button class="btn-outline" style="width:100%;margin-top:8px;border-color:var(--text-danger);color:var(--text-danger)" onclick="terminerSoireeService()">
         🏁 Terminer la soirée
       </button>
     </div>
   `;
-
-  document.getElementById('select-ajout-recette').onchange = async (e) => {
-    if (!e.target.value) return;
-    await ajouterRecetteMenu(e.target.value);
-  };
- soireeMenuRecettesActives.forEach(mr => {
-    const btn = document.getElementById('btn-servir-' + mr.id);
-    if (!btn) return;
-    const recette = recettes.find(r => r.id === mr.recette_id);
-    btn.addEventListener('click', () => {
-      servirCocktail(mr.id, mr.recette_id, recette?.nom || '', mr.portions_prevues);
-    });
-  });
-}
 
 
 async function ajouterInviteService(modeChoix) {
@@ -5631,6 +5618,40 @@ async function ajouterRecetteMenu(recetteId) {
   }).select().single();
   if (data) soireeMenuRecettesActives.push(data);
   renderTableauBordSoiree();
+}
+ async function annulerService(serviceId, recetteId, portions) {
+  if (!confirm('Annuler ce service et remettre les cl en cave ?')) return;
+
+  const recette = recettes.find(r => r.id === recetteId);
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+
+  // Remettre les cl en cave
+  for (const ing of (recette?.ingredients || [])) {
+    if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
+    if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
+    if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
+    const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
+    const itemId = ing.item_cave_id;
+
+    if (estEnVoyage) {
+      const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
+      if (!b) continue;
+      const nouveau = parseFloat(b.cl_restants_voyage ?? 0) + qteCl;
+      await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+        .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
+      b.cl_restants_voyage = nouveau;
+    } else {
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
+      if (!item) continue;
+      const nouveau = (item.cl_restants ?? 0) + qteCl;
+      await db.from('items').update({ cl_restants: nouveau }).eq('id', itemId).eq('user_id', currentUser.id);
+      item.cl_restants = nouveau;
+    }
+  }
+
+  // Supprimer le service
+  await db.from('soiree_services').delete().eq('id', serviceId);
+  await renderTableauBordSoiree();
 }
 async function ouvrirGenerateurRecettes() {
   if (!voyageActif || voyageBouteillesActives.length === 0) {
