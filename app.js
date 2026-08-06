@@ -5525,9 +5525,11 @@ document.getElementById('btn-confirmer-marquer').addEventListener('click', async
       if (estEnVoyage) {
         const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
         if (!b) continue;
-        const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
-        await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
+const nouveau = Math.max(0, parseFloat(b.cl_restants_voyage ?? 0) - qteCl);
+        console.log('UPDATE voyage bouteille:', itemId, 'nouveau:', nouveau);
+        const result = await db.from('mode_voyage_bouteilles').update({ cl_restants_voyage: nouveau })
           .eq('item_cave_id', itemId).eq('mode_voyage_id', voyageActif.id);
+        console.log('résultat UPDATE:', JSON.stringify(result));
         b.cl_restants_voyage = nouveau;
       } else {
         const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === itemId);
