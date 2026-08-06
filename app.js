@@ -5543,11 +5543,14 @@ async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
 
       <div style="display:flex;gap:8px;margin-top:16px">
         <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-servir-cocktail').remove()">Annuler</button>
-        <button class="btn-primary" style="flex:1" onclick="confirmerServir('${recetteId}', ${portions}, ${JSON.stringify(invitesAvecCecocktail.map(i => i.id))})">✅ Confirmer</button>
+        <button class="btn-primary" style="flex:1" id="btn-confirmer-servir">✅ Confirmer</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+ document.getElementById('btn-confirmer-servir').addEventListener('click', () => {
+  confirmerServir(recetteId, portions, invitesAvecCecocktail.map(i => i.id));
+});
 }
 
 async function confirmerServir(recetteId, portions, inviteIds) {
