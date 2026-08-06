@@ -5463,47 +5463,17 @@ async function confirmerAssignation() {
   const recetteId = document.getElementById('assign-cocktail')?.value;
   if (!inviteId || !recetteId) { alert('Sélectionne un invité et un cocktail.'); return; }
   
-// Mettre à jour les lignes "assigne" en "servi" pour les invités cochés
-  for (const invId of invitesCochés) {
-    const { data: existing } = await db.from('soiree_services')
-      .select('id')
-      .eq('invite_id', invId)
-      .eq('recette_id', recetteId)
-      .eq('statut', 'assigne')
-      .single();
-    
-    if (existing) {
-      await db.from('soiree_services')
-        .update({ statut: 'servi', portions })
-        .eq('id', existing.id);
-    } else {
-      await db.from('soiree_services').insert({
-        id: 'srv-' + Date.now(),
-        user_id: currentUser.id,
-        soiree_menu_id: soireeMenuActive.id,
-        recette_id: recetteId,
-        portions,
-        item_cave_id: recetteId,
-        cl_servi: 0,
-        statut: 'servi',
-        invite_id: invId
-      });
-    }
-  }
-
-  // Si aucun invité coché, logger quand même le service sans invité
-  if (invitesCochés.length === 0 && !autreInviteId) {
-    await db.from('soiree_services').insert({
-      id: 'srv-' + Date.now(),
-      user_id: currentUser.id,
-      soiree_menu_id: soireeMenuActive.id,
-      recette_id: recetteId,
-      portions,
-      item_cave_id: recetteId,
-      cl_servi: 0,
-      statut: 'servi'
-    });
-  }
+  await db.from('soiree_services').insert({
+    id: 'srv-assign-' + Date.now(),
+    user_id: currentUser.id,
+    soiree_menu_id: soireeMenuActive.id,
+    recette_id: recetteId,
+    portions: 1,
+    item_cave_id: recetteId,
+    cl_servi: 0,
+    statut: 'assigne',
+    invite_id: inviteId
+  });
 
   document.getElementById('modal-assignation')?.remove();
   await renderTableauBordSoiree();
