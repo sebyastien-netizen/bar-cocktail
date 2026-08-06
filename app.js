@@ -5482,9 +5482,10 @@ async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
     !CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))
   );
 
-  const subs = {};
-  ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
-  window._servir_subs = { ...subs };
+const subs = {};
+ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
+window._servir_subs = { ...subs };
+window._servirInviteIds = [];
 
   const modal = document.createElement('div');
   modal.id = 'modal-servir-cocktail';
@@ -5564,7 +5565,7 @@ async function confirmerServir(recetteId, portions, inviteIds) {
     return checkbox ? checkbox.checked : true;
   });
   for (const invId of invitesCochés) {
-    await db.from('sessions_invites').update({ statut: 'degustation' }).eq('id', invId);
+    await db.from('sessions_invites').update({ statut: 'termine' }).eq('id', invId);
   }
   const autreInviteId = document.getElementById('serv-autre-invite')?.value;
   if (autreInviteId) {
