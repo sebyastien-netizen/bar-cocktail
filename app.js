@@ -5506,22 +5506,20 @@ async function marquerServi(serviceId, recetteId, portions) {
   `;
   document.body.appendChild(modal);
 
-  document.getElementById('btn-confirmer-marquer').addEventListener('click', async () => {
+document.getElementById('btn-confirmer-marquer').addEventListener('click', async () => {
     const subs = window._marquerServiSubs;
     const serviceId = window._marquerServiId;
     const recetteId = window._marquerServiRecetteId;
     const portions = window._marquerServiPortions;
-const recette = recettes.find(r => r.id === recetteId);
+    const recette = recettes.find(r => r.id === recetteId);
     const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
-    await db.from('soiree_services')
-
+    await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
     for (const ing of (recette?.ingredients || [])) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
       if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
       const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
       const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
-
       if (estEnVoyage) {
         const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
         if (!b) continue;
@@ -5537,10 +5535,9 @@ const recette = recettes.find(r => r.id === recetteId);
         item.cl_restants = nouveau;
       }
     }
-
     document.getElementById('modal-marquer-servi')?.remove();
     await renderTableauBordSoiree();
-  });
+  }, { once: true });
 }
 function afficherQRInvite(lien, nomInvite) {
   const modal = document.createElement('div');
