@@ -5299,6 +5299,7 @@ ${cocktailsInvite.map(s => {
   });
  // Boutons servir par invité
 (invites || []).forEach(inv => {
+  console.log('inv:', inv.nom_invite, 'cocktails:', (servicesParInvite[inv.id] || []).length);
   const cocktailsInv = servicesParInvite[inv.id] || [];
   cocktailsInv.forEach(s => {
     const btn = document.getElementById('btn-servir-invite-' + s.id);
