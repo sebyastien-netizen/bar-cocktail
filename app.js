@@ -5431,6 +5431,7 @@ async function confirmerAssignation() {
   await renderTableauBordSoiree();
 }
 async function marquerServi(serviceId, recetteId, portions) {
+  console.log('marquerServi appelé', serviceId, recetteId, portions);
   if (!confirm(`Servir ce cocktail ?`)) return;
   
   await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
