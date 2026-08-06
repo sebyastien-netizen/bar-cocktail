@@ -5101,20 +5101,20 @@ const servicesParInvite = {};
   });
 
 // Calculer consommation réelle par item depuis les services "servi"
-  const consoReelle = {};
+const consoReelle = {};
   (services || []).filter(s => s.statut === 'servi').forEach(s => {
     if (parseFloat(s.cl_servi || 0) > 0) {
-      // Service avec cl_servi (ancien flux confirmerServir)
       consoReelle[s.item_cave_id] = (consoReelle[s.item_cave_id] || 0) + parseFloat(s.cl_servi);
     } else {
-      // Service via marquerServi — recalculer depuis la recette
       const recette = recettes.find(r => r.id === s.recette_id);
+      const subs = s.substitutions || {};
       (recette?.ingredients || []).forEach(ing => {
         if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
         if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
         if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
         const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * (s.portions || 1);
-        consoReelle[ing.item_cave_id] = (consoReelle[ing.item_cave_id] || 0) + qteCl;
+        const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
+        consoReelle[itemId] = (consoReelle[itemId] || 0) + qteCl;
       });
     }
   });
@@ -5515,7 +5515,7 @@ document.getElementById('btn-confirmer-marquer').addEventListener('click', async
     const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
     console.log('subs au moment de confirmer:', JSON.stringify(subs));
     console.log('itemId pour jameson:', subs['jameson']);
-    await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
+    await db.from('soiree_services').update({ statut: 'servi', substitutions: subs }).eq('id', serviceId);
     for (const ing of (recette?.ingredients || [])) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
