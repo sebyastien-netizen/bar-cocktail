@@ -5153,22 +5153,24 @@ async function renderTableauBordSoiree() {
           const recette = recettes.find(r => r.id === mr.recette_id);
           const vp = estEnVoyage ? calculerVerresPossiblesVoyage(recette) : calculerVerresPossibles(recette);
           const nbServis = (services || []).filter(s => s.recette_id === mr.recette_id).reduce((acc, s) => acc + (s.portions || 1), 0);
-          return `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-              <div>
-                <span style="font-size:0.9rem;font-weight:600;cursor:pointer" onclick="ouvrirFicheRecette && ouvrirFicheRecette('${recette?.id}')">${recette?.nom || '—'}</span>
-<button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0 4px" onclick="ouvrirFicheRecette && ouvrirFicheRecette('${recette?.id}')">ℹ️</button>
-                ${vp ? `<span style="font-size:0.72rem;color:${vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)'};margin-left:6px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max}v</span>` : ''}
-                ${nbServis > 0 ? `<span style="font-size:0.72rem;color:var(--text-danger);margin-left:6px">✓ ${nbServis} servi${nbServis > 1 ? 's' : ''}</span>` : ''}
-              </div>
-              <div style="display:flex;align-items:center;gap:6px">
-                <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1)">−</button>
-                <span style="min-width:20px;text-align:center;font-size:0.9rem">${mr.portions_prevues}</span>
-                <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', 1)">+</button>
-                <button class="btn-primary" style="padding:4px 10px;font-size:0.8rem" onclick="servirCocktail('${mr.id}', '${recette?.id}', '${recette?.nom?.replace(/'/g, "\\'")}', ${mr.portions_prevues})">🍸</button>
-                <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
-              </div>
-            </div>`;
+return `
+  <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <span style="font-size:0.9rem;font-weight:600;cursor:pointer" onclick="ouvrirFicheRecette && ouvrirFicheRecette('${recette?.id}')">${recette?.nom || '—'}</span>
+        <button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0 4px" onclick="ouvrirFicheRecette && ouvrirFicheRecette('${recette?.id}')">ℹ️</button>
+        ${vp ? `<span style="font-size:0.72rem;color:${vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)'};margin-left:6px">${estEnVoyage ? '🧳' : '🍸'} ${vp.max}v</span>` : ''}
+        ${nbServis > 0 ? `<span style="font-size:0.72rem;color:var(--text-danger);margin-left:6px">✓ ${nbServis} servi${nbServis > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1); renderTableauBordSoiree()">−</button>
+        <span style="min-width:20px;text-align:center;font-size:0.9rem">${mr.portions_prevues}</span>
+        <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', 1); renderTableauBordSoiree()">+</button>
+        <button class="btn-primary" style="padding:4px 10px;font-size:0.8rem" onclick="window._servirMR='${mr.id}'; window._servirRId='${recette?.id}'; window._servirNom=${JSON.stringify(recette?.nom || '')}; window._servirPortions=${mr.portions_prevues}; servirCocktail(window._servirMR, window._servirRId, window._servirNom, window._servirPortions)">🍸</button>
+        <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
+      </div>
+    </div>
+  </div>`;
         }).join('')}
         <select id="select-ajout-recette" style="width:100%;margin-top:10px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary)">
           <option value="">+ Ajouter un cocktail au menu…</option>
