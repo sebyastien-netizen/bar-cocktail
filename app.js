@@ -5398,10 +5398,19 @@ async function confirmerAssignation() {
   const inviteId = document.getElementById('assign-invite')?.value;
   const recetteId = document.getElementById('assign-cocktail')?.value;
   if (!inviteId || !recetteId) { alert('Sélectionne un invité et un cocktail.'); return; }
-  await db.from('sessions_invites').update({
+  
+  // Créer une ligne service "assigne"
+  await db.from('soiree_services').insert({
+    id: 'srv-' + Date.now(),
+    user_id: currentUser.id,
+    soiree_menu_id: soireeMenuActive.id,
     recette_id: recetteId,
-    statut: 'recette_choisie'
-  }).eq('id', inviteId);
+    portions: 1,
+    item_cave_id: recetteId,
+    cl_servi: 0,
+    invite_id: inviteId
+  });
+
   document.getElementById('modal-assignation')?.remove();
   await renderTableauBordSoiree();
 }
@@ -5576,7 +5585,14 @@ async function confirmerServir(recetteId, portions, inviteIds) {
       recette_id: recetteId
     }).eq('id', autreInviteId);
   }
-
+// Marquer les assignations comme servies
+for (const invId of invitesCochés) {
+  await db.from('soiree_services')
+    .update({ statut: 'servi' })
+    .eq('invite_id', invId)
+    .eq('recette_id', recetteId)
+    .eq('soiree_menu_id', soireeMenuActive.id);
+}
   // Logger UNE SEULE fois le service (pas par ingrédient)
   await db.from('soiree_services').insert({
     id: 'srv-' + Date.now(),
