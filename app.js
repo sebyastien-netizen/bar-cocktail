@@ -5251,7 +5251,7 @@ ${cocktailsInvite.map(s => {
       <span style="font-size:0.78rem;color:${couleur}">${icone} ${r?.nom || s.recette_id}</span>
       ${s.statut === 'assigne' ? `
         <button style="background:none;border:1px solid var(--text-success);border-radius:6px;padding:2px 8px;font-size:0.75rem;color:var(--text-success);cursor:pointer"
-          onclick="marquerServi('${s.id}', '${s.recette_id}', ${s.portions || 1}, '${inv.nom_invite}')">✅ Servi</button>
+          onclick="marquerServi('${s.id}', '${s.recette_id}', ${s.portions || 1})">✅ Servi</button>
       ` : ''}
     </div>
   `;
@@ -5430,8 +5430,8 @@ async function confirmerAssignation() {
   document.getElementById('modal-assignation')?.remove();
   await renderTableauBordSoiree();
 }
-async function marquerServi(serviceId, recetteId, portions, nomInvite) {
-  if (!confirm(`Servir ${recettes.find(r=>r.id===recetteId)?.nom || recetteId} à ${nomInvite} ?`)) return;
+async function marquerServi(serviceId, recetteId, portions) {
+  if (!confirm(`Servir ce cocktail ?`)) return;
   
   await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
   
