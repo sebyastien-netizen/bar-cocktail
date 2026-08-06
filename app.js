@@ -5514,14 +5514,22 @@ async function servirCocktail(menuRecetteId, recetteId, recetteNom, portions) {
     : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
 
   // Charger invités pour ce cocktail
-  const { data: tousInvites } = await db.from('sessions_invites')
+const { data: tousInvites } = await db.from('sessions_invites')
     .select('*')
     .eq('soiree_menu_id', soireeMenuActive.id)
     .eq('is_master', false)
     .order('created_at');
 
+  // Chercher les invités qui ont ce cocktail assigné dans soiree_services
+  const { data: servicesAssignes } = await db.from('soiree_services')
+    .select('invite_id')
+    .eq('soiree_menu_id', soireeMenuActive.id)
+    .eq('recette_id', recetteId)
+    .eq('statut', 'assigne');
+
+  const inviteIdsAssignes = (servicesAssignes || []).map(s => s.invite_id?.toString());
   const invitesAvecCecocktail = (tousInvites || []).filter(i =>
-    i.recette_id === recetteId && i.statut !== 'termine'
+    inviteIdsAssignes.includes(i.id?.toString())
   );
   const invitesSansCommande = (tousInvites || []).filter(i =>
     !i.recette_id && i.statut !== 'termine'
