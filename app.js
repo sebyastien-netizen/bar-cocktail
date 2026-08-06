@@ -5218,12 +5218,16 @@ return `
         ${(invites||[]).map(inv => {
           const recetteInv = recettes.find(r => r.id === inv.recette_id);
           const statutLabel = inv.statut === 'termine' ? '✅' : inv.statut === 'degustation' ? '🍷' : inv.statut === 'recette_choisie' ? '🟢' : '🟡';
+const statutTexte = inv.statut === 'termine' ? 'Servi' : inv.statut === 'degustation' ? 'En dégustation' : inv.statut === 'recette_choisie' ? 'Cocktail choisi' : 'En attente';
           const lienQR = `${window.location.origin}/guest.html?invite=${inv.token}`;
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
               <div>
                 <div style="font-size:0.88rem;font-weight:600">${statutLabel} ${inv.nom_invite || 'Invité'}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted)">${recetteInv?.nom || (inv.mode_choix === 'libre' ? 'Choisit lui-même' : 'En attente')}</div>
+                <div style="font-size:0.75rem;margin-top:2px">
+  ${recetteInv ? `<span style="color:var(--text-accent)">🍸 ${recetteInv.nom}</span>` : `<span style="color:var(--text-muted)">${inv.mode_choix === 'libre' ? 'Choisit via QR' : 'Sans cocktail'}</span>`}
+  <span style="color:var(--text-muted);margin-left:6px">${statutTexte}</span>
+</div>
               </div>
               <div style="display:flex;gap:6px">
                <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem" title="QR défi gustatif" onclick="afficherQRInvite('${lienQR}', '${inv.nom_invite}')">📱</button>
