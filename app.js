@@ -5105,7 +5105,7 @@ const servicesParInvite = {};
 const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
-    const servicesRecette = (services || []).filter(s => s.recette_id === mr.recette_id);
+    const servicesRecette = (services || []).filter(s => s.recette_id === mr.recette_id && s.statut === 'assigne');
     
     if (servicesRecette.length > 0) {
       // Calculer par service avec ses substitutions propres
