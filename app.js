@@ -5166,11 +5166,7 @@ return `
         <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', -1); renderTableauBordSoiree()">−</button>
         <span style="min-width:20px;text-align:center;font-size:0.9rem">${mr.portions_prevues}</span>
         <button class="btn-outline" style="padding:2px 8px" onclick="ajusterPortionsMenu('${mr.id}', 1); renderTableauBordSoiree()">+</button>
-        <button class="btn-primary" style="padding:4px 10px;font-size:0.8rem"
-  data-mr-id="${mr.id}"
-  data-r-id="${recette?.id}"
-  data-portions="${mr.portions_prevues}"
-  onclick="const d=this.dataset; servirCocktail(d.mrId, d.rId, recettes.find(r=>r.id===d.rId)?.nom||'', parseInt(d.portions)||1)">🍸</button>
+<button class="btn-primary" style="padding:4px 10px;font-size:0.8rem" id="btn-servir-${mr.id}">🍸</button>
         <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerRecetteMenu('${mr.id}')">🗑</button>
       </div>
     </div>
@@ -5270,6 +5266,14 @@ return `
     if (!e.target.value) return;
     await ajouterRecetteMenu(e.target.value);
   };
+ soireeMenuRecettesActives.forEach(mr => {
+    const btn = document.getElementById('btn-servir-' + mr.id);
+    if (!btn) return;
+    const recette = recettes.find(r => r.id === mr.recette_id);
+    btn.addEventListener('click', () => {
+      servirCocktail(mr.id, mr.recette_id, recette?.nom || '', mr.portions_prevues);
+    });
+  });
 }
 
 
