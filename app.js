@@ -5071,40 +5071,67 @@ async function renderTableauBordSoiree() {
     .eq('soiree_menu_id', soireeMenuActive.id)
     .eq('is_master', false)
     .order('created_at');
+ // Créer automatiquement les lignes soiree_services pour les invités qui ont choisi via QR
+  for (const inv of (invites || [])) {
+    if (!inv.recette_id) continue;
+    const dejaService = (services || []).some(s => 
+      s.invite_id === inv.id && s.recette_id === inv.recette_id
+    );
+    if (!dejaService) {
+      const { data: newService } = await db.from('soiree_services').insert({
+        id: 'srv-qr-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        user_id: currentUser.id,
+        soiree_menu_id: soireeMenuActive.id,
+        recette_id: inv.recette_id,
+        portions: 1,
+        item_cave_id: inv.recette_id,
+        cl_servi: 0,
+        statut: 'assigne',
+        invite_id: inv.id
+      }).select().single();
+      if (newService) services.push(newService);
+    }
+  }
 // Grouper les services par invite_id
 const servicesParInvite = {};
-(services || []).forEach(s => {
-  if (!s.invite_id) return;
-  if (!servicesParInvite[s.invite_id]) servicesParInvite[s.invite_id] = [];
-  // Garder une seule ligne par recette — préférer 'servi' sur 'assigne'
-  const existing = servicesParInvite[s.invite_id].find(x => x.recette_id === s.recette_id);
-  if (!existing) {
-    servicesParInvite[s.invite_id].push(s);
-  } else if (s.statut === 'servi' && existing.statut === 'assigne') {
-    // Remplacer assigne par servi
-    const idx = servicesParInvite[s.invite_id].indexOf(existing);
-    servicesParInvite[s.invite_id][idx] = s;
-  }
-});
+  (services || []).forEach(s => {
+    if (!s.invite_id) return;
+    if (!servicesParInvite[s.invite_id]) servicesParInvite[s.invite_id] = [];
+    // Fusionner assigne+servi pour la même ligne (même id)
+    const existing = servicesParInvite[s.invite_id].find(x => x.id === s.id);
+    if (!existing) servicesParInvite[s.invite_id].push(s);
+  });
   // Calculer consommation projetée par item
 const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
-    // Chercher les substitutions assignées pour cette recette
-const serviceAssigne = (services || []).find(s => 
-      s.recette_id === mr.recette_id && s.substitutions &&
-      (s.statut === 'assigne' || s.statut === 'servi')
-    );
-    const subs = serviceAssigne?.substitutions || {};
-    (recette?.ingredients || []).forEach(ing => {
-      if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
-      if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
-      if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
-      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
-      const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
-      if (!consoPrevue[itemId]) consoPrevue[itemId] = { nom: ing.nom, totalCl: 0 };
-      consoPrevue[itemId].totalCl += qteCl * mr.portions_prevues;
-    });
+    const servicesRecette = (services || []).filter(s => s.recette_id === mr.recette_id);
+    
+    if (servicesRecette.length > 0) {
+      // Calculer par service avec ses substitutions propres
+      servicesRecette.forEach(s => {
+        const subs = s.substitutions || {};
+        (recette?.ingredients || []).forEach(ing => {
+          if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
+          if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+          if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
+          const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+          const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
+          if (!consoPrevue[itemId]) consoPrevue[itemId] = { nom: ing.nom, totalCl: 0 };
+          consoPrevue[itemId].totalCl += qteCl;
+        });
+      });
+    } else {
+      // Pas de service assigné — utiliser portions_prevues sans substitution
+      (recette?.ingredients || []).forEach(ing => {
+        if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
+        if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
+        if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
+        const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+        if (!consoPrevue[ing.item_cave_id]) consoPrevue[ing.item_cave_id] = { nom: ing.nom, totalCl: 0 };
+        consoPrevue[ing.item_cave_id].totalCl += qteCl * mr.portions_prevues;
+      });
+    }
   });
 
 // Calculer consommation réelle par item depuis les services "servi"
