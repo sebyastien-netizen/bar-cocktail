@@ -5566,8 +5566,6 @@ async function confirmerServir(recetteId, portions, inviteIds) {
   for (const invId of invitesCochés) {
     await db.from('sessions_invites').update({ statut: 'degustation' }).eq('id', invId);
   }
-
-  // Marquer l'invité supplémentaire si sélectionné
   const autreInviteId = document.getElementById('serv-autre-invite')?.value;
   if (autreInviteId) {
     await db.from('sessions_invites').update({
@@ -5576,23 +5574,24 @@ async function confirmerServir(recetteId, portions, inviteIds) {
     }).eq('id', autreInviteId);
   }
 
-  // Logger et décrémenter
+  // Logger UNE SEULE fois le service (pas par ingrédient)
+  await db.from('soiree_services').insert({
+    id: 'srv-' + Date.now(),
+    user_id: currentUser.id,
+    soiree_menu_id: soireeMenuActive.id,
+    recette_id: recetteId,
+    portions,
+    item_cave_id: recetteId, // référence recette, pas ingrédient
+    cl_servi: 0 // pas utilisé pour le comptage
+  });
+
+  // Décrémenter cave par ingrédient
   for (const ing of (recette?.ingredients || [])) {
     if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
     if (ing.unite !== 'cl' && ing.unite !== 'ml') continue;
     if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) continue;
     const qteCl = (ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite) * portions;
     const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
-
-    await db.from('soiree_services').insert({
-      id: 'srv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
-      user_id: currentUser.id,
-      soiree_menu_id: soireeMenuActive.id,
-      recette_id: recetteId,
-      portions,
-      item_cave_id: itemId,
-      cl_servi: qteCl
-    });
 
     if (estEnVoyage) {
       const b = voyageBouteillesActives.find(b => b.item_cave_id === itemId);
@@ -5612,11 +5611,6 @@ async function confirmerServir(recetteId, portions, inviteIds) {
 
   document.getElementById('modal-servir-cocktail')?.remove();
   await renderTableauBordSoiree();
-}
-async function supprimerInviteService(inviteId) {
-  if (!confirm('Supprimer cet invité ?')) return;
-  await db.from('sessions_invites').delete().eq('id', inviteId);
-  renderModeService(document.getElementById('modal-tableau-bord-soiree'), calculerConsommationAgregee());
 }
 
 async function terminerSoireeService() {
