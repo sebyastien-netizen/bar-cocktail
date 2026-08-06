@@ -5087,16 +5087,22 @@ const servicesParInvite = {};
   }
 });
   // Calculer consommation projetée par item
-  const consoPrevue = {};
+const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
+    // Chercher les substitutions assignées pour cette recette
+    const serviceAssigne = (services || []).find(s => 
+      s.recette_id === mr.recette_id && s.statut === 'assigne' && s.substitutions
+    );
+    const subs = serviceAssigne?.substitutions || {};
     (recette?.ingredients || []).forEach(ing => {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) return;
       if (ing.unite !== 'cl' && ing.unite !== 'ml') return;
       if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
       const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
-      if (!consoPrevue[ing.item_cave_id]) consoPrevue[ing.item_cave_id] = { nom: ing.nom, totalCl: 0 };
-      consoPrevue[ing.item_cave_id].totalCl += qteCl * mr.portions_prevues;
+      const itemId = subs[ing.item_cave_id] || ing.item_cave_id;
+      if (!consoPrevue[itemId]) consoPrevue[itemId] = { nom: ing.nom, totalCl: 0 };
+      consoPrevue[itemId].totalCl += qteCl * mr.portions_prevues;
     });
   });
 
