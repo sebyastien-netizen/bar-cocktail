@@ -5393,42 +5393,98 @@ async function ouvrirAssignationInvite() {
     .eq('is_master', false)
     .order('created_at');
 
-  const sansAssignation = invites || [];
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+  const bouteilles = estEnVoyage
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
 
   const modal = document.createElement('div');
   modal.id = 'modal-assignation';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.innerHTML = `
-    <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+    <div style="max-width:440px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px;max-height:90vh;overflow-y:auto">
       <div style="font-size:1rem;font-weight:700;margin-bottom:16px">🍸 Assigner un cocktail</div>
       ${(invites||[]).length === 0 ? '<div style="font-size:0.85rem;color:var(--text-muted)">Aucun invité dans la soirée.</div>' : `
-      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">Invité :</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">Invité :</div>
       <select id="assign-invite" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:12px">
         <option value="">— Choisir un invité —</option>
-        ${sansAssignation.map(i => `<option value="${i.id}">${i.nom_invite}</option>`).join('')}
+        ${(invites||[]).map(i => {
+          const r = recettes.find(rec => rec.id === i.recette_id);
+          return `<option value="${i.id}">${i.nom_invite}${r ? ' (' + r.nom + ')' : ''}</option>`;
+        }).join('')}
       </select>
-      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px">Cocktail :</div>
-      <select id="assign-cocktail" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:16px">
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">Cocktail :</div>
+      <select id="assign-cocktail" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:12px"
+        onchange="renderIngredientsAssignation(this.value)">
         <option value="">— Choisir un cocktail —</option>
         ${soireeMenuRecettesActives.map(mr => {
           const r = recettes.find(rec => rec.id === mr.recette_id);
           return `<option value="${mr.recette_id}">${r?.nom || mr.recette_id}</option>`;
         }).join('')}
-      </select>`}
+      </select>
+      <div id="assign-ingredients" style="margin-bottom:12px"></div>
+      `}
       <div style="display:flex;gap:8px">
         <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-assignation').remove()">Annuler</button>
-        ${sansAssignation.length > 0 ? `<button class="btn-primary" style="flex:1" onclick="confirmerAssignation()">✅ Assigner</button>` : ''}
+        ${(invites||[]).length > 0 ? `<button class="btn-primary" style="flex:1" onclick="confirmerAssignation()">✅ Assigner</button>` : ''}
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+
+  // Stocker les bouteilles dans window pour y accéder depuis renderIngredientsAssignation
+  window._assignBouteilles = bouteilles;
+  window._assignSubs = {};
+}
+
+function renderIngredientsAssignation(recetteId) {
+  const container = document.getElementById('assign-ingredients');
+  if (!container) return;
+  if (!recetteId) { container.innerHTML = ''; return; }
+
+  const recette = recettes.find(r => r.id === recetteId);
+  const bouteilles = window._assignBouteilles || [];
+  const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+
+  const ingsTrackables = (recette?.ingredients || []).filter(ing =>
+    ing.item_cave_id && ing.quantite &&
+    (ing.unite === 'cl' || ing.unite === 'ml') &&
+    !ing.optionnel &&
+    !CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))
+  );
+
+  if (ingsTrackables.length === 0) { container.innerHTML = ''; return; }
+
+  window._assignSubs = {};
+  ingsTrackables.forEach(ing => { window._assignSubs[ing.item_cave_id] = ing.item_cave_id; });
+
+  container.innerHTML = `
+    <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px">Bouteilles à utiliser :</div>
+    ${ingsTrackables.map(ing => {
+      const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          <select style="flex:1;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.78rem;margin-right:8px"
+            onchange="window._assignSubs['${ing.item_cave_id}']=this.value">
+            ${bouteilles.map(b => {
+              const bId = estEnVoyage ? b.item_cave_id : b.id;
+              return `<option value="${bId}" ${bId === ing.item_cave_id ? 'selected' : ''}>${b.nom}</option>`;
+            }).join('')}
+          </select>
+          <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${qteCl}cl</span>
+        </div>
+      `;
+    }).join('')}
+  `;
 }
 
 async function confirmerAssignation() {
   const inviteId = document.getElementById('assign-invite')?.value;
   const recetteId = document.getElementById('assign-cocktail')?.value;
   if (!inviteId || !recetteId) { alert('Sélectionne un invité et un cocktail.'); return; }
-  
+
+  const subs = window._assignSubs || {};
+
   await db.from('soiree_services').insert({
     id: 'srv-assign-' + Date.now(),
     user_id: currentUser.id,
@@ -5438,16 +5494,21 @@ async function confirmerAssignation() {
     item_cave_id: recetteId,
     cl_servi: 0,
     statut: 'assigne',
-    invite_id: inviteId
+    invite_id: inviteId,
+    substitutions: Object.keys(subs).length > 0 ? subs : null
   });
 
   document.getElementById('modal-assignation')?.remove();
   await renderTableauBordSoiree();
 }
 async function marquerServi(serviceId, recetteId, portions) {
-  console.log('marquerServi appelé', serviceId, recetteId, portions);
   const recette = recettes.find(r => r.id === recetteId);
   const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+
+  // Charger les substitutions déjà définies à l'assignation
+  const { data: serviceData } = await db.from('soiree_services')
+    .select('substitutions').eq('id', serviceId).single();
+  const subsPredef = serviceData?.substitutions || {};
   
   const bouteilles = estEnVoyage
     ? voyageBouteillesActives
@@ -5469,8 +5530,10 @@ async function marquerServi(serviceId, recetteId, portions) {
   }
 
   // Afficher modal substitution
-  const subs = {};
-  ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
+const subs = {};
+  ingsTrackables.forEach(ing => { 
+    subs[ing.item_cave_id] = subsPredef[ing.item_cave_id] || ing.item_cave_id; 
+  });
   window._marquerServiSubs = { ...subs };
   window._marquerServiId = serviceId;
   window._marquerServiRecetteId = recetteId;
@@ -5491,7 +5554,8 @@ async function marquerServi(serviceId, recetteId, portions) {
               onchange="window._marquerServiSubs['${ing.item_cave_id}']=this.value">
               ${bouteilles.map(b => {
                 const bId = estEnVoyage ? b.item_cave_id : b.id;
-                return `<option value="${bId}" ${bId === ing.item_cave_id ? 'selected' : ''}>${b.nom}</option>`;
+                const defaultId = subsPredef[ing.item_cave_id] || ing.item_cave_id;
+return `<option value="${bId}" ${bId === defaultId ? 'selected' : ''}>${b.nom}</option>`;
               }).join('')}
             </select>
             <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${Math.round(qteCl*10)/10}cl</span>
