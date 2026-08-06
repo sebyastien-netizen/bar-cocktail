@@ -5339,7 +5339,7 @@ cocktailsInv.forEach(s => {
         }
       }
       await renderTableauBordSoiree();
-    });
+};
   });
 });
 }
