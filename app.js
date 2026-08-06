@@ -5513,6 +5513,8 @@ document.getElementById('btn-confirmer-marquer').addEventListener('click', async
     const portions = window._marquerServiPortions;
     const recette = recettes.find(r => r.id === recetteId);
     const estEnVoyage = voyageActif && soireeMenuActive?.voyage_id === voyageActif.id;
+    console.log('subs au moment de confirmer:', JSON.stringify(subs));
+    console.log('itemId pour jameson:', subs['jameson']);
     await db.from('soiree_services').update({ statut: 'servi' }).eq('id', serviceId);
     for (const ing of (recette?.ingredients || [])) {
       if (!ing.item_cave_id || !ing.quantite || ing.optionnel) continue;
