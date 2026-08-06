@@ -5091,8 +5091,9 @@ const consoPrevue = {};
   soireeMenuRecettesActives.forEach(mr => {
     const recette = recettes.find(r => r.id === mr.recette_id);
     // Chercher les substitutions assignées pour cette recette
-    const serviceAssigne = (services || []).find(s => 
-      s.recette_id === mr.recette_id && s.statut === 'assigne' && s.substitutions
+const serviceAssigne = (services || []).find(s => 
+      s.recette_id === mr.recette_id && s.substitutions &&
+      (s.statut === 'assigne' || s.statut === 'servi')
     );
     const subs = serviceAssigne?.substitutions || {};
     (recette?.ingredients || []).forEach(ing => {
