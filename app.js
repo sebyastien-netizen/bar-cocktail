@@ -6918,6 +6918,7 @@ container.innerHTML = `
   <button class="btn-outline" onclick="captureRapideBartender()">📱 Dévoile ton cocktail</button>
   <button class="btn-outline" onclick="ouvrirLaTournee()">🍹 La Tournée</button>
 <button class="btn-outline" onclick="ouvrirImportURL()">🔗 Importer URL</button>
+  <button class="btn-outline" onclick="ouvrirRechercheIngredients()">🎯 Chercher par ingrédients</button>
   <button class="btn-outline" onclick="document.getElementById('screenshot-input').click()">📷 Screenshot recette</button>
   <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="analyserScreenshot(this)">
   <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
@@ -7044,6 +7045,132 @@ function ouvrirLaTournee() {
       text: url, width: 200, height: 200,
       colorDark: '#000000', colorLight: '#ffffff'
     });
+  }
+}
+ // Liste toutes les bouteilles de la cave (normale ou voyage), dédoublonnées
+function listeToutesLesBouteilles() {
+  const bouteilles = voyageActif
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
+  const vues = new Set();
+  return bouteilles
+    .map(b => ({ id: voyageActif ? b.item_cave_id : b.id, nom: b.nom }))
+    .filter(ing => { if (vues.has(ing.id)) return false; vues.add(ing.id); return true; })
+    .sort((a, b) => a.nom.localeCompare(b.nom));
+}
+
+let rechercheIngredientsSelection = [];
+
+// Ouvre le sélecteur d'ingrédients pour chercher une vraie recette en ligne
+function ouvrirRechercheIngredients() {
+  rechercheIngredientsSelection = [];
+  const bouteilles = listeToutesLesBouteilles();
+  const modal = document.createElement('div');
+  modal.id = 'modal-recherche-ingredients';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:420px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px;max-height:85vh;display:flex;flex-direction:column">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🎯 Chercher une recette existante</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">Choisis au moins 2 ingrédients à combiner${voyageActif ? ' (cave voyage)' : ''} — on cherche une vraie recette publiée qui les utilise ensemble.</div>
+      <input type="text" placeholder="🔍 Rechercher…" oninput="filtrerListeRechercheIngredients(this.value)"
+        style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:10px">
+      <div id="liste-recherche-ingredients" style="overflow-y:auto;flex:1;margin-bottom:14px">
+        ${bouteilles.map(ing => `
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 4px;font-size:0.85rem;cursor:pointer" data-nom="${ing.nom.toLowerCase()}">
+            <input type="checkbox" value="${ing.nom}" onchange="toggleIngredientRecherche('${ing.nom.replace(/'/g, "\\'")}')">
+            ${ing.nom}
+          </label>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-recherche-ingredients').remove()">Annuler</button>
+        <button class="btn-primary" style="flex:1" id="btn-lancer-recherche" disabled onclick="lancerRechercheIngredients()">🔍 Chercher</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function toggleIngredientRecherche(nom) {
+  const index = rechercheIngredientsSelection.indexOf(nom);
+  if (index === -1) rechercheIngredientsSelection.push(nom);
+  else rechercheIngredientsSelection.splice(index, 1);
+  document.getElementById('btn-lancer-recherche').disabled = rechercheIngredientsSelection.length < 2;
+}
+
+function filtrerListeRechercheIngredients(texte) {
+  const t = texte.toLowerCase();
+  document.querySelectorAll('#liste-recherche-ingredients label').forEach(el => {
+    el.style.display = el.dataset.nom.includes(t) ? 'flex' : 'none';
+  });
+}
+
+async function lancerRechercheIngredients() {
+  const btn = document.getElementById('btn-lancer-recherche');
+  btn.disabled = true; btn.textContent = '⏳ Recherche…';
+
+  const response = await fetch('/api/chercher-url-recette', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredients: rechercheIngredientsSelection })
+  });
+  const result = await response.json();
+
+  document.getElementById('modal-recherche-ingredients')?.remove();
+
+  if (!result.success || result.resultats.length === 0) {
+    alert('Aucune recette trouvée combinant ces ingrédients.');
+    return;
+  }
+
+  afficherResultatsRechercheIngredients(result.resultats);
+}
+
+function afficherResultatsRechercheIngredients(resultats) {
+  const modal = document.createElement('div');
+  modal.id = 'modal-resultats-recherche';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:480px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px;max-height:85vh;overflow-y:auto">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:14px">Pages trouvées — choisis celle à analyser</div>
+      ${resultats.map(r => `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer"
+          onclick="importerDepuisResultatRecherche('${r.url.replace(/'/g, "\\'")}')">
+          <div style="font-weight:600;font-size:0.88rem;margin-bottom:4px">${r.titre}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">${r.extrait}...</div>
+        </div>
+      `).join('')}
+      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="document.getElementById('modal-resultats-recherche').remove()">Annuler</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+// Réutilise le pipeline d'extraction déjà existant (api/tavily.js) sur l'URL choisie
+async function importerDepuisResultatRecherche(url) {
+  document.getElementById('modal-resultats-recherche')?.remove();
+  const loadingModal = document.createElement('div');
+  loadingModal.id = 'modal-loading-extraction';
+  loadingModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center';
+  loadingModal.innerHTML = `<div style="color:var(--text-primary)">⏳ Analyse de la page…</div>`;
+  document.body.appendChild(loadingModal);
+
+  try {
+    const res = await fetch('/api/tavily', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    document.getElementById('modal-loading-extraction')?.remove();
+
+    if (data.error) { alert('Erreur : ' + data.error); return; }
+    if (!data.recettes || data.recettes.length === 0) { alert('Aucune recette détectée sur cette page.'); return; }
+
+    ouvrirModalImportRecettes(data.recettes, url, data._meta?.images || []);
+  } catch (e) {
+    document.getElementById('modal-loading-extraction')?.remove();
+    alert('Erreur réseau : ' + e.message);
   }
 }
 async function ouvrirImportURL() {
