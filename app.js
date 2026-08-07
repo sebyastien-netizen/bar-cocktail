@@ -8920,7 +8920,6 @@ async function ajouterGarniture(nom, videoUrl) {
 function ouvrirFicheGarniture(id) {
   const g = ecoleData.garnitures.find(x => x.id === id);
   if (!g) return;
-
   document.querySelector('.ecole-fiche-contenu').innerHTML = `
     <div class="plante-fiche-header">
       <span style="font-size:2.5rem">🍋</span>
@@ -8930,22 +8929,12 @@ function ouvrirFicheGarniture(id) {
           onchange="renommerGarniture('${g.id}', this.value)">
       </div>
     </div>
-<div class="plante-section" id="garniture-video-zone-${g.id}">
-      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer"
-        onclick="lancerLectureGarniture('${g.id}', '${g.video_url.replace(/'/g, "\\'")}')">
-        <div id="garniture-fiche-thumb-${g.id}" style="width:80px;height:80px;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
-          <span style="font-size:1.8rem">▶️</span>
-        </div>
-        <div>
-          <div style="font-weight:600;font-size:0.9rem">▶️ Lancer la vidéo</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">Lecture directe</div>
-        </div>
-      </div>
-    </div>
+    <div class="plante-section" id="garniture-video-zone-${g.id}"></div>
     <div class="plante-section">
       <button class="btn-danger" onclick="supprimerGarniture('${g.id}')">🗑️ Supprimer</button>
     </div>
   `;
+  lancerLectureGarniture(g.id, g.video_url);
   afficherModal('modal-ecole-fiche');
   setTimeout(() => chargerApercuVideoGarniture(g.id, g.video_url), 50);
 }
