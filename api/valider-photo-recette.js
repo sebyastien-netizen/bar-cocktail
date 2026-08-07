@@ -17,9 +17,11 @@ export default async function handler(req, res) {
     if (!imageResponse.ok) {
       return res.status(502).json({ error: 'Échec du téléchargement de l\'image choisie' });
     }
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-    const extension = contentType.includes('png') ? 'png' : 'jpg';
+const imageBuffer = await imageResponse.arrayBuffer();
+    const contentTypeSource = imageResponse.headers.get('content-type') || '';
+    const estPng = contentTypeSource.includes('png') || url_choisie.toLowerCase().includes('.png');
+    const extension = estPng ? 'png' : 'jpg';
+    const contentTypeForce = estPng ? 'image/png' : 'image/jpeg';
     const finalPath = `${recette_id}.${extension}`;
 
     // 2. Uploader vers le chemin final
@@ -28,7 +30,7 @@ export default async function handler(req, res) {
       headers: {
         apikey: SERVICE_KEY,
         Authorization: `Bearer ${SERVICE_KEY}`,
-        'Content-Type': contentType,
+        'Content-Type': contentTypeForce,
         'x-upsert': 'true'
       },
       body: Buffer.from(imageBuffer)
