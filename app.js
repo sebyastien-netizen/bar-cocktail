@@ -10112,4 +10112,3 @@ async function annulerService(serviceId, recetteId, portions) {
   await db.from('soiree_services').delete().eq('id', serviceId);
   await renderTableauBordSoiree();
 }
-}
