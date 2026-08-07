@@ -1525,9 +1525,10 @@ const vues = new Set();
       vues.add(ing.id);
       return true;
     })
-    .sort((a, b) => a.nom.localeCompare(b.nom));
+.sort((a, b) => a.nom.localeCompare(b.nom));
+}
 
-// Ouvre le sélecteur d'ingrédients à prioriser
+// Ouvre le sélecteur
 function ouvrirPrioriteIngredients() {
   const ingredients = listeIngredientsPriorisables();
   const modal = document.createElement('div');
