@@ -1,11 +1,3 @@
-// Cherche 3 photos libres de droit pour une recette, les télécharge et les stocke comme candidates en attente de validation
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -15,6 +7,9 @@ export default async function handler(req, res) {
   if (!recette_id || !nom || !user_id) {
     return res.status(400).json({ error: 'recette_id, nom et user_id requis' });
   }
+
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
   try {
     // 1. Chercher 3 images libres de droit via Tavily
@@ -37,15 +32,26 @@ export default async function handler(req, res) {
     }
 
     // 2. Nettoyer d'éventuelles anciennes candidates pour cette recette
-    const { data: oldCandidates } = await supabase
-      .from('recette_photos_candidates')
-      .select('storage_path')
-      .eq('recette_id', recette_id)
-      .eq('user_id', user_id);
+    const oldCandidatesRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/recette_photos_candidates?recette_id=eq.${recette_id}&user_id=eq.${user_id}&select=storage_path`,
+      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
+    );
+    const oldCandidates = await oldCandidatesRes.json();
 
-    if (oldCandidates?.length > 0) {
-      await supabase.storage.from('photos-recettes').remove(oldCandidates.map(c => c.storage_path));
-      await supabase.from('recette_photos_candidates').delete().eq('recette_id', recette_id).eq('user_id', user_id);
+    if (Array.isArray(oldCandidates) && oldCandidates.length > 0) {
+      await fetch(`${SUPABASE_URL}/storage/v1/object/photos-recettes`, {
+        method: 'DELETE',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prefixes: oldCandidates.map(c => c.storage_path) })
+      });
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/recette_photos_candidates?recette_id=eq.${recette_id}&user_id=eq.${user_id}`,
+        { method: 'DELETE', headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
+      );
     }
 
     // 3. Télécharger et uploader chaque candidate
@@ -59,23 +65,33 @@ export default async function handler(req, res) {
       const extension = contentType.includes('png') ? 'png' : 'jpg';
       const storagePath = `candidates/${recette_id}-${i + 1}.${extension}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('photos-recettes')
-        .upload(storagePath, imageBuffer, { contentType, upsert: true });
-
-      if (uploadError) continue;
-
-      const candidateId = `cand-${recette_id}-${i + 1}-${Date.now()}`;
-      await supabase.from('recette_photos_candidates').insert({
-        id: candidateId,
-        user_id,
-        recette_id,
-        storage_path: storagePath,
-        ordre: i + 1
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/photos-recettes/${storagePath}`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': contentType,
+          'x-upsert': 'true'
+        },
+        body: Buffer.from(imageBuffer)
       });
 
-      const { data: publicUrlData } = supabase.storage.from('photos-recettes').getPublicUrl(storagePath);
-      candidatesCreees.push({ id: candidateId, storage_path: storagePath, url: publicUrlData.publicUrl, ordre: i + 1 });
+      if (!uploadRes.ok) continue;
+
+      const candidateId = `cand-${recette_id}-${i + 1}-${Date.now()}`;
+      await fetch(`${SUPABASE_URL}/rest/v1/recette_photos_candidates`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({ id: candidateId, user_id, recette_id, storage_path: storagePath, ordre: i + 1 })
+      });
+
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/photos-recettes/${storagePath}`;
+      candidatesCreees.push({ id: candidateId, storage_path: storagePath, url: publicUrl, ordre: i + 1 });
     }
 
     return res.status(200).json({ success: true, recette_id, candidates: candidatesCreees });
