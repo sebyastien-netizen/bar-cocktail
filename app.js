@@ -1480,8 +1480,15 @@ async function ouvrirValidationPhoto(recetteId) {
   const recette = recettes.find(r => r.id === recetteId);
   if (!recette) return;
 
-  let { data: candidates } = await db.from('recette_photos_candidates')
+  let { data: candidatesRaw } = await db.from('recette_photos_candidates')
     .select('*').eq('recette_id', recetteId).eq('user_id', currentUser.id).order('ordre');
+
+  // Reconstruire l'URL publique à partir du storage_path (non stocké en base)
+  let candidates = (candidatesRaw || []).map(c => ({
+    ...c,
+    url: `${SUPABASE_URL}/storage/v1/object/public/photos-recettes/${c.storage_path}`
+  }));
+
 
   const modal = document.createElement('div');
   modal.id = 'modal-validation-photo';
