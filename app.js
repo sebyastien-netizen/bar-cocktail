@@ -8756,18 +8756,20 @@ async function chargerEcole() {
   if (!container) return;
   container.innerHTML = '<div class="loading-state">Chargement…</div>';
  
-  const [{ data: alcools }, { data: techniques }, { data: materiels }, { data: lexique }] = await Promise.all([
+const [{ data: alcools }, { data: techniques }, { data: materiels }, { data: lexique }, { data: garnitures }] = await Promise.all([
     db.from('ecole_alcools').select('*').order('ordre'),
     db.from('ecole_techniques').select('*').order('ordre'),
     db.from('ecole_materiels').select('*').order('ordre'),
-    db.from('ecole_lexique').select('*').order('ordre')
+    db.from('ecole_lexique').select('*').order('ordre'),
+    db.from('ecole_garnitures').select('*').order('ordre')
   ]);
  
   ecoleData = {
     alcools:    alcools    || [],
     techniques: techniques || [],
     materiels:  materiels  || [],
-    lexique:    lexique    || []
+    lexique:    lexique    || [],
+    garnitures: garnitures || []
   };
  
   renderEcole();
@@ -8791,9 +8793,10 @@ function renderEcole() {
   const container = document.getElementById('ecole-container');
   if (!container) return;
  
-  const sections = [
+const sections = [
     { id: 'alcools',    label: '🥃 Alcools' },
     { id: 'techniques', label: '🍹 Techniques' },
+    { id: 'garnitures', label: '🍋 Garnitures' },
     { id: 'materiels',  label: '🔧 Matériels' },
     { id: 'lexique',    label: '📖 Lexique' }
   ];
@@ -8807,9 +8810,10 @@ function renderEcole() {
         </button>
       `).join('')}
     </div>
-    <div class="ecole-content">
+<div class="ecole-content">
       ${ecoleSection === 'alcools'    ? renderAlcools()    : ''}
       ${ecoleSection === 'techniques' ? renderTechniques() : ''}
+      ${ecoleSection === 'garnitures' ? renderGarnitures() : ''}
       ${ecoleSection === 'materiels'  ? renderMateriels()  : ''}
       ${ecoleSection === 'lexique'    ? renderLexique()    : ''}
     </div>
@@ -8868,7 +8872,118 @@ function renderTechniques() {
     </div>
   `).join('')}</div>`;
 }
- 
+ // =============================================
+// GARNITURES
+// =============================================
+
+function renderGarnitures() {
+  return `
+    <div style="margin-bottom:12px">
+      <button class="btn-outline" onclick="ouvrirAjoutGarniture()">+ Ajouter une garniture</button>
+    </div>
+    <div class="ecole-grille">
+      ${ecoleData.garnitures.length === 0 ? '<div class="empty-state"><div class="empty-state-titre">Aucune garniture</div><div class="empty-state-texte">Ajoute des vidéos de techniques de garniture trouvées sur les réseaux.</div></div>' : ''}
+      ${ecoleData.garnitures.map(g => `
+        <div class="ecole-carte" onclick="ouvrirFicheGarniture('${g.id}')">
+          <div id="garniture-thumb-${g.id}" style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:8px">
+            <span style="font-size:2rem">▶️</span>
+          </div>
+          <div class="ecole-nom">${g.nom}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function ouvrirAjoutGarniture() {
+  const url = prompt('Colle le lien de la vidéo (YouTube, TikTok, Instagram) :');
+  if (!url) return;
+  const nom = prompt('Nom de cette garniture (ex: Rosace citron, Twist orange) :', `Garniture ${ecoleData.garnitures.length + 1}`);
+  if (!nom) return;
+  ajouterGarniture(nom, url);
+}
+
+async function ajouterGarniture(nom, videoUrl) {
+  const id = 'garniture-' + Date.now();
+  const { error } = await db.from('ecole_garnitures').insert({
+    id, user_id: currentUser.id, nom, video_url: videoUrl, ordre: ecoleData.garnitures.length + 1
+  });
+  if (error) { alert('Erreur : ' + error.message); return; }
+  await chargerEcole();
+  ecoleSection = 'garnitures';
+  renderEcole();
+}
+
+function ouvrirFicheGarniture(id) {
+  const g = ecoleData.garnitures.find(x => x.id === id);
+  if (!g) return;
+
+  document.querySelector('.ecole-fiche-contenu').innerHTML = `
+    <div class="plante-fiche-header">
+      <span style="font-size:2.5rem">🍋</span>
+      <div>
+        <input type="text" id="garniture-nom-input" value="${g.nom}" 
+          style="font-size:1.1rem;font-weight:700;background:transparent;border:none;color:var(--text-primary);padding:2px 0;border-bottom:1px dashed var(--border)"
+          onchange="renommerGarniture('${g.id}', this.value)">
+      </div>
+    </div>
+    <div class="plante-section">
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer"
+        onclick="window.open('${g.video_url.replace(/'/g, "\\'")}', '_blank')">
+        <div id="garniture-fiche-thumb-${g.id}" style="width:80px;height:80px;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          <span style="font-size:1.8rem">▶️</span>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem">▶️ Voir la vidéo</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">Ouvre dans un nouvel onglet</div>
+        </div>
+      </div>
+    </div>
+    <div class="plante-section">
+      <button class="btn-danger" onclick="supprimerGarniture('${g.id}')">🗑️ Supprimer</button>
+    </div>
+  `;
+  afficherModal('modal-ecole-fiche');
+  setTimeout(() => chargerApercuVideoGarniture(g.id, g.video_url), 50);
+}
+
+async function chargerApercuVideoGarniture(garnitureId, videoUrl) {
+  let oembedUrl = null;
+  if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+    oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`;
+  } else if (videoUrl.includes('tiktok.com')) {
+    oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(videoUrl)}`;
+  }
+  if (!oembedUrl) return;
+
+  try {
+    const res = await fetch(oembedUrl);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.thumbnail_url) {
+      const html = `<img src="${data.thumbnail_url}" style="width:100%;height:100%;object-fit:cover">`;
+      const gridThumb = document.getElementById(`garniture-thumb-${garnitureId}`);
+      const ficheThumb = document.getElementById(`garniture-fiche-thumb-${garnitureId}`);
+      if (gridThumb) gridThumb.innerHTML = html;
+      if (ficheThumb) ficheThumb.innerHTML = html;
+    }
+  } catch (e) {}
+}
+
+async function renommerGarniture(id, nouveauNom) {
+  await db.from('ecole_garnitures').update({ nom: nouveauNom }).eq('id', id).eq('user_id', currentUser.id);
+  const g = ecoleData.garnitures.find(x => x.id === id);
+  if (g) g.nom = nouveauNom;
+}
+
+async function supprimerGarniture(id) {
+  if (!confirm('Supprimer cette garniture ?')) return;
+  await db.from('ecole_garnitures').delete().eq('id', id).eq('user_id', currentUser.id);
+  fermerModal('modal-ecole-fiche');
+  await chargerEcole();
+  ecoleSection = 'garnitures';
+  renderEcole();
+}
 // =============================================
 // MATÉRIELS
 // =============================================
