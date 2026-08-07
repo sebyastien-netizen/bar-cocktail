@@ -13,15 +13,15 @@ export default async function handler(req, res) {
 
   try {
     // 1. Chercher 3 images libres de droit via Tavily
-    const tavilyResponse = await fetch('https://api.tavily.com/search', {
+const tavilyResponse = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: process.env.TAVILY_API_KEY,
-        query: `${nom} cocktail photo`,
+        query: `"${nom} cocktail" recipe drink glass garnish bar`,
         include_domains: ['pexels.com', 'pixabay.com', 'foodiesfeed.com', 'unsplash.com'],
         include_images: true,
-        max_results: 3
+        max_results: 5
       })
     });
     const tavilyData = await tavilyResponse.json();
