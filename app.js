@@ -1516,11 +1516,16 @@ function listeIngredientsPriorisables() {
     ? voyageBouteillesActives
     : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
 
+const vues = new Set();
   return bouteilles
     .filter(b => idsUtilises.has(voyageActif ? b.item_cave_id : b.id))
     .map(b => ({ id: voyageActif ? b.item_cave_id : b.id, nom: b.nom }))
+    .filter(ing => {
+      if (vues.has(ing.id)) return false;
+      vues.add(ing.id);
+      return true;
+    })
     .sort((a, b) => a.nom.localeCompare(b.nom));
-}
 
 // Ouvre le sélecteur d'ingrédients à prioriser
 function ouvrirPrioriteIngredients() {
