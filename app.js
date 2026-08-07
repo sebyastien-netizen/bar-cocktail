@@ -1461,7 +1461,7 @@ ${(() => {
   const couleur = vp.max === 0 ? 'var(--text-danger)' : vp.max <= 2 ? 'var(--text-warning)' : 'var(--text-success)';
   return `<span style="font-size:0.75rem;color:${couleur};font-weight:600">🍸 ${vp.max} verre${vp.max > 1 ? 's' : ''}${vp.partiel ? '*' : ''}</span>`;
 })()}
-          ${(() => {
+${(() => {
   const aLier = (r.ingredients || []).some(i =>
     !i.item_cave_id && !i.optionnel &&
     i.quantite && (i.unite === 'cl' || i.unite === 'ml') &&
@@ -1469,12 +1469,107 @@ ${(() => {
   );
   return aLier ? `<span style="font-size:0.72rem;color:var(--text-warning);font-weight:600;margin-left:4px" title="Ingrédient(s) non lié(s) à Ma Cave">⚠️ lier</span>` : '';
 })()}
+          ${!r.photo_url ? `<span style="font-size:0.72rem;color:var(--text-secondary);font-weight:600;margin-left:4px;cursor:pointer" title="Ajouter une photo" onclick="event.stopPropagation(); ouvrirValidationPhoto('${r.id}')">📷</span>` : ''}
         </div>
       </div>
     </div>
   `;
 }
+// Ouvre le modal de validation de photo pour une recette : charge les candidates, ou en génère si aucune n'existe
+async function ouvrirValidationPhoto(recetteId) {
+  const recette = recettes.find(r => r.id === recetteId);
+  if (!recette) return;
 
+  let { data: candidates } = await db.from('recette_photos_candidates')
+    .select('*').eq('recette_id', recetteId).eq('user_id', currentUser.id).order('ordre');
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-validation-photo';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  if (!candidates || candidates.length === 0) {
+    modal.innerHTML = `
+      <div style="max-width:340px;width:100%;background:var(--bg-card);border-radius:16px;padding:24px;text-align:center">
+        <div style="font-size:1rem;font-weight:700;margin-bottom:12px">📷 ${recette.nom}</div>
+        <div class="loading-state" id="loading-candidates">Recherche de photos en cours…</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const response = await fetch('/api/photo-recette-candidates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recette_id: recetteId, nom: recette.nom, user_id: currentUser.id })
+    });
+    const result = await response.json();
+    modal.remove();
+
+    if (!result.success || result.candidates.length === 0) {
+      alert('Aucune photo trouvée pour cette recette. Essaie une génération IA ou ajoute ta propre photo.');
+      return;
+    }
+    candidates = result.candidates;
+  }
+
+  window._photoCandidateChoisie = null;
+  afficherModalCandidates(recetteId, recette.nom, candidates);
+}
+
+function afficherModalCandidates(recetteId, nomRecette, candidates) {
+  document.getElementById('modal-validation-photo')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'modal-validation-photo';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:14px">📷 ${nomRecette} — choisis la photo</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+        ${candidates.map(c => `
+<div class="photo-candidate" data-url="${c.url}"
+            style="border:2px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;aspect-ratio:1"
+            onclick="selectionnerCandidate(this, '${c.url}')">
+            <img src="${c.url}" style="width:100%;height:100%;object-fit:cover" />
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-validation-photo').remove()">Annuler</button>
+        <button class="btn-primary" style="flex:1" id="btn-confirmer-photo" disabled onclick="confirmerPhotoChoisie('${recetteId}')">✅ Valider</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function selectionnerCandidate(el, url) {
+  document.querySelectorAll('.photo-candidate').forEach(c => c.style.borderColor = 'var(--border)');
+  el.style.borderColor = 'var(--accent)';
+  window._photoCandidateChoisie = url;
+  document.getElementById('btn-confirmer-photo').disabled = false;
+}
+
+async function confirmerPhotoChoisie(recetteId) {
+  const urlChoisie = window._photoCandidateChoisie;
+  if (!urlChoisie) return;
+
+  const response = await fetch('/api/valider-photo-recette', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recette_id: recetteId, url_choisie: urlChoisie, user_id: currentUser.id })
+  });
+  const result = await response.json();
+
+  document.getElementById('modal-validation-photo')?.remove();
+
+  if (result.success) {
+    const recette = recettes.find(r => r.id === recetteId);
+    if (recette) recette.photo_url = result.photo_url;
+    // Recharger l'affichage des recettes pour retirer le badge 📷
+    if (typeof renderRecettes === 'function') renderRecettes();
+  } else {
+    alert('Erreur lors de la validation : ' + (result.error || 'inconnue'));
+  }
+}
 function changerSection(section) {
   sectionRecette = section;
   filtreBase = ''; filtreGout = ''; filtreDiff = '';
