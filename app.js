@@ -8877,6 +8877,9 @@ function renderTechniques() {
 // =============================================
 
 function renderGarnitures() {
+  setTimeout(() => {
+    ecoleData.garnitures.forEach(g => chargerApercuVideoGarniture(g.id, g.video_url));
+  }, 50);
   return `
     <div style="margin-bottom:12px">
       <button class="btn-outline" onclick="ouvrirAjoutGarniture()">+ Ajouter une garniture</button>
