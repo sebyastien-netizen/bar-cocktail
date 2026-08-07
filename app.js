@@ -8985,7 +8985,7 @@ function lancerLectureGarniture(garnitureId, videoUrl) {
   if (ytId) {
     zone.innerHTML = `
       <div style="position:relative;width:100%;max-width:280px;aspect-ratio:9/16;margin:0 auto;border-radius:10px;overflow:hidden">
-        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&playsinline=1"
+        <iframe src="https://www.youtube.com/embed/${ytId}?playsinline=1"
           style="width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
       </div>
     `;
