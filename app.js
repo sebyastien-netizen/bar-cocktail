@@ -8930,15 +8930,15 @@ function ouvrirFicheGarniture(id) {
           onchange="renommerGarniture('${g.id}', this.value)">
       </div>
     </div>
-    <div class="plante-section">
+<div class="plante-section" id="garniture-video-zone-${g.id}">
       <div style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer"
-        onclick="window.open('${g.video_url.replace(/'/g, "\\'")}', '_blank')">
+        onclick="lancerLectureGarniture('${g.id}', '${g.video_url.replace(/'/g, "\\'")}')">
         <div id="garniture-fiche-thumb-${g.id}" style="width:80px;height:80px;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
           <span style="font-size:1.8rem">▶️</span>
         </div>
         <div>
-          <div style="font-weight:600;font-size:0.9rem">▶️ Voir la vidéo</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">Ouvre dans un nouvel onglet</div>
+          <div style="font-weight:600;font-size:0.9rem">▶️ Lancer la vidéo</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">Lecture directe</div>
         </div>
       </div>
     </div>
@@ -8972,7 +8972,27 @@ async function chargerApercuVideoGarniture(garnitureId, videoUrl) {
     }
   } catch (e) {}
 }
+function extraireYoutubeId(url) {
+  const match = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
 
+function lancerLectureGarniture(garnitureId, videoUrl) {
+  const zone = document.getElementById(`garniture-video-zone-${garnitureId}`);
+  if (!zone) return;
+
+  const ytId = extraireYoutubeId(videoUrl);
+  if (ytId) {
+    zone.innerHTML = `
+      <div style="position:relative;width:100%;max-width:280px;aspect-ratio:9/16;margin:0 auto;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1"
+          style="width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    `;
+  } else {
+    window.open(videoUrl, '_blank');
+  }
+}
 async function renommerGarniture(id, nouveauNom) {
   await db.from('ecole_garnitures').update({ nom: nouveauNom }).eq('id', id).eq('user_id', currentUser.id);
   const g = ecoleData.garnitures.find(x => x.id === id);
