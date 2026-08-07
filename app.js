@@ -13,6 +13,8 @@ let recettes    = [];
 let currentUser = null;
 let filtreRecherche = '';
 let filtreCategorieActive = null;
+let filtrePrioriteIngredients = [];
+let filtrePrioriteMode = 'OU';
 let ongletActif = 'cave';
  
 // Section recettes
@@ -853,10 +855,17 @@ function renderRecettes() {
       !/glace|glaçon/i.test(i.nom || '')
     ));
   }
- if (rechercheRecette) liste = liste.filter(r => 
+if (rechercheRecette) liste = liste.filter(r => 
   r.nom.toLowerCase().includes(rechercheRecette.toLowerCase()) ||
   (r.base_alcool && r.base_alcool.toLowerCase().includes(rechercheRecette.toLowerCase()))
 );
+
+  if (filtrePrioriteIngredients.length > 0) {
+    liste = [...liste].sort((a, b) =>
+      comptageMatchIngredients(b, filtrePrioriteIngredients, filtrePrioriteMode) -
+      comptageMatchIngredients(a, filtrePrioriteIngredients, filtrePrioriteMode)
+    );
+  }
  
   const bases = [...new Set(recettes.filter(r => r.type === sectionRecette && r.base_alcool).map(r => r.base_alcool))].sort();
   const gouts = [...new Set(recettes.filter(r => r.type === sectionRecette).flatMap(r => r.gouts || []))].sort();
@@ -908,6 +917,9 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
 </button>
 <button class="btn-filtre-dispo ${filtreSansLiaison ? 'active' : ''}" onclick="filtreSansLiaison=!filtreSansLiaison; renderRecettes()">
   🔗 Sans liaisons
+</button>
+<button class="btn-filtre-dispo ${filtrePrioriteIngredients.length > 0 ? 'active' : ''}" onclick="ouvrirPrioriteIngredients()">
+  🎯 Prioriser${filtrePrioriteIngredients.length > 0 ? ' (' + filtrePrioriteIngredients.length + ')' : ''}
 </button>
     </div>
  
@@ -1474,6 +1486,80 @@ ${(() => {
       </div>
     </div>
   `;
+}
+// Calcule le score de correspondance d'une recette avec les ingrédients priorisés
+function comptageMatchIngredients(recette, prioriteIds, mode) {
+  const idsRecette = (recette.ingredients || []).map(i => i.item_cave_id).filter(Boolean);
+  const matches = prioriteIds.filter(id => idsRecette.includes(id));
+  if (mode === 'ET') return matches.length === prioriteIds.length ? 1 : 0;
+  return matches.length;
+}
+
+// Liste les ingrédients de la cave (ou cave voyage) réellement utilisés dans au moins une recette
+function listeIngredientsPriorisables() {
+  const idsUtilises = new Set();
+  recettes.forEach(r => (r.ingredients || []).forEach(i => { if (i.item_cave_id) idsUtilises.add(i.item_cave_id); }));
+
+  const bouteilles = voyageActif
+    ? voyageBouteillesActives
+    : cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
+
+  return bouteilles
+    .filter(b => idsUtilises.has(voyageActif ? b.item_cave_id : b.id))
+    .map(b => ({ id: voyageActif ? b.item_cave_id : b.id, nom: b.nom }))
+    .sort((a, b) => a.nom.localeCompare(b.nom));
+}
+
+// Ouvre le sélecteur d'ingrédients à prioriser
+function ouvrirPrioriteIngredients() {
+  const ingredients = listeIngredientsPriorisables();
+  const modal = document.createElement('div');
+  modal.id = 'modal-priorite-ingredients';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:420px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px;max-height:85vh;display:flex;flex-direction:column">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🎯 Prioriser des ingrédients</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">Les recettes utilisant ces ingrédients remonteront en premier${voyageActif ? ' (cave voyage)' : ''}.</div>
+      <input type="text" id="recherche-priorite-ingredients" placeholder="🔍 Rechercher…"
+        oninput="filtrerListePrioriteIngredients(this.value)"
+        style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.85rem;margin-bottom:10px">
+      <div id="liste-priorite-ingredients" style="overflow-y:auto;flex:1;margin-bottom:14px">
+        ${ingredients.length === 0 ? '<div style="font-size:0.8rem;color:var(--text-muted)">Aucun ingrédient priorisable trouvé.</div>' : ''}
+        ${ingredients.map(ing => `
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 4px;font-size:0.85rem;cursor:pointer" data-nom="${ing.nom.toLowerCase()}">
+            <input type="checkbox" value="${ing.id}" ${filtrePrioriteIngredients.includes(ing.id) ? 'checked' : ''}
+              onchange="toggleIngredientPriorite('${ing.id}')">
+            ${ing.nom}
+          </label>
+        `).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:0.8rem;color:var(--text-secondary)">Combinaison :</span>
+        <button class="btn-outline" style="flex:1;padding:8px"
+          onclick="filtrePrioriteMode = filtrePrioriteMode === 'OU' ? 'ET' : 'OU'; document.getElementById('label-mode-priorite').textContent = filtrePrioriteMode === 'OU' ? 'OU (au moins un)' : 'ET (tous)';">
+          <span id="label-mode-priorite">${filtrePrioriteMode === 'OU' ? 'OU (au moins un)' : 'ET (tous)'}</span>
+        </button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="flex:1" onclick="filtrePrioriteIngredients=[]; document.getElementById('modal-priorite-ingredients').remove(); renderRecettes()">Réinitialiser</button>
+        <button class="btn-primary" style="flex:1" onclick="document.getElementById('modal-priorite-ingredients').remove(); renderRecettes()">✅ Appliquer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function toggleIngredientPriorite(id) {
+  const index = filtrePrioriteIngredients.indexOf(id);
+  if (index === -1) filtrePrioriteIngredients.push(id);
+  else filtrePrioriteIngredients.splice(index, 1);
+}
+
+function filtrerListePrioriteIngredients(texte) {
+  const t = texte.toLowerCase();
+  document.querySelectorAll('#liste-priorite-ingredients label').forEach(el => {
+    el.style.display = el.dataset.nom.includes(t) ? 'flex' : 'none';
+  });
 }
 // Ouvre le modal de validation de photo pour une recette : charge les candidates, ou en génère si aucune n'existe
 async function ouvrirValidationPhoto(recetteId) {
