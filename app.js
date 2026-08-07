@@ -7089,9 +7089,7 @@ function ouvrirRechercheIngredients() {
     });
 
   // Pré-sélectionner les détenus
-  rechercheIngredientsSelection = tousAvecStatut
-    .filter(i => i.detenu)
-    .map(i => i.nom);
+rechercheIngredientsSelection = [];
 
   const modal = document.createElement('div');
   modal.id = 'modal-recherche-ingredients';
@@ -7114,7 +7112,7 @@ function ouvrirRechercheIngredients() {
         ${tousAvecStatut.map(ing => `
           <label style="display:flex;align-items:center;gap:10px;padding:9px 6px;font-size:0.85rem;cursor:pointer;border-radius:6px;transition:background 0.1s" data-nom="${ing.nom.toLowerCase()}"
             onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background=''">
-            <input type="checkbox" value="${ing.nom}" ${ing.detenu ? 'checked' : ''}
+            <input type="checkbox" value="${ing.nom}"
               onchange="toggleIngredientRecherche('${ing.nom.replace(/'/g, "\\'")}', this.checked)">
             <span style="flex:1">${ing.nom}</span>
             ${ing.detenu ? '<span style="font-size:0.7rem;color:var(--text-success);font-weight:600">🟢 en cave</span>' : '<span style="font-size:0.7rem;color:var(--text-muted)">⚪ non détenu</span>'}
