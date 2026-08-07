@@ -860,11 +860,13 @@ if (rechercheRecette) liste = liste.filter(r =>
   (r.base_alcool && r.base_alcool.toLowerCase().includes(rechercheRecette.toLowerCase()))
 );
 
+let nbMatchesPriorite = 0;
   if (filtrePrioriteIngredients.length > 0) {
     liste = [...liste].sort((a, b) =>
       comptageMatchIngredients(b, filtrePrioriteIngredients, filtrePrioriteMode) -
       comptageMatchIngredients(a, filtrePrioriteIngredients, filtrePrioriteMode)
     );
+    nbMatchesPriorite = liste.filter(r => comptageMatchIngredients(r, filtrePrioriteIngredients, filtrePrioriteMode) > 0).length;
   }
  
   const bases = [...new Set(recettes.filter(r => r.type === sectionRecette && r.base_alcool).map(r => r.base_alcool))].sort();
@@ -929,7 +931,16 @@ ${voyageActif && modeSelectionSoiree ? `
   </div>` : ''}
 <div class="recettes-grille">
       ${liste.length === 0 ? '<div class="empty-state">Aucune recette trouvée.</div>' : ''}
-      ${liste.map(r => renderCarteRecette(r)).join('')}
+      ${liste.map((r, index) => {
+        const separateur = filtrePrioriteIngredients.length > 0 && index === nbMatchesPriorite && nbMatchesPriorite > 0 && nbMatchesPriorite < liste.length
+          ? `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:8px 0;color:var(--text-muted);font-size:0.78rem">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              Le reste des recettes
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+             </div>`
+          : '';
+        return separateur + renderCarteRecette(r);
+      }).join('')}
     </div>
   `;
   ouvrirBarreSelectionSoiree();
@@ -1481,7 +1492,8 @@ ${(() => {
   );
   return aLier ? `<span style="font-size:0.72rem;color:var(--text-warning);font-weight:600;margin-left:4px" title="Ingrédient(s) non lié(s) à Ma Cave">⚠️ lier</span>` : '';
 })()}
-          ${!r.photo_url ? `<span style="font-size:0.72rem;color:var(--text-secondary);font-weight:600;margin-left:4px;cursor:pointer" title="Ajouter une photo" onclick="event.stopPropagation(); ouvrirValidationPhoto('${r.id}')">📷</span>` : ''}
+${!r.photo_url ? `<span style="font-size:0.72rem;color:var(--text-secondary);font-weight:600;margin-left:4px;cursor:pointer" title="Ajouter une photo" onclick="event.stopPropagation(); ouvrirValidationPhoto('${r.id}')">📷</span>` : ''}
+          ${filtrePrioriteIngredients.length > 0 && comptageMatchIngredients(r, filtrePrioriteIngredients, filtrePrioriteMode) > 0 ? `<span style="font-size:0.72rem;color:var(--text-accent);font-weight:600;margin-left:4px" title="Correspond à ta priorité d'ingrédients">🎯</span>` : ''}
         </div>
       </div>
     </div>
