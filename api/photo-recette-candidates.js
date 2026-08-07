@@ -60,9 +60,11 @@ export default async function handler(req, res) {
       const imageResponse = await fetch(imageUrls[i]);
       if (!imageResponse.ok) continue;
 
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-      const extension = contentType.includes('png') ? 'png' : 'jpg';
+const imageBuffer = await imageResponse.arrayBuffer();
+      const contentTypeSource = imageResponse.headers.get('content-type') || '';
+      const estPng = contentTypeSource.includes('png') || imageUrls[i].toLowerCase().includes('.png');
+      const extension = estPng ? 'png' : 'jpg';
+      const contentTypeForce = estPng ? 'image/png' : 'image/jpeg';
       const storagePath = `candidates/${recette_id}-${i + 1}.${extension}`;
 
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/photos-recettes/${storagePath}`, {
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
         headers: {
           apikey: SERVICE_KEY,
           Authorization: `Bearer ${SERVICE_KEY}`,
-          'Content-Type': contentType,
+          'Content-Type': contentTypeForce,
           'x-upsert': 'true'
         },
         body: Buffer.from(imageBuffer)
