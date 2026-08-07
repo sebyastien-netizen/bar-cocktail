@@ -5129,3 +5129,4 @@ async function appliquerBilanVoyage(lignesRef) {
   chargerCave();
   alert('Voyage terminé — ta cave a été mise à jour.');
 }
+// fin app.js
