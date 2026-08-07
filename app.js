@@ -9002,6 +9002,20 @@ function ouvrirFicheTechnique(id) {
       </ol>
     </div>` : ''}
     ${t.conseil_pro ? `<div class="plante-section"><h3>Conseil pro</h3><p class="plante-notes-bar">${t.conseil_pro}</p></div>` : ''}
+    ${t.video_url ? `
+    <div class="plante-section">
+      <h3>Vidéo</h3>
+      <div id="video-technique-container-${t.id}" style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer"
+        onclick="window.open('${t.video_url.replace(/'/g, "\\'")}', '_blank')">
+        <div id="video-thumb-${t.id}" style="width:64px;height:64px;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          <span style="font-size:1.5rem">▶️</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div id="video-titre-${t.id}" style="font-weight:600;font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Voir la vidéo</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">Ouvre dans un nouvel onglet</div>
+        </div>
+      </div>
+    </div>` : ''}
     ${t.id === 'fat-wash' ? `
     <div class="plante-section">
       <h3>Conservation</h3>
@@ -9019,8 +9033,31 @@ function ouvrirFicheTechnique(id) {
     </div>` : ''}
   `;
   afficherModal('modal-ecole-fiche');
+ if (t.video_url) setTimeout(() => chargerApercuVideoTechnique(t.id, t.video_url), 50);
 }
- 
+async function chargerApercuVideoTechnique(techniqueId, videoUrl) {
+  const thumbEl = document.getElementById(`video-thumb-${techniqueId}`);
+  const titreEl = document.getElementById(`video-titre-${techniqueId}`);
+  if (!thumbEl || !titreEl) return;
+
+  let oembedUrl = null;
+  if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+    oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`;
+  } else if (videoUrl.includes('tiktok.com')) {
+    oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(videoUrl)}`;
+  }
+  if (!oembedUrl) return;
+
+  try {
+    const res = await fetch(oembedUrl);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.title) titreEl.textContent = data.title;
+    if (data.thumbnail_url) {
+      thumbEl.innerHTML = `<img src="${data.thumbnail_url}" style="width:100%;height:100%;object-fit:cover">`;
+    }
+  } catch (e) {}
+} 
 function ouvrirFicheMateriel(id) {
   const m = ecoleData.materiels.find(x => x.id === id);
   if (!m) return;
