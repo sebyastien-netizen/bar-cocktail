@@ -7503,6 +7503,15 @@ ${inspi.photo_url ? `
   <button class="btn-outline" style="white-space:nowrap;padding:8px 12px;font-size:0.78rem" onclick="associerPhotoInspiration('${inspi.id}')">${inspi.photo_url ? '🔄 Changer' : '📷 Ajouter'}</button>
 </div>
 
+<div class="plante-section" id="inspi-video-zone-${inspi.id}">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="text" id="inspi-video-input-${inspi.id}" placeholder="Coller un lien vidéo (YouTube, TikTok...)" value="${inspi.video_url || ''}" style="flex:1;font-size:0.8rem">
+        <button class="btn-outline" style="white-space:nowrap;padding:8px 12px;font-size:0.78rem" onclick="associerVideoInspiration('${inspi.id}')">${inspi.video_url ? '🔄 Changer' : '🎬 Ajouter'}</button>
+      </div>
+      <div id="inspi-video-lecteur-${inspi.id}"></div>
+      <div id="inspi-video-miniatures-${inspi.id}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px"></div>
+    </div>
+
     ${(reponsesBartender && reponsesBartender.length > 0) ? `
     <div class="plante-section">
       <h3>📱 Réponses bartender (${reponsesBartender.length})</h3>
@@ -7588,8 +7597,127 @@ ${inspi.source !== 'url' ? `<button class="btn-outline" onclick="ouvrirQRDepuisF
 </div>
 `;
 afficherModal('modal-fiche-inspiration');
+
+  if (inspi.video_url) {
+    setTimeout(() => {
+      lancerLectureVideoInspiration(inspi.id, inspi.video_url);
+      afficherChoixMiniaturesInspiration(inspi.id, inspi.video_url);
+    }, 50);
+  }
+}
+function extraireYoutubeId(url) {
+  const match = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+function extraireYoutubeId(url) {
+  const match = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
 }
 
+async function associerVideoInspiration(id) {
+  const input = document.getElementById(`inspi-video-input-${id}`);
+  if (!input) return;
+  const url = input.value.trim();
+  if (!url) return;
+
+  const { error } = await db.from('inspirations').update({ video_url: url }).eq('id', id).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (inspi) inspi.video_url = url;
+
+  lancerLectureVideoInspiration(id, url);
+  afficherChoixMiniaturesInspiration(id, url);
+}
+
+function lancerLectureVideoInspiration(id, videoUrl) {
+  const zone = document.getElementById(`inspi-video-lecteur-${id}`);
+  if (!zone) return;
+  const ytId = extraireYoutubeId(videoUrl);
+  if (ytId) {
+    zone.innerHTML = `
+      <div style="position:relative;width:100%;max-width:280px;aspect-ratio:9/16;margin:8px auto;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/${ytId}?playsinline=1"
+          style="width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    `;
+  } else {
+    zone.innerHTML = `<a href="${videoUrl}" target="_blank" class="btn-outline" style="display:inline-block;margin-top:8px">▶️ Ouvrir la vidéo</a>`;
+  }
+}
+
+function afficherChoixMiniaturesInspiration(id, videoUrl) {
+  const zone = document.getElementById(`inspi-video-miniatures-${id}`);
+  if (!zone) return;
+  const ytId = extraireYoutubeId(videoUrl);
+  if (!ytId) { zone.innerHTML = ''; return; }
+
+  const options = [0, 1, 2, 3].map(n => `https://img.youtube.com/vi/${ytId}/${n}.jpg`);
+  zone.innerHTML = options.map(url => `
+    <img src="${url}" onclick="definirMiniatureVideoInspiration('${id}', '${url}')"
+      style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid var(--border)"
+      onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+  `).join('');
+}
+
+async function definirMiniatureVideoInspiration(id, url) {
+  await db.from('inspirations').update({ video_thumbnail_url: url }).eq('id', id).eq('user_id', currentUser.id);
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (inspi) inspi.video_thumbnail_url = url;
+  alert('Miniature vidéo enregistrée.');
+}
+async function associerVideoInspiration(id) {
+  const input = document.getElementById(`inspi-video-input-${id}`);
+  if (!input) return;
+  const url = input.value.trim();
+  if (!url) return;
+
+  const { error } = await db.from('inspirations').update({ video_url: url }).eq('id', id).eq('user_id', currentUser.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (inspi) inspi.video_url = url;
+
+  lancerLectureVideoInspiration(id, url);
+  afficherChoixMiniaturesInspiration(id, url);
+}
+
+function lancerLectureVideoInspiration(id, videoUrl) {
+  const zone = document.getElementById(`inspi-video-lecteur-${id}`);
+  if (!zone) return;
+  const ytId = extraireYoutubeId(videoUrl);
+  if (ytId) {
+    zone.innerHTML = `
+      <div style="position:relative;width:100%;max-width:280px;aspect-ratio:9/16;margin:8px auto;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/${ytId}?playsinline=1"
+          style="width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    `;
+  } else {
+    zone.innerHTML = `<a href="${videoUrl}" target="_blank" class="btn-outline" style="display:inline-block;margin-top:8px">▶️ Ouvrir la vidéo</a>`;
+  }
+}
+
+function afficherChoixMiniaturesInspiration(id, videoUrl) {
+  const zone = document.getElementById(`inspi-video-miniatures-${id}`);
+  if (!zone) return;
+  const ytId = extraireYoutubeId(videoUrl);
+  if (!ytId) { zone.innerHTML = ''; return; }
+
+  const options = [0, 1, 2, 3].map(n => `https://img.youtube.com/vi/${ytId}/${n}.jpg`);
+  zone.innerHTML = options.map(url => `
+    <img src="${url}" onclick="definirMiniatureVideoInspiration('${id}', '${url}')"
+      style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid var(--border)"
+      onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+  `).join('');
+}
+
+async function definirMiniatureVideoInspiration(id, url) {
+  await db.from('inspirations').update({ video_thumbnail_url: url }).eq('id', id).eq('user_id', currentUser.id);
+  const inspi = inspirationsList.find(x => x.id === id);
+  if (inspi) inspi.video_thumbnail_url = url;
+  alert('Miniature vidéo enregistrée.');
+}
 function renderReponseBartender(r) {
   const dateStr = new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const statutBadge = r.statut === 'validee'
