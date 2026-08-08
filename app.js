@@ -542,6 +542,55 @@ async function enregistrerRecetteDepuisIA(idx) {
   alert(`✅ "${c.nom}" enregistrée dans tes recettes.`);
   await chargerRecettes();
 }
+async function ouvrirHistoriqueAnalyses() {
+  const { data: historique } = await db.from('analyses_bouteilles')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-historique-analyses';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:440px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px;max-height:85vh;overflow-y:auto">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:14px">🕐 Historique des analyses</div>
+      ${!historique?.length ? '<div class="empty-state"><div class="empty-state-titre">Aucune analyse enregistrée</div></div>' : ''}
+      ${(historique || []).map(h => `
+        <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+          onclick="revoirAnalyseHistorique('${h.id}')">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem">${h.resultat?.nom_complet || h.nom_recherche}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">${new Date(h.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          </div>
+          <button class="btn-outline" style="font-size:0.7rem;padding:4px 8px;color:var(--text-danger);border-color:var(--border-danger)" onclick="event.stopPropagation(); supprimerAnalyseHistorique('${h.id}')">🗑️</button>
+        </div>
+      `).join('')}
+      <button class="btn-outline" style="width:100%;margin-top:8px" onclick="document.getElementById('modal-historique-analyses').remove()">Fermer</button>
+    </div>
+  `;
+  window._historiqueAnalyses = historique || [];
+  document.body.appendChild(modal);
+}
+
+function revoirAnalyseHistorique(id) {
+  const h = window._historiqueAnalyses?.find(x => x.id === id);
+  if (!h) return;
+  document.getElementById('modal-historique-analyses')?.remove();
+  document.getElementById('analyser-input').value = h.nom_recherche;
+  analyseCourante = h.resultat;
+  document.getElementById('analyser-result').innerHTML = construireResultatAnalyse(h.resultat, h.nom_recherche) +
+    `<div style="text-align:center;margin-top:10px">
+      <span style="font-size:0.72rem;color:var(--text-muted)">Résultat du ${new Date(h.created_at).toLocaleDateString('fr-FR')}</span>
+    </div>`;
+}
+
+async function supprimerAnalyseHistorique(id) {
+  if (!confirm('Supprimer cette analyse de l\'historique ?')) return;
+  await db.from('analyses_bouteilles').delete().eq('id', id).eq('user_id', currentUser.id);
+  document.getElementById('modal-historique-analyses')?.remove();
+  ouvrirHistoriqueAnalyses();
+}
 function calculerDisponibilite(recette, caveIdsOverride) {
   const caveIds = caveIdsOverride || getItemsCave();
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
@@ -3731,7 +3780,8 @@ container.innerHTML = `
         style="width:100%;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:14px;cursor:pointer;">
         📷 Analyser depuis une photo (appareil ou galerie)
       </button>
-      <div id="analyser-result"></div>
+<div id="analyser-result"></div>
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:0.8rem" onclick="ouvrirHistoriqueAnalyses()">🕐 Historique des analyses</button>
     </div>
 ${stockBas.length > 0 || itemsMasques.length > 0 ? `
 <div class="aacheter-groupe">
