@@ -449,7 +449,25 @@ function getItemsCave() {
   }));
   return ids;
 }
- 
+ // Retourne les noms (en minuscules) de tous les items détenus, cave active (normale ou voyage)
+function getNomsCaveActive() {
+  if (voyageActif) {
+    return new Set((voyageBouteillesActives || []).map(b => (b.nom || '').toLowerCase()).filter(Boolean));
+  }
+  if (!cave) return new Set();
+  const noms = new Set();
+  cave.categories.forEach(cat => cat.items.forEach(item => {
+    if (item.detenu !== false) noms.add((item.nom || '').toLowerCase());
+  }));
+  return noms;
+}
+
+// Vérifie si un nom d'ingrédient texte correspond à un item réellement détenu
+function ingredientEnCaveActive(nomIngredient, nomsCave) {
+  const key = (nomIngredient || '').toLowerCase().trim();
+  if (!key) return false;
+  return [...nomsCave].some(n => n.includes(key) || key.includes(n));
+}
 function calculerDisponibilite(recette, caveIdsOverride) {
   const caveIds = caveIdsOverride || getItemsCave();
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
@@ -3796,11 +3814,7 @@ const result = await attendreElement('analyser-result', 60);
   photoBtn.textContent = '📷 Compression de la photo…';
   result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
 
-  const caveListe = (cave?.categories || [])
-    .flatMap(c => c.items)
-    .filter(i => i.detenu !== false)
-    .map(i => i.nom)
-    .join(', ');
+const caveListe = [...getNomsCaveActive()].join(', ');
 
   try {
     const image_base64 = await redimensionnerImage(fichier);
@@ -3877,15 +3891,28 @@ function construireResultatAnalyse(data, nomPourRecherche) {
 ${data.cocktails_possibles?.length ? `
       <div class="analyser-section">
         <div class="analyser-label">🍹 Cocktails réalisables</div>
-        ${data.cocktails_possibles.map(c => `
-          <div class="simulateur-recette">
-            <span class="simulateur-recette-nom">${c.nom}</span>
-            <span class="simulateur-recette-gouts">${
-              c.ingredients_manquants?.length
-                ? '⚠️ manque : ' + c.ingredients_manquants.join(', ')
-                : '✓ réalisable maintenant'
-            }</span>
-          </div>`).join('')}
+        ${data.cocktails_possibles.map(c => {
+          const nomsCaveActive = getNomsCaveActive();
+          // Recroise chaque ingrédient manquant annoncé par l'IA avec la vraie cave
+          const vraisManquants = (c.ingredients_manquants || []).filter(ing => !ingredientEnCaveActive(ing, nomsCaveActive));
+
+          // Cherche si ce cocktail existe réellement dans la BDD recettes
+          const recetteExistante = recettes.find(r => r.nom.toLowerCase().trim() === c.nom.toLowerCase().trim());
+
+          if (recetteExistante) {
+            return `
+            <div class="simulateur-recette" onclick="ouvrirFicheRecette('${recetteExistante.id}')" style="cursor:pointer">
+              <span class="simulateur-recette-nom">📖 ${c.nom}</span>
+              <span class="simulateur-recette-gouts">${vraisManquants.length ? '⚠️ manque : ' + vraisManquants.join(', ') : '✓ réalisable maintenant'}</span>
+            </div>`;
+          }
+
+          return `
+            <div class="simulateur-recette">
+              <span class="simulateur-recette-nom">✨ ${c.nom} <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">(nouvelle découverte, hors BDD)</span></span>
+              <span class="simulateur-recette-gouts">${vraisManquants.length ? '⚠️ manque : ' + vraisManquants.join(', ') : '✓ réalisable avec ta cave'}</span>
+            </div>`;
+        }).join('')}
       </div>` : ''}
       ${data.doublon_cave ? `
       <div class="analyser-section analyser-section--warning">
