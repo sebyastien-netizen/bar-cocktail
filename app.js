@@ -484,12 +484,12 @@ async function appliquerFondAmbiance() {
   if (!fondEl) {
     fondEl = document.createElement('div');
     fondEl.id = 'fond-ambiance-dashboard';
-    fondEl.style.cssText = `
-      position: fixed; top: 0; left: 0; right: 0; height: 260px;
+fondEl.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background-size: cover; background-position: center;
-      z-index: -1; opacity: 0.35;
-      mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+      z-index: -1; opacity: 0.55;
+      mask-image: linear-gradient(to bottom, black 0%, black 40%, rgba(0,0,0,0.3) 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, rgba(0,0,0,0.3) 100%);
     `;
     document.body.prepend(fondEl);
   }
