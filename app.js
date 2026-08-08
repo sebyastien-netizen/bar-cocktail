@@ -7605,15 +7605,6 @@ afficherModal('modal-fiche-inspiration');
     }, 50);
   }
 }
-function extraireYoutubeId(url) {
-  const match = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
-}
-function extraireYoutubeId(url) {
-  const match = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
-}
-
 async function associerVideoInspiration(id) {
   const input = document.getElementById(`inspi-video-input-${id}`);
   if (!input) return;
