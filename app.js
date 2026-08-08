@@ -1346,15 +1346,43 @@ async function ouvrirTableauBordVoyage() {
 
 <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px">🍾 Bouteilles emportées</div>
       <button class="btn-outline" style="width:100%;margin-bottom:10px;font-size:0.85rem" onclick="ouvrirAjoutBouteilleVoyage()">+ Ajouter une bouteille</button>
-      ${(bouteilles || []).map(b => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
-          <span>${b.nom}</span>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="color:var(--text-accent)">${b.cl_restants_voyage ?? '—'} cl</span>
-            <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerBouteilleVoyage('${b.id}')">🗑</button>
-          </div>
-        </div>
-      `).join('') || '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille.</div>'}
+      ${(() => {
+        if (!(bouteilles || []).length) return '<div style="font-size:0.8rem;color:var(--text-muted)">Aucune bouteille.</div>';
+
+        // Regroupe les bouteilles voyage par catégorie réelle (même logique que la cave normale)
+        const groupes = {};
+        bouteilles.forEach(b => {
+          const catId = categorieDeItemGlobal(b.item_cave_id) || 'autre';
+          if (!groupes[catId]) groupes[catId] = [];
+          groupes[catId].push(b);
+        });
+
+        const catsOrdre = (cave?.categories || []).map(c => c.id);
+        const idsTries = Object.keys(groupes).sort((a, b) => {
+          const ia = catsOrdre.indexOf(a), ib = catsOrdre.indexOf(b);
+          return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        });
+
+        return idsTries.map(catId => {
+          const catInfo = (cave?.categories || []).find(c => c.id === catId);
+          const label = catInfo?.label || 'Autre';
+          const icon = catInfo?.icon || '📦';
+          return `
+            <div style="margin-bottom:14px">
+              <div style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px">${icon} ${label}</div>
+              ${groupes[catId].map(b => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
+                  <span>${b.nom}</span>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="color:var(--text-accent)">${b.cl_restants_voyage ?? '—'} cl</span>
+                    <button class="btn-icon" style="color:var(--text-danger)" onclick="retirerBouteilleVoyage('${b.id}')">🗑</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }).join('');
+      })()}
       <button class="btn-outline" style="width:100%;margin-top:20px;border-color:var(--text-danger);color:var(--text-danger)" onclick="ouvrirBilanVoyage()">🏁 Terminer le voyage</button>
     </div>
   `;
