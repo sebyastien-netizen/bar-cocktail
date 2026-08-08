@@ -9,6 +9,7 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
  
 let cave        = null;
+let analyseCourante = null;
 let recettes    = [];
 let currentUser = null;
 let filtreRecherche = '';
@@ -3749,7 +3750,8 @@ async function analyserBouteille(forcerNouvelleAnalyse = false) {
       .limit(1)
       .maybeSingle();
 
-    if (existante) {
+if (existante) {
+      analyseCourante = existante.resultat;
       result.innerHTML = construireResultatAnalyse(existante.resultat, nom) +
         `<div style="text-align:center;margin-top:10px">
           <span style="font-size:0.72rem;color:var(--text-muted)">Résultat du ${new Date(existante.created_at).toLocaleDateString('fr-FR')}</span>
@@ -3773,7 +3775,8 @@ async function analyserBouteille(forcerNouvelleAnalyse = false) {
 
     if (!data.identifie) {
       result.innerHTML = '<div class="simulateur-vide">Alcool non reconnu. Essaie un nom plus précis.</div>';
-    } else {
+} else {
+      analyseCourante = data;
       result.innerHTML = construireResultatAnalyse(data, nom);
       // Sauvegarde pour réutilisation future
       await db.from('analyses_bouteilles').insert({
