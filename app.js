@@ -8939,6 +8939,7 @@ function ouvrirFicheGarniture(id) {
     </div>
   `;
   lancerLectureGarniture(g.id, g.video_url);
+ afficherChoixMiniatures(g.id, g.video_url);
   afficherModal('modal-ecole-fiche');
   setTimeout(() => chargerApercuVideoGarniture(g.id, g.video_url), 50);
 }
@@ -9130,7 +9131,6 @@ function ouvrirFicheAlcool(id) {
       </div>
     </div>` : ''}
   `;
- afficherChoixMiniatures(g.id, g.video_url);
   afficherModal('modal-ecole-fiche');
 }
  
