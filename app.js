@@ -3907,10 +3907,15 @@ ${data.cocktails_possibles?.length ? `
             </div>`;
           }
 
-          return `
-            <div class="simulateur-recette">
-              <span class="simulateur-recette-nom">✨ ${c.nom} <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">(nouvelle découverte, hors BDD)</span></span>
+return `
+            <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:6px">
+              <div style="display:flex;justify-content:space-between;width:100%">
+                <span class="simulateur-recette-nom">✨ ${c.nom} <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">(nouvelle découverte, hors BDD)</span></span>
+              </div>
               <span class="simulateur-recette-gouts">${vraisManquants.length ? '⚠️ manque : ' + vraisManquants.join(', ') : '✓ réalisable avec ta cave'}</span>
+              ${vraisManquants.length ? `
+              <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px" onclick="ajouterIngredientsManquantsAAcheter(${JSON.stringify(vraisManquants).replace(/"/g, '&quot;')})">🛒 Ajouter à "À acheter"</button>
+              ` : ''}
             </div>`;
         }).join('')}
       </div>` : ''}
@@ -3950,6 +3955,16 @@ ${data.cocktails_possibles?.length ? `
       ${itemMatch ? `<button class="btn btn-outline" style="margin-top:12px;width:100%" onclick="marquerAchete('${itemMatch.id}', '${itemMatch.category_id}', '${itemMatch.nom.replace(/'/g, "\\'")}')">✓ Marquer comme acheté</button>` : ''}
     </div>
   `;
+}
+async function ajouterIngredientsManquantsAAcheter(noms) {
+  for (const nom of noms) {
+    const id = 'custom-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    await db.from('items').insert({
+      id, user_id: currentUser.id, nom, category_id: 'ponctuels', detenu: false
+    });
+  }
+  alert(`${noms.length} ingrédient${noms.length > 1 ? 's' : ''} ajouté${noms.length > 1 ? 's' : ''} à "À acheter".`);
+  await chargerCave();
 }
 function switchSousOngletAAcheter(panel, btn) {
   document.querySelectorAll('#section-aacheter .conc-sous-onglet').forEach(b => b.classList.remove('active'));
