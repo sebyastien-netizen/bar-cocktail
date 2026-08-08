@@ -3890,32 +3890,35 @@ function construireResultatAnalyse(data, nomPourRecherche) {
       <div class="analyser-meta">${data.categorie} · ${data.degre}° · ${data.profil_gustatif}</div>
 ${data.cocktails_possibles?.length ? `
       <div class="analyser-section">
-        <div class="analyser-label">🍹 Cocktails réalisables</div>
-        ${data.cocktails_possibles.map(c => {
+        <div class="analyser-label">🍹 Cocktails réalisables (${data.cocktails_possibles.length})</div>
+        ${data.cocktails_possibles.map((c, idx) => {
           const nomsCaveActive = getNomsCaveActive();
-          // Recroise chaque ingrédient manquant annoncé par l'IA avec la vraie cave
-          const vraisManquants = (c.ingredients_manquants || []).filter(ing => !ingredientEnCaveActive(ing, nomsCaveActive));
-
-          // Cherche si ce cocktail existe réellement dans la BDD recettes
+          const ings = c.ingredients || [];
+          const manquants = ings.filter(ing => !ingredientEnCaveActive(ing.nom, nomsCaveActive));
           const recetteExistante = recettes.find(r => r.nom.toLowerCase().trim() === c.nom.toLowerCase().trim());
+          const uid = `analyse-cocktail-${idx}-${Date.now()}`;
 
-          if (recetteExistante) {
-            return `
-            <div class="simulateur-recette" onclick="ouvrirFicheRecette('${recetteExistante.id}')" style="cursor:pointer">
-              <span class="simulateur-recette-nom">📖 ${c.nom}</span>
-              <span class="simulateur-recette-gouts">${vraisManquants.length ? '⚠️ manque : ' + vraisManquants.join(', ') : '✓ réalisable maintenant'}</span>
-            </div>`;
-          }
-
-return `
-            <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:6px">
-              <div style="display:flex;justify-content:space-between;width:100%">
-                <span class="simulateur-recette-nom">✨ ${c.nom} <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">(nouvelle découverte, hors BDD)</span></span>
+          return `
+            <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer" onclick="toggleDetailCocktailAnalyse('${uid}')">
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+                <span class="simulateur-recette-nom">${recetteExistante ? '📖' : '✨'} ${c.nom}</span>
+                <span style="font-size:0.72rem;color:var(--text-muted)">▾</span>
               </div>
-              <span class="simulateur-recette-gouts">${vraisManquants.length ? '⚠️ manque : ' + vraisManquants.join(', ') : '✓ réalisable avec ta cave'}</span>
-              ${vraisManquants.length ? `
-              <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px" onclick="ajouterIngredientsManquantsAAcheter(${JSON.stringify(vraisManquants).replace(/"/g, '&quot;')})">🛒 Ajouter à "À acheter"</button>
-              ` : ''}
+              <span class="simulateur-recette-gouts">${manquants.length ? '⚠️ manque ' + manquants.length + ' ingrédient' + (manquants.length > 1 ? 's' : '') : '✓ réalisable maintenant'}</span>
+              <div id="${uid}" style="display:none;width:100%;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+                ${ings.map(ing => {
+                  const enCave = ingredientEnCaveActive(ing.nom, nomsCaveActive);
+                  return `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:3px 0">
+                    <span>${enCave ? '✅' : '❌'} ${ing.nom}</span>
+                    <span style="color:var(--text-muted)">${ing.quantite || ''} ${ing.unite || ''}</span>
+                  </div>`;
+                }).join('')}
+                ${recetteExistante ? `
+                <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px;margin-top:8px" onclick="event.stopPropagation(); ouvrirFicheRecette('${recetteExistante.id}')">📖 Voir la fiche recette</button>
+                ` : manquants.length ? `
+                <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px;margin-top:8px" onclick="event.stopPropagation(); ajouterIngredientsManquantsAAcheter(${JSON.stringify(manquants.map(m => m.nom)).replace(/"/g, '&quot;')})">🛒 Ajouter à "À acheter"</button>
+                ` : ''}
+              </div>
             </div>`;
         }).join('')}
       </div>` : ''}
@@ -3965,6 +3968,10 @@ async function ajouterIngredientsManquantsAAcheter(noms) {
   }
   alert(`${noms.length} ingrédient${noms.length > 1 ? 's' : ''} ajouté${noms.length > 1 ? 's' : ''} à "À acheter".`);
   await chargerCave();
+}
+function toggleDetailCocktailAnalyse(uid) {
+  const el = document.getElementById(uid);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 function switchSousOngletAAcheter(panel, btn) {
   document.querySelectorAll('#section-aacheter .conc-sous-onglet').forEach(b => b.classList.remove('active'));
