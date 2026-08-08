@@ -57,6 +57,7 @@ function afficherLogin() {
 async function afficherApp() {
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
+appliquerFondAmbiance();
 chargerCave();
   chargerRecettes();
   await chargerStockReserve();
