@@ -480,6 +480,68 @@ function ingredientEnCaveActive(nomIngredient, nomsCave) {
     return motsClesIng.some(m => motsCave.includes(m));
   });
 }
+// Trouve l'item_cave_id réel correspondant à un nom d'ingrédient texte (ou null si aucun match fiable)
+function trouverItemCaveIdParNom(nomIngredient) {
+  const key = (nomIngredient || '').toLowerCase().trim();
+  if (!key) return null;
+  const tousItems = cave?.categories?.flatMap(c => c.items) || [];
+  const motsVides = new Set(['frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les']);
+  const motsClesIng = key.split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
+
+  // Match direct d'abord
+  const matchDirect = tousItems.find(i => {
+    const nomCave = (i.nom || '').toLowerCase();
+    return nomCave.includes(key) || key.includes(nomCave);
+  });
+  if (matchDirect) return matchDirect.id;
+
+  // Match par mot-clé partagé sinon
+  const matchMot = tousItems.find(i => {
+    const motsCave = (i.nom || '').toLowerCase().split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
+    return motsClesIng.some(m => motsCave.includes(m));
+  });
+  return matchMot ? matchMot.id : null;
+}
+async function enregistrerRecetteDepuisIA(idx) {
+  if (!analyseCourante?.cocktails_possibles?.[idx]) { alert('Donnée introuvable, relance l\'analyse.'); return; }
+  const c = analyseCourante.cocktails_possibles[idx];
+
+  const slug = c.nom.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const id = `ia-${slug}-${Date.now()}`;
+
+  const diffMap = { facile: 'facile', moyen: 'moyen', difficile: 'avance', avance: 'avance', avancé: 'avance' };
+  const difficulte = diffMap[(c.difficulte || '').toLowerCase()] || 'moyen';
+
+  const { error: errRecette } = await db.from('recettes').insert({
+    id, user_id: currentUser.id, type: 'cocktail', nom: c.nom, difficulte,
+    description_courte: `Suggestion générée lors de l'analyse de "${analyseCourante.nom_complet}".`
+  });
+  if (errRecette) { alert('Erreur création recette : ' + errRecette.message); return; }
+
+  const ingredientsPayload = (c.ingredients || []).map((ing, i) => ({
+    recette_id: id, user_id: currentUser.id, nom: ing.nom,
+    item_cave_id: trouverItemCaveIdParNom(ing.nom),
+    quantite: parseFloat(ing.quantite) || null, unite: ing.unite || null,
+    optionnel: false, ordre: i + 1
+  }));
+  if (ingredientsPayload.length) {
+    const { error: errIng } = await db.from('recette_ingredients').insert(ingredientsPayload);
+    if (errIng) { alert('Erreur ingrédients : ' + errIng.message); return; }
+  }
+
+  const etapesPayload = (c.etapes || []).map((desc, i) => ({
+    recette_id: id, user_id: currentUser.id, ordre: i + 1, titre: `Étape ${i + 1}`, description: desc
+  }));
+  if (etapesPayload.length) {
+    const { error: errEtapes } = await db.from('recette_etapes').insert(etapesPayload);
+    if (errEtapes) { alert('Erreur étapes : ' + errEtapes.message); return; }
+  }
+
+  alert(`✅ "${c.nom}" enregistrée dans tes recettes.`);
+  await chargerRecettes();
+}
 function calculerDisponibilite(recette, caveIdsOverride) {
   const caveIds = caveIdsOverride || getItemsCave();
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
@@ -3952,11 +4014,14 @@ ${data.cocktails_possibles?.length ? `
                     <span style="color:var(--text-muted)">${ing.quantite || ''} ${ing.unite || ''}</span>
                   </div>`;
                 }).join('')}
-                ${recetteExistante ? `
+${recetteExistante ? `
                 <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px;margin-top:8px" onclick="event.stopPropagation(); ouvrirFicheRecette('${recetteExistante.id}')">📖 Voir la fiche recette</button>
-                ` : manquants.length ? `
-                <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px;margin-top:8px" onclick="event.stopPropagation(); ajouterIngredientsManquantsAAcheter(${JSON.stringify(manquants.map(m => m.nom)).replace(/"/g, '&quot;')})">🛒 Ajouter à "À acheter"</button>
-                ` : ''}
+                ` : `
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                  ${manquants.length ? `<button class="btn-outline" style="font-size:0.72rem;padding:4px 10px" onclick="event.stopPropagation(); ajouterIngredientsManquantsAAcheter(${JSON.stringify(manquants.map(m => m.nom)).replace(/"/g, '&quot;')})">🛒 Ajouter à "À acheter"</button>` : ''}
+                  <button class="btn-primary" style="font-size:0.72rem;padding:4px 10px" onclick="event.stopPropagation(); enregistrerRecetteDepuisIA(${idx})">💾 Enregistrer cette recette</button>
+                </div>
+                `}
               </div>
             </div>`;
         }).join('')}
