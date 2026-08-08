@@ -3729,7 +3729,7 @@ ${trierParBudget(items).map(item => renderItemAAcheter(item, false)).join('')}
 
   renderAAcheterParRecette();
 }
-async function analyserBouteille() {
+async function analyserBouteille(forcerNouvelleAnalyse = false) {
   const nom = document.getElementById('analyser-input')?.value?.trim();
   if (!nom) return;
 
@@ -3739,11 +3739,29 @@ async function analyserBouteille() {
   btn.textContent = 'Analyse en cours…';
   result.innerHTML = '<div class="simulateur-vide">Interrogation du bartender IA…</div>';
 
-  const caveListe = (cave?.categories || [])
-    .flatMap(c => c.items)
-    .filter(i => i.detenu !== false)
-    .map(i => i.nom)
-    .join(', ');
+  // Vérifie si une analyse existe déjà pour ce nom (évite un appel IA redondant)
+  if (!forcerNouvelleAnalyse) {
+    const { data: existante } = await db.from('analyses_bouteilles')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .ilike('nom_recherche', nom)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existante) {
+      result.innerHTML = construireResultatAnalyse(existante.resultat, nom) +
+        `<div style="text-align:center;margin-top:10px">
+          <span style="font-size:0.72rem;color:var(--text-muted)">Résultat du ${new Date(existante.created_at).toLocaleDateString('fr-FR')}</span>
+          <button class="btn-outline" style="display:block;margin:8px auto 0;font-size:0.75rem;padding:6px 12px" onclick="analyserBouteille(true)">🔄 Relancer une nouvelle analyse</button>
+        </div>`;
+      btn.disabled = false;
+      btn.textContent = '🔍 Analyser';
+      return;
+    }
+  }
+
+  const caveListe = [...getNomsCaveActive()].join(', ');
 
   try {
     const rep = await fetch('/api/analyser', {
@@ -3757,6 +3775,13 @@ async function analyserBouteille() {
       result.innerHTML = '<div class="simulateur-vide">Alcool non reconnu. Essaie un nom plus précis.</div>';
     } else {
       result.innerHTML = construireResultatAnalyse(data, nom);
+      // Sauvegarde pour réutilisation future
+      await db.from('analyses_bouteilles').insert({
+        id: 'analyse-' + Date.now(),
+        user_id: currentUser.id,
+        nom_recherche: nom,
+        resultat: data
+      });
     }
   } catch (e) {
     result.innerHTML = '<div class="simulateur-vide">Erreur de connexion. Réessaie.</div>';
