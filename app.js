@@ -2831,6 +2831,8 @@ function afficherModal(id) {
 }
 function fermerModal(id) {
   document.getElementById(id).classList.remove('visible');
+  // Couper toute vidéo en lecture dans ce modal (évite qu'elle continue en fond)
+  document.querySelectorAll(`#${id} iframe`).forEach(f => f.remove());
   const encoreUnModalOuvert = document.querySelector('.modal-overlay.visible');
   if (!encoreUnModalOuvert) {
     document.body.style.overflow = '';
