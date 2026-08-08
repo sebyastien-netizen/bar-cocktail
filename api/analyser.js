@@ -22,7 +22,7 @@ Cave actuelle du bartender (ce qu'il possède déjà) : ${cave}.
 Ta mission :
 1. Identifier précisément l'alcool${image_base64 ? ' visible sur la photo (marque, expression, millésime si lisible)' : ''}
 2. Détecter si un alcool similaire est déjà en cave (même famille ET profil proche)
-3. Lister 6 à 8 cocktails classiques ou modernes réalisables avec cet alcool, en variant les techniques et familles (sour, spritz, fizz, spirit-forward, long drink, digestif...) — pas plusieurs variantes très proches du même type. Pour chaque cocktail, donne la composition COMPLÈTE (tous les ingrédients avec quantité approximative en cl/ml/traits), pas seulement ce qui manque.
+3. Lister 6 à 8 cocktails classiques ou modernes réalisables avec cet alcool, en variant les techniques et familles (sour, spritz, fizz, spirit-forward, long drink, digestif...) — pas plusieurs variantes très proches du même type. Pour chaque cocktail, donne la composition COMPLÈTE (tous les ingrédients avec quantité approximative en cl/ml/traits) ET les étapes de préparation numérotées, précises et exécutables.
 4. Évaluer si une meilleure version existe (millésime supérieur, expression premium) avec prix réel français
 5. Identifier une alternative moins chère donnant le même résultat en cocktail avec prix réel français
 6. Donner un avis bartender technique et personnel sur la complémentarité avec cette cave précise
@@ -46,6 +46,12 @@ Retourne ce JSON exactement, sans champ supplémentaire :
         {"nom": "Gin", "quantite": "3", "unite": "cl"},
         {"nom": "Campari", "quantite": "3", "unite": "cl"},
         {"nom": "Vermouth rouge", "quantite": "3", "unite": "cl"}
+      ],
+      "etapes": [
+        "Verser tous les ingrédients dans un verre à mélange avec glace.",
+        "Mélanger 30 secondes.",
+        "Filtrer dans un verre old fashioned sur glaçons.",
+        "Garnir d'un zeste d'orange."
       ]
     }
   ],
@@ -75,7 +81,7 @@ Si alcool non identifié${image_base64 ? ' sur la photo (étiquette illisible, f
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        max_tokens: 2000,
+        max_tokens: 2500,
         response_format: { type: 'json_object' },
         messages: [
           {
