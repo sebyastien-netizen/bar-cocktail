@@ -22,7 +22,7 @@ Cave actuelle du bartender (ce qu'il possède déjà) : ${cave}.
 Ta mission :
 1. Identifier précisément l'alcool${image_base64 ? ' visible sur la photo (marque, expression, millésime si lisible)' : ''}
 2. Détecter si un alcool similaire est déjà en cave (même famille ET profil proche)
-3. Lister les cocktails classiques ou modernes réalisables avec cet alcool ET les ingrédients déjà en cave — sois précis et exhaustif, minimum 3 cocktails si possible
+3. Lister 6 à 8 cocktails classiques ou modernes réalisables avec cet alcool, en variant les techniques et familles (sour, spritz, fizz, spirit-forward, long drink, digestif...) — pas plusieurs variantes très proches du même type. Pour chaque cocktail, donne la composition COMPLÈTE (tous les ingrédients avec quantité approximative en cl/ml/traits), pas seulement ce qui manque.
 4. Évaluer si une meilleure version existe (millésime supérieur, expression premium) avec prix réel français
 5. Identifier une alternative moins chère donnant le même résultat en cocktail avec prix réel français
 6. Donner un avis bartender technique et personnel sur la complémentarité avec cette cave précise
@@ -39,8 +39,15 @@ Retourne ce JSON exactement, sans champ supplémentaire :
   "doublon_cave": "nom exact de l'alcool similaire déjà en cave, ou null",
   "doublon_note": "en 1 phrase : en quoi ils se ressemblent ET en quoi ils diffèrent, ou null",
   "cocktails_possibles": [
-    {"nom": "Negroni", "ingredients_manquants": [], "difficulte": "facile"},
-    {"nom": "Last Word", "ingredients_manquants": ["Marasquin"], "difficulte": "moyen"}
+    {
+      "nom": "Negroni",
+      "difficulte": "facile",
+      "ingredients": [
+        {"nom": "Gin", "quantite": "3", "unite": "cl"},
+        {"nom": "Campari", "quantite": "3", "unite": "cl"},
+        {"nom": "Vermouth rouge", "quantite": "3", "unite": "cl"}
+      ]
+    }
   ],
   "meilleure_version": "nom exact d'une expression supérieure si applicable, ou null",
   "meilleure_version_prix": 45,
@@ -68,7 +75,7 @@ Si alcool non identifié${image_base64 ? ' sur la photo (étiquette illisible, f
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        max_tokens: 1200,
+        max_tokens: 2000,
         response_format: { type: 'json_object' },
         messages: [
           {
