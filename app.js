@@ -484,20 +484,22 @@ function ingredientEnCaveActive(nomIngredient, nomsCave) {
 function trouverItemCaveIdParNom(nomIngredient) {
   const key = (nomIngredient || '').toLowerCase().trim();
   if (!key) return null;
-  const tousItems = cave?.categories?.flatMap(c => c.items) || [];
   const motsVides = new Set(['frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les']);
   const motsClesIng = key.split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
 
-  // Match direct d'abord
-  const matchDirect = tousItems.find(i => {
-    const nomCave = (i.nom || '').toLowerCase();
+  // Cave active : voyage si actif, sinon cave normale — cohérent avec ingredientEnCaveActive
+  const pool = voyageActif
+    ? (voyageBouteillesActives || []).map(b => ({ id: b.item_cave_id, nom: b.nom || '' }))
+    : (cave?.categories?.flatMap(c => c.items) || []).map(i => ({ id: i.id, nom: i.nom || '' }));
+
+  const matchDirect = pool.find(i => {
+    const nomCave = i.nom.toLowerCase();
     return nomCave.includes(key) || key.includes(nomCave);
   });
   if (matchDirect) return matchDirect.id;
 
-  // Match par mot-clé partagé sinon
-  const matchMot = tousItems.find(i => {
-    const motsCave = (i.nom || '').toLowerCase().split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
+  const matchMot = pool.find(i => {
+    const motsCave = i.nom.toLowerCase().split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
     return motsClesIng.some(m => motsCave.includes(m));
   });
   return matchMot ? matchMot.id : null;
