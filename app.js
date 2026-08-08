@@ -466,7 +466,18 @@ function getNomsCaveActive() {
 function ingredientEnCaveActive(nomIngredient, nomsCave) {
   const key = (nomIngredient || '').toLowerCase().trim();
   if (!key) return false;
-  return [...nomsCave].some(n => n.includes(key) || key.includes(n));
+  // Mots vides à ignorer dans la comparaison (ne portent pas l'identité de l'ingrédient)
+  const motsVides = new Set(['frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les', 'd\'', 'l\'']);
+  const motsClesIng = key.split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
+  if (motsClesIng.length === 0) return [...nomsCave].some(n => n.includes(key) || key.includes(n));
+
+  return [...nomsCave].some(nomCave => {
+    // Match direct (comportement existant conservé)
+    if (nomCave.includes(key) || key.includes(nomCave)) return true;
+    // Match par mots-clés significatifs communs (au moins 1 mot clé partagé, hors mots vides)
+    const motsCave = nomCave.split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
+    return motsClesIng.some(m => motsCave.includes(m));
+  });
 }
 function calculerDisponibilite(recette, caveIdsOverride) {
   const caveIds = caveIdsOverride || getItemsCave();
@@ -3899,7 +3910,7 @@ ${data.cocktails_possibles?.length ? `
           const uid = `analyse-cocktail-${idx}-${Date.now()}`;
 
           return `
-            <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer" onclick="toggleDetailCocktailAnalyse('${uid}')">
+            <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:10px" onclick="toggleDetailCocktailAnalyse('${uid}')">
               <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
                 <span class="simulateur-recette-nom">${recetteExistante ? '📖' : '✨'} ${c.nom}</span>
                 <span style="font-size:0.72rem;color:var(--text-muted)">▾</span>
