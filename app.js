@@ -8929,7 +8929,15 @@ function ouvrirFicheGarniture(id) {
           onchange="renommerGarniture('${g.id}', this.value)">
       </div>
     </div>
-    <div class="plante-section" id="garniture-video-zone-${g.id}"></div>
+<div class="plante-section" id="garniture-video-zone-${g.id}"></div>
+    <div class="plante-section">
+      <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">Miniature personnalisée (optionnel)</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="garniture-thumb-input-${g.id}" placeholder="Coller une URL d'image…" value="${g.thumbnail_url || ''}"
+          style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.8rem">
+        <button class="btn-outline" onclick="definirMiniatureGarniture('${g.id}')">OK</button>
+      </div>
+    </div>
     <div class="plante-section">
       <button class="btn-danger" onclick="supprimerGarniture('${g.id}')">🗑️ Supprimer</button>
     </div>
@@ -8940,6 +8948,15 @@ function ouvrirFicheGarniture(id) {
 }
 
 async function chargerApercuVideoGarniture(garnitureId, videoUrl) {
+  const g = ecoleData.garnitures.find(x => x.id === garnitureId);
+  if (g?.thumbnail_url) {
+    const html = `<img src="${g.thumbnail_url}" style="width:100%;height:100%;object-fit:cover">`;
+    const gridThumb = document.getElementById(`garniture-thumb-${garnitureId}`);
+    const ficheThumb = document.getElementById(`garniture-fiche-thumb-${garnitureId}`);
+    if (gridThumb) gridThumb.innerHTML = html;
+    if (ficheThumb) ficheThumb.innerHTML = html;
+    return;
+  }
   let oembedUrl = null;
   if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
     oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`;
@@ -8960,6 +8977,17 @@ async function chargerApercuVideoGarniture(garnitureId, videoUrl) {
       if (ficheThumb) ficheThumb.innerHTML = html;
     }
   } catch (e) {}
+}
+async function definirMiniatureGarniture(id) {
+  const input = document.getElementById(`garniture-thumb-input-${id}`);
+  if (!input) return;
+  const url = input.value.trim();
+  await db.from('ecole_garnitures').update({ thumbnail_url: url || null }).eq('id', id).eq('user_id', currentUser.id);
+  const g = ecoleData.garnitures.find(x => x.id === id);
+  if (g) g.thumbnail_url = url || null;
+  const gridThumb = document.getElementById(`garniture-thumb-${id}`);
+  if (gridThumb && url) gridThumb.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
+  alert('Miniature mise à jour.');
 }
 function extraireYoutubeId(url) {
   const match = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
