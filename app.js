@@ -462,7 +462,38 @@ function getNomsCaveActive() {
   }));
   return noms;
 }
+let fondAmbianceActuel = null;
 
+async function appliquerFondAmbiance() {
+  const isMobile = window.innerWidth < 768;
+  const appareil = isMobile ? 'mobile' : 'desktop';
+
+  const { data: fonds } = await db.from('fonds_ambiance')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .eq('appareil', appareil)
+    .eq('actif', true);
+
+  if (!fonds || !fonds.length) return;
+
+  const choisi = fonds[Math.floor(Math.random() * fonds.length)];
+  fondAmbianceActuel = choisi.url;
+
+  let fondEl = document.getElementById('fond-ambiance-dashboard');
+  if (!fondEl) {
+    fondEl = document.createElement('div');
+    fondEl.id = 'fond-ambiance-dashboard';
+    fondEl.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; height: 260px;
+      background-size: cover; background-position: center;
+      z-index: -1; opacity: 0.35;
+      mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+    `;
+    document.body.prepend(fondEl);
+  }
+  fondEl.style.backgroundImage = `url('${choisi.url}')`;
+}
 // Vérifie si un nom d'ingrédient texte correspond à un item réellement détenu
 function ingredientEnCaveActive(nomIngredient, nomsCave) {
   const key = (nomIngredient || '').toLowerCase().trim();
