@@ -5054,7 +5054,7 @@ function ouvrirChoixTypeSession() {
       </button>
 
       <button class="btn-outline" style="width:100%;padding:14px;margin-bottom:20px;text-align:left;display:flex;align-items:center;gap:12px"
-        onclick="this.closest('div[style*=fixed]').remove(); creerSoireeMenuSolo()">
+       onclick="this.closest('div[style*=fixed]').remove(); creerSoireeMenuSolo(voyageActif?.id || null)">
         <span style="font-size:1.4rem">🧑‍🍳</span>
 <span>
           <div style="font-weight:600">Je sers moi-même</div>
