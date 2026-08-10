@@ -5339,6 +5339,11 @@ function ajouterLigneDecrement(recetteId, recetteNom) {
 
 
 async function appliquerDecrementParCocktail() {
+  // Recharge les bouteilles voyage fraîches avant de décrémenter (évite un tableau périmé en mémoire)
+  if (voyageActif) {
+    const { data: bouteillesFraiches } = await db.from('mode_voyage_bouteilles').select('*').eq('mode_voyage_id', voyageActif.id);
+    voyageBouteillesActives = bouteillesFraiches || [];
+  }
   const conso = {};
   for (const row of window._decrementRows) {
     if (!row.recetteId) continue;
