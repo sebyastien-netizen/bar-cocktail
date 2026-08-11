@@ -3486,12 +3486,15 @@ async function confirmerArchiver() {
     const conc = concoctions.find(c => c.id === concId);
     if (conc) {
 const nomFinal = document.getElementById('input-archiver-nom')?.value?.trim() || conc.nom;
+      const volume = parseFloat(document.getElementById('input-archiver-volume')?.value) || null;
       const { data: itemArchive } = await db.from('items').insert({
         id: 'concoction-' + Date.now(),
         user_id: currentUser.id,
         nom: nomFinal,
         category_id: 'concoctions',
         detenu: true,
+        cl_total: volume,
+        cl_restants: volume,
         info_description: notes || `Concoction maison archivée le ${new Date().toLocaleDateString('fr-FR')}.`
       }).select().single();
       if (itemArchive) await autoLierIngredientParNom(nomFinal, itemArchive.id);
