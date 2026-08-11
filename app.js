@@ -31,6 +31,7 @@ let selectionPourSoireeEnAttente = null;
 let filtreGout      = '';
 let filtreDiff      = '';
 let filtreDisponible = false;
+let filtreDisponibleVoyage = false;
 let filtreSansLiaison = false;
 let recetteOuverte  = null;
  
@@ -1014,13 +1015,12 @@ function renderRecettes() {
   if (filtreGout) liste = liste.filter(r => r.gouts && r.gouts.includes(filtreGout));
   if (filtreDiff) liste = liste.filter(r => r.difficulte === filtreDiff);
  
-  if (filtreDisponible) {
-    if (voyageActif) {
-      liste = liste.filter(r => calculerDisponibiliteVoyage(r) === 0);
-      liste = [...liste].sort((a, b) => calculerDisponibiliteVoyage(a) - calculerDisponibiliteVoyage(b));
-    } else {
-      liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
-    }
+if (filtreDisponible) {
+    liste = [...liste].sort((a, b) => calculerDisponibilite(a) - calculerDisponibilite(b));
+  }
+  if (filtreDisponibleVoyage && voyageActif) {
+    liste = liste.filter(r => calculerDisponibiliteVoyage(r) === 0);
+    liste = [...liste].sort((a, b) => calculerDisponibiliteVoyage(a) - calculerDisponibiliteVoyage(b));
   }
 
   if (filtreSansLiaison) {
@@ -1090,8 +1090,12 @@ style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--bor
         <option value="avance" ${filtreDiff==='avance'?'selected':''}>Avancé</option>
       </select>
 <button class="btn-filtre-dispo ${filtreDisponible ? 'active' : ''}" onclick="filtreDisponible=!filtreDisponible; renderRecettes()">
-  ${voyageActif ? '🧳 Réalisables voyage' : '✅ Réalisables en premier'}
+  ✅ Réalisables maintenant
 </button>
+${voyageActif ? `
+<button class="btn-filtre-dispo ${filtreDisponibleVoyage ? 'active' : ''}" onclick="filtreDisponibleVoyage=!filtreDisponibleVoyage; renderRecettes()">
+  🧳 Réalisables voyage
+</button>` : ''}
 <button class="btn-filtre-dispo ${filtreSansLiaison ? 'active' : ''}" onclick="filtreSansLiaison=!filtreSansLiaison; renderRecettes()">
   🔗 Sans liaisons
 </button>
@@ -3021,6 +3025,7 @@ async function toggleDetenu(itemId, catId) {
   await db.from('items').update({ detenu: nouvelEtat }).eq('id', itemId).eq('user_id', currentUser.id);
   item.detenu = nouvelEtat;
   renderCave();
+  if (typeof renderRecettes === 'function') renderRecettes();
 }
  
 // =============================================
