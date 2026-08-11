@@ -2948,7 +2948,17 @@ async function autoLierIngredientParNom(nomItem, itemCaveId) {
     .ilike('nom', nomItem)
     .is('item_cave_id', null);
 
-  if (!ingsCorrespondants || ingsCorrespondants.length === 0) return;
+  if (!ingsCorrespondants || ingsCorrespondants.length === 0) {
+    const feedbackVide = document.createElement('div');
+    feedbackVide.className = 'toast-feedback';
+    feedbackVide.style.background = 'var(--bg-warning)';
+    feedbackVide.style.color = 'var(--text-warning)';
+    feedbackVide.textContent = `⚠️ Aucune recette ne correspond exactement à "${nomItem}" — vérifie l'orthographe.`;
+    document.body.appendChild(feedbackVide);
+    setTimeout(() => feedbackVide.classList.add('visible'), 50);
+    setTimeout(() => { feedbackVide.classList.remove('visible'); setTimeout(() => feedbackVide.remove(), 300); }, 3500);
+    return;
+  }
 
   await db.from('ingredients_alias').upsert({
     user_id: currentUser.id,
