@@ -3461,6 +3461,8 @@ let concoctionAArchiver = null;
 
 function ouvrirModalArchiver(concId) {
   concoctionAArchiver = concId;
+  const conc = concoctions.find(c => c.id === concId);
+  document.getElementById('input-archiver-nom').value = conc?.nom || '';
   document.getElementById('input-archiver-notes').value = '';
   document.getElementById('input-archiver-cave').checked = true;
   document.getElementById('btn-confirmer-archiver').onclick = () => confirmerArchiver();
@@ -3483,14 +3485,15 @@ async function confirmerArchiver() {
   if (ajouterCave) {
     const conc = concoctions.find(c => c.id === concId);
     if (conc) {
+const nomFinal = document.getElementById('input-archiver-nom')?.value?.trim() || conc.nom;
       const { data: itemArchive } = await db.from('items').insert({
         user_id: currentUser.id,
-        nom: conc.nom,
+        nom: nomFinal,
         category_id: 'concoctions',
         detenu: true,
         info_description: notes || `Concoction maison archivée le ${new Date().toLocaleDateString('fr-FR')}.`
       }).select().single();
-      if (itemArchive) await autoLierIngredientParNom(itemArchive.nom, itemArchive.id);
+      if (itemArchive) await autoLierIngredientParNom(nomFinal, itemArchive.id);
     }
   }
 
