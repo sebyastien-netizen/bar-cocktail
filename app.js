@@ -3487,6 +3487,7 @@ async function confirmerArchiver() {
     if (conc) {
 const nomFinal = document.getElementById('input-archiver-nom')?.value?.trim() || conc.nom;
       const { data: itemArchive } = await db.from('items').insert({
+        id: 'concoction-' + Date.now(),
         user_id: currentUser.id,
         nom: nomFinal,
         category_id: 'concoctions',
