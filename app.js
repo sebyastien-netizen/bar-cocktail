@@ -7266,7 +7266,7 @@ container.innerHTML = `
 <button class="btn-outline" onclick="ouvrirImportURL()">🔗 Importer URL</button>
   <button class="btn-outline" onclick="document.getElementById('screenshot-input').click()">📷 Screenshot recette</button>
   <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="analyserScreenshot(this)">
-  <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration'); if(!document.getElementById('inspi-ingredients-rows').children.length) ajouterLigneIngredientInspi();">+ Ajouter</button>
+  <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration'); peuplerDatalistCaveItems(); if(!document.getElementById('inspi-ingredients-rows').children.length) ajouterLigneIngredientInspi();">+ Ajouter</button>
 </div>
 
     ${enAttente.length > 0 ? `
@@ -7615,6 +7615,12 @@ function selectInspiSource(btn) {
   document.getElementById('inspi-photo-group').style.display = inspiSourceActive === 'photo' ? '' : 'none';
   document.getElementById('inspi-url-group').style.display = inspiSourceActive === 'url' ? '' : 'none';
 }
+function peuplerDatalistCaveItems() {
+  const datalist = document.getElementById('datalist-cave-items');
+  if (!datalist) return;
+  const noms = (cave?.categories?.flatMap(c => c.items) || []).map(i => i.nom);
+  datalist.innerHTML = noms.map(n => `<option value="${n}">`).join('');
+}
 function ajouterLigneIngredientInspi(nom = '', quantite = '', unite = 'cl') {
   const container = document.getElementById('inspi-ingredients-rows');
   const rowId = 'row-ing-' + Date.now() + Math.random().toString(36).slice(2, 6);
@@ -7622,7 +7628,7 @@ function ajouterLigneIngredientInspi(nom = '', quantite = '', unite = 'cl') {
   row.id = rowId;
   row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
   row.innerHTML = `
-    <input type="text" class="ing-nom" placeholder="Ingrédient" value="${nom}" style="flex:2">
+    <input type="text" class="ing-nom" placeholder="Ingrédient" value="${nom}" style="flex:2" list="datalist-cave-items">
     <input type="number" step="0.1" class="ing-quantite" placeholder="Qté" value="${quantite}" style="flex:0.8">
     <select class="ing-unite" style="flex:0.8">
       <option value="cl" ${unite === 'cl' ? 'selected' : ''}>cl</option>
