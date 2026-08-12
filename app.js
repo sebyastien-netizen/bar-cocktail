@@ -895,7 +895,9 @@ const typeVersCategorie = {
           btnIdentifier.disabled = false;
           return;
         }
-const recommandations = caveItems.filter(i => i.sous_type_alcool === info.sous_type_alcool);
+const recommandations = info.sous_type_alcool
+          ? caveItems.filter(i => i.sous_type_alcool === info.sous_type_alcool)
+          : [];
 
         let recoHtml = '';
         if (recommandations.length > 0) {
