@@ -2312,6 +2312,11 @@ ${r.photo_url ? `<div class="fiche-img-wrap" style="${r.photo_cadrage ? 'positio
           <span>✦ Version ajustée active</span>
           <button class="fiche-bandeau-reset" onclick="annulerAjustements()">↺ Recette originale</button>
         </div>` : ''}
+${r.illustration_url ? `
+        <div style="margin:12px 0">
+          <img src="${r.illustration_url}" style="width:100%;border-radius:10px;display:block">
+          ${r.illustration_credit ? `<div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-style:italic">${r.illustration_credit}</div>` : ''}
+        </div>` : ''}
         ${r.description_courte ? `<p class="fiche-description">${r.description_courte}</p>` : ''}
       </div>
     </div>
