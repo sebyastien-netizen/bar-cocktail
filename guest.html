@@ -154,8 +154,8 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const params = new URLSearchParams(window.location.search);
 const token = params.get('session');
 let session = null;
-let pseudo = '';
 let inviteId = null;
+let pseudo = '';
 let profilGustatif = { sucre: 0, amer: 0, acide: 0, fruite: 0, fume: 0, floral: 0, epice: 0, cremeux: 0 };
 let questionActuelle = 0;
 const DEG_ETAPES = [
@@ -307,15 +307,15 @@ let reponsesQuestionnaire = Array(QUESTIONS.length).fill(null);
 
 async function init() {
   const paramsInvite = new URLSearchParams(window.location.search);
-  const inviteId = paramsInvite.get('invite');
+  inviteId = paramsInvite.get('invite');
 
   if (inviteId) {
    const { data, error } = await db.from('sessions_invites').select('*').eq('token', inviteId).single();
     if (error || !data) { afficherErreur('Lien invalide ou expiré.'); return; }
     session = data;
 
-    const { data: recetteData } = await db.from('recettes')
-      .select('id, nom, base_alcool, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi')
+const { data: recetteData } = await db.from('recettes')
+      .select('id, nom, base_alcool, anecdote, description_courte, illustration_url, illustration_credit, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi_invite')
       .eq('id', data.recette_id).single();
 
     recetteConfirmee = data.recette_id;
