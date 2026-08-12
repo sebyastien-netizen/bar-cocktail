@@ -626,10 +626,22 @@ async function supprimerAnalyseHistorique(id) {
   document.getElementById('modal-historique-analyses')?.remove();
   ouvrirHistoriqueAnalyses();
 }
+// Substituts reconnus à quantité égale (Tubiana) — utilisés pour disponibilité et calcul de verres possibles
+const SUBSTITUTIONS_INGREDIENTS = {
+  'oeufs': ['aquafaba'],
+  'aquafaba': ['oeufs']
+};
+
+// Retourne [id_original, ...substituts] pour un item donné
+function alternativesPour(itemCaveId) {
+  return [itemCaveId, ...(SUBSTITUTIONS_INGREDIENTS[itemCaveId] || [])];
+}
 function calculerDisponibilite(recette, caveIdsOverride) {
   const caveIds = caveIdsOverride || getItemsCave();
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
-  const manquants = ingredientsRequis.filter(i => !caveIds.has(i.item_cave_id));
+  const manquants = ingredientsRequis.filter(i =>
+    !alternativesPour(i.item_cave_id).some(alt => caveIds.has(alt))
+  );
   return manquants.length;
 }
  // Mode Fin du monde : matching par texte (nom/catégorie), pas par item_cave_id —
@@ -656,7 +668,8 @@ function calculerDisponibiliteVoyage(recette) {
   const ingredientsRequis = (recette.ingredients || []).filter(i => !i.optionnel && i.item_cave_id);
   const manquants = ingredientsRequis.filter(i => {
     if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(i.item_cave_id))) return false;
-    return !voyageBouteillesActives.some(b => b.item_cave_id === i.item_cave_id);
+    const alternatives = alternativesPour(i.item_cave_id);
+    return !voyageBouteillesActives.some(b => alternatives.includes(b.item_cave_id));
   });
   return manquants.length;
 }
@@ -1162,16 +1175,23 @@ const tousIngs = (recette.ingredients || []).filter(i =>
 tousIngs.forEach(ing => {
     if (!ing.item_cave_id) { inconnu = true; return; }
     if (CATEGORIES_NON_TRACKEES.includes(categorieDeItemGlobal(ing.item_cave_id))) return;
-    const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === ing.item_cave_id);
-    if (!item || item.cl_restants === null || item.cl_restants === undefined) {
-      inconnu = true;
-      return;
-    }
     const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
     if (qteCl <= 0) return;
-    const disponibleReel = Math.max(0, item.cl_restants - clReserveePour(item.id));
-    const possibles = Math.floor(disponibleReel / qteCl);
-    if (possibles < max) max = possibles;
+
+    // Meilleur résultat parmi l'item d'origine et ses substituts reconnus (ex: œuf / aquafaba)
+    let meilleurPossibles = null;
+    let auMoinsUnConnu = false;
+    alternativesPour(ing.item_cave_id).forEach(altId => {
+      const item = cave?.categories?.flatMap(c => c.items).find(i => i.id === altId);
+      if (!item || item.cl_restants === null || item.cl_restants === undefined) return;
+      auMoinsUnConnu = true;
+      const disponibleReel = Math.max(0, item.cl_restants - clReserveePour(item.id));
+      const possibles = Math.floor(disponibleReel / qteCl);
+      if (meilleurPossibles === null || possibles > meilleurPossibles) meilleurPossibles = possibles;
+    });
+
+    if (!auMoinsUnConnu) { inconnu = true; return; }
+    if (meilleurPossibles < max) max = meilleurPossibles;
   });
 
   if (max === Infinity) return null;
@@ -1189,12 +1209,19 @@ function calculerVerresPossiblesVoyage(recette) {
 
   tousIngs.forEach(ing => {
     if (!ing.item_cave_id) { horsVoyage = true; return; }
-    const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === ing.item_cave_id);
-    if (!bouteille || bouteille.cl_restants_voyage === null) { horsVoyage = true; return; }
     const qteCl = ing.unite === 'ml' ? ing.quantite / 10 : ing.quantite;
     if (qteCl <= 0) return;
-    const possibles = Math.floor(bouteille.cl_restants_voyage / qteCl);
-    if (possibles < max) max = possibles;
+
+    let meilleurPossibles = null;
+    alternativesPour(ing.item_cave_id).forEach(altId => {
+      const bouteille = voyageBouteillesActives.find(b => b.item_cave_id === altId);
+      if (!bouteille || bouteille.cl_restants_voyage === null) return;
+      const possibles = Math.floor(bouteille.cl_restants_voyage / qteCl);
+      if (meilleurPossibles === null || possibles > meilleurPossibles) meilleurPossibles = possibles;
+    });
+
+    if (meilleurPossibles === null) { horsVoyage = true; return; }
+    if (meilleurPossibles < max) max = meilleurPossibles;
   });
 
   if (max === Infinity || horsVoyage) return { max: 0, indisponible: true };
