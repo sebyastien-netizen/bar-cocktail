@@ -2313,9 +2313,14 @@ ${r.photo_url ? `<div class="fiche-img-wrap" style="${r.photo_cadrage ? 'positio
           <button class="fiche-bandeau-reset" onclick="annulerAjustements()">↺ Recette originale</button>
         </div>` : ''}
 ${r.illustration_url ? `
-        <div style="margin:12px 0">
-          <img src="${r.illustration_url}" style="width:100%;border-radius:10px;display:block">
-          ${r.illustration_credit ? `<div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-style:italic">${r.illustration_credit}</div>` : ''}
+        <div style="display:flex;gap:12px;align-items:flex-start;margin:14px 0;padding:12px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
+          <div style="flex-shrink:0;width:88px">
+            <img src="${r.illustration_url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:3px solid var(--bg-card);box-shadow:0 2px 6px rgba(0,0,0,0.3);filter:sepia(0.35) contrast(1.05)">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.68rem;letter-spacing:0.5px;color:var(--text-accent);text-transform:uppercase;margin-bottom:3px">📜 Archive historique</div>
+            ${r.illustration_credit ? `<div style="font-size:0.72rem;color:var(--text-muted);font-style:italic;line-height:1.35">${r.illustration_credit}</div>` : ''}
+          </div>
         </div>` : ''}
         ${r.description_courte ? `<p class="fiche-description">${r.description_courte}</p>` : ''}
       </div>
