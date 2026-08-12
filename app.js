@@ -2366,7 +2366,7 @@ const uniteAffichee = (ing.unite === 'ml') ? 'cl' : (ing.unite || '');
                 </div>
                 ${pct > 0 ? `<div class="fiche-ing-barre"><div class="fiche-ing-barre-fill fiche-ing-barre-fill--${couleur}" style="width:${pct}%"></div></div>` : ''}
                 ${enCave === false && !ing.optionnel ? `<div class="fiche-ing-warn">Manquant — voir À acheter</div>` : ''}
-${enCave === null && !ing.optionnel ? `
+${enCave === null && !ing.optionnel && !/glace|glaçon/i.test(ing.nom || '') ? `
   <div style="display:flex;align-items:center;gap:8px;">
     <div class="fiche-ing-warn" style="color:var(--text-muted)">Non lié à Ma Cave</div>
     <button onclick="event.stopPropagation();ouvrirLiaisonIngredient('${ing.nom.replace(/'/g, "\\'")}', '${ing.id}')" 
