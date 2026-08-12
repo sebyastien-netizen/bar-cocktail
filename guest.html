@@ -457,8 +457,7 @@ async function afficherChoixCocktails() {
   const ids = session.recettes_disponibles || [];
 
 const { data: recettesData } = await db.from('recettes')
-    .select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage, anecdote, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi_invite')
-    .in('id', ids);
+.select('id, nom, base_alcool, gout_sucre, gout_amer, gout_acide, gout_fruite, gout_fume, gout_floral, gout_epice, gout_cremeux, photo_url, photo_cadrage, anecdote, description_courte, illustration_url, illustration_credit, degustation_voir, degustation_sentir, degustation_gout, degustation_finish, degustation_defi_invite')    .in('id', ids);
 
   const { data: verresData } = session.voyage_id
   ? await db.rpc('verres_possibles_voyage_public', { p_recette_ids: ids, p_voyage_id: session.voyage_id })
@@ -567,18 +566,32 @@ function ouvrirInfoCocktail(id) {
       </div>
 
       <div style="padding:18px 20px 24px;overflow-y:auto;-webkit-overflow-scrolling:touch">
-        ${axesPertinents.length > 0 ? `
-        <div style="margin-bottom:${r.anecdote ? '18px' : '0'}">
+${axesPertinents.length > 0 ? `
+        <div style="margin-bottom:18px">
           ${barres}
         </div>` : ''}
-
+        ${r.illustration_url ? `
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;padding:12px;background:rgba(0,0,0,0.25);border-radius:10px;border:1px solid rgba(232,213,168,0.12)">
+          <div style="flex-shrink:0;width:76px">
+            <img src="${r.illustration_url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:3px solid rgba(232,213,168,0.15);filter:sepia(0.35) contrast(1.05)">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.68rem;letter-spacing:0.5px;color:rgba(217,164,65,0.7);text-transform:uppercase;margin-bottom:3px">📜 Archive historique</div>
+            ${r.illustration_credit ? `<div style="font-size:0.7rem;color:rgba(232,213,168,0.5);font-style:italic;line-height:1.35">${r.illustration_credit}</div>` : ''}
+          </div>
+        </div>` : ''}
+        ${r.description_courte ? `
+        <div style="margin-bottom:16px">
+          <div style="font-size:0.72rem;font-weight:700;color:rgba(217,164,65,0.7);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">🕰️ Origine</div>
+          <div style="font-size:0.86rem;line-height:1.55;color:rgba(232,213,168,0.85)">${r.description_courte}</div>
+        </div>` : ''}
         ${r.anecdote ? `
         <div style="border-top:${axesPertinents.length > 0 ? '1px solid rgba(232,213,168,0.1)' : 'none'};padding-top:${axesPertinents.length > 0 ? '16px' : '0'}">
           <div style="font-size:0.72rem;font-weight:700;color:rgba(217,164,65,0.7);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📖 Histoire</div>
           <div style="font-size:0.86rem;line-height:1.55;color:rgba(232,213,168,0.85)">${r.anecdote}</div>
         </div>` : ''}
 
-        ${!r.anecdote && axesPertinents.length === 0 ? `
+${!r.anecdote && !r.description_courte && !r.illustration_url && axesPertinents.length === 0 ? `
         <div style="text-align:center;padding:20px 0;font-size:0.8rem;color:rgba(232,213,168,0.35)">Pas encore d'anecdote pour ce cocktail.</div>` : ''}
       </div>
     </div>
