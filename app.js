@@ -7266,7 +7266,7 @@ container.innerHTML = `
 <button class="btn-outline" onclick="ouvrirImportURL()">🔗 Importer URL</button>
   <button class="btn-outline" onclick="document.getElementById('screenshot-input').click()">📷 Screenshot recette</button>
   <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="analyserScreenshot(this)">
-  <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration')">+ Ajouter</button>
+  <button class="btn-primary" onclick="afficherModal('modal-ajout-inspiration'); if(!document.getElementById('inspi-ingredients-rows').children.length) ajouterLigneIngredientInspi();">+ Ajouter</button>
 </div>
 
     ${enAttente.length > 0 ? `
@@ -7615,13 +7615,47 @@ function selectInspiSource(btn) {
   document.getElementById('inspi-photo-group').style.display = inspiSourceActive === 'photo' ? '' : 'none';
   document.getElementById('inspi-url-group').style.display = inspiSourceActive === 'url' ? '' : 'none';
 }
+function ajouterLigneIngredientInspi(nom = '', quantite = '', unite = 'cl') {
+  const container = document.getElementById('inspi-ingredients-rows');
+  const rowId = 'row-ing-' + Date.now() + Math.random().toString(36).slice(2, 6);
+  const row = document.createElement('div');
+  row.id = rowId;
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+  row.innerHTML = `
+    <input type="text" class="ing-nom" placeholder="Ingrédient" value="${nom}" style="flex:2">
+    <input type="number" step="0.1" class="ing-quantite" placeholder="Qté" value="${quantite}" style="flex:0.8">
+    <select class="ing-unite" style="flex:0.8">
+      <option value="cl" ${unite === 'cl' ? 'selected' : ''}>cl</option>
+      <option value="ml" ${unite === 'ml' ? 'selected' : ''}>ml</option>
+      <option value="traits" ${unite === 'traits' ? 'selected' : ''}>traits</option>
+      <option value="pièce" ${unite === 'pièce' ? 'selected' : ''}>pièce</option>
+    </select>
+    <button type="button" class="btn-icon" style="color:var(--text-danger)" onclick="document.getElementById('${rowId}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+}
 
+function lireLignesIngredientsInspi() {
+  const rows = document.querySelectorAll('#inspi-ingredients-rows > div');
+  const result = [];
+  rows.forEach(row => {
+    const nom = row.querySelector('.ing-nom').value.trim();
+    if (!nom) return;
+    const quantite = row.querySelector('.ing-quantite').value.trim();
+    const unite = row.querySelector('.ing-unite').value;
+    result.push({
+      nom,
+      quantite: quantite ? parseFloat(quantite) : null,
+      unite: quantite ? unite : null
+    });
+  });
+  return result;
+}
 async function sauverInspiration() {
   const nom = document.getElementById('inspi-nom').value.trim();
   if (!nom) return;
 
-  const ingsRaw = document.getElementById('inspi-ingredients').value.trim();
-  const ingredients = ingsRaw ? ingsRaw.split('\n').filter(Boolean).map(l => ({ nom: l.trim() })) : [];
+const ingredients = lireLignesIngredientsInspi();
   const tagsRaw = document.getElementById('inspi-tags').value.trim();
   const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
@@ -7657,7 +7691,8 @@ async function sauverInspiration() {
     fermerModal('modal-ajout-inspiration');
     // Reset form
     document.getElementById('inspi-nom').value = '';
-    document.getElementById('inspi-ingredients').value = '';
+    document.getElementById('inspi-ingredients-rows').innerHTML = '';
+    ajouterLigneIngredientInspi();
     document.getElementById('inspi-tags').value = '';
     document.getElementById('inspi-notes').value = '';
     document.getElementById('inspi-source-detail').value = '';
