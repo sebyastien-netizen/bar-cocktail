@@ -903,7 +903,9 @@ const typeVersCategorie = {
           recoHtml = `<div style="margin-top:6px;">Vous avez déjà : ${recommandations.map(r => `<strong>${r.nom}</strong>`).join(', ')}</div>`;
         }
 
-        resultDiv.innerHTML = `🏷️ ${info.categorie_id} — style : ${info.sous_type_alcool || 'non déterminé'}${info.tourbe ? ' (tourbé)' : ''}${recoHtml}`;
+        resultDiv.innerHTML = info.alcoolise === false
+          ? `🥤 ${info.categorie_id} — produit non alcoolisé${recoHtml}`
+          : `🏷️ ${info.categorie_id} — style : ${info.sous_type_alcool || 'non déterminé'}${info.tourbe ? ' (tourbé)' : ''}${recoHtml}`;
 
         if (recommandations.length === 1) {
           itemSelectionne = recommandations[0].id;
