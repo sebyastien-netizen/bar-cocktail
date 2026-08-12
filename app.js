@@ -895,28 +895,35 @@ const typeVersCategorie = {
           btnIdentifier.disabled = false;
           return;
         }
-
-        const recommandations = caveItems.filter(i => i.sous_type_alcool === info.sous_type_alcool);
+const recommandations = caveItems.filter(i => i.sous_type_alcool === info.sous_type_alcool);
 
         let recoHtml = '';
         if (recommandations.length > 0) {
           recoHtml = `<div style="margin-top:6px;">Vous avez déjà : ${recommandations.map(r => `<strong>${r.nom}</strong>`).join(', ')}</div>`;
         }
 
-resultDiv.innerHTML = info.alcoolise === false
+        resultDiv.innerHTML = info.alcoolise === false
           ? `🥤 ${info.categorie_id} — produit non alcoolisé${recoHtml}`
           : `🏷️ ${info.categorie_id} — style : ${info.sous_type_alcool || 'non déterminé'}${info.tourbe ? ' (tourbé)' : ''}${recoHtml}`;
 
-        // Capitalise l'identification dans le glossaire pour ne plus jamais avoir à la refaire
-        db.from('ingredients_glossaire').upsert({
-          user_id: currentUser.id,
-          nom_canonique: nomIng,
-          alias: [nomIng.toLowerCase()],
-          type: info.categorie_id,
-          source: info.source_web ? 'identifier-web' : 'identifier-ia'
-        }, { onConflict: 'user_id,nom_canonique' }).then(({ error }) => {
-          if (error) console.error('Erreur écriture glossaire:', error.message);
-        });
+        // Capitalise l'identification dans le glossaire (uniquement liqueurs/bitters/sirops/mixers —
+        // les spiritueux de base relèvent du futur chantier Banque d'Alcool, pas encore créé)
+        const TYPE_VERS_GLOSSAIRE = {
+          'liqueurs': 'liqueur', 'bitters': 'bitter', 'sirops': 'sirop',
+          'sodas-mixers': 'mixer', 'triples-secs': 'liqueur'
+        };
+        const typeGlossaire = TYPE_VERS_GLOSSAIRE[info.categorie_id];
+        if (typeGlossaire) {
+          db.from('ingredients_glossaire').upsert({
+            user_id: currentUser.id,
+            nom_canonique: nomIng,
+            alias: [nomIng.toLowerCase()],
+            type: typeGlossaire,
+            source: info.source_web ? 'identifier-web' : 'identifier-ia'
+          }, { onConflict: 'user_id,nom_canonique' }).then(({ error }) => {
+            if (error) console.error('Erreur écriture glossaire:', error.message);
+          });
+        }
 
         if (recommandations.length === 1) {
           itemSelectionne = recommandations[0].id;
