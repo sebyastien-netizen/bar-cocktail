@@ -7702,6 +7702,13 @@ function lireLignesIngredientsInspi() {
   });
   return result;
 }
+let inspiTypeSelectionne = 'cocktail';
+
+function selectInspiType(btn) {
+  document.querySelectorAll('#inspi-type-btns .config-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  inspiTypeSelectionne = btn.dataset.type;
+}
 async function sauverInspiration() {
   const nom = document.getElementById('inspi-nom').value.trim();
   if (!nom) return;
@@ -7723,11 +7730,12 @@ const ingredients = lireLignesIngredientsInspi();
     }
   }
 
-  const id = 'inspi-' + Date.now();
+const id = 'inspi-' + Date.now();
   const { data } = await db.from('inspirations').insert({
     id,
     user_id: currentUser.id,
     nom,
+    type: inspiTypeSelectionne,
     source: inspiSourceActive,
     source_detail: document.getElementById('inspi-source-detail').value.trim() || null,
     ingredients,
@@ -7741,7 +7749,10 @@ const ingredients = lireLignesIngredientsInspi();
     inspirationsList.unshift(data);
     fermerModal('modal-ajout-inspiration');
     // Reset form
-    document.getElementById('inspi-nom').value = '';
+document.getElementById('inspi-nom').value = '';
+    inspiTypeSelectionne = 'cocktail';
+    document.querySelectorAll('#inspi-type-btns .config-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('#inspi-type-btns .config-btn[data-type="cocktail"]')?.classList.add('active');
     document.getElementById('inspi-ingredients-rows').innerHTML = '';
     ajouterLigneIngredientInspi();
     document.getElementById('inspi-tags').value = '';
@@ -8399,10 +8410,10 @@ async function validerDirectement(id) {
 
   const complementsTexte = (notesTournee.complements && notesTournee.complements !== 'null') ? notesTournee.complements : null;
 
-  const { data: recette, error } = await db.from('recettes').insert({
+const { data: recette, error } = await db.from('recettes').insert({
     id: recetteId,
     user_id: currentUser.id,
-    type: 'cocktail',
+    type: inspi.type || 'cocktail',
     nom: inspi.nom,
     difficulte: 'moyen',
    base_alcool: (notesTournee.base_alcool && notesTournee.base_alcool !== 'null') ? notesTournee.base_alcool : null,
