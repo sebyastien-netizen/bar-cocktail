@@ -7672,6 +7672,17 @@ function peuplerDatalistCaveItems() {
   const noms = (cave?.categories?.flatMap(c => c.items) || []).map(i => i.nom);
   datalist.innerHTML = noms.map(n => `<option value="${n}">`).join('');
 }
+async function peuplerDatalistRechercheIngredient() {
+  const datalist = document.getElementById('datalist-recherche-ingredient');
+  if (!datalist) return;
+
+  const nomsCave = (cave?.categories?.flatMap(c => c.items) || []).map(i => i.nom);
+  const { data: glossaire } = await db.from('ingredients_glossaire').select('nom_canonique').eq('user_id', currentUser.id);
+  const nomsGlossaire = (glossaire || []).map(g => g.nom_canonique);
+
+  const tousNoms = [...new Set([...nomsCave, ...nomsGlossaire])].sort();
+  datalist.innerHTML = tousNoms.map(n => `<option value="${n}">`).join('');
+}
 function ajouterLigneIngredientInspi(nom = '', quantite = '', unite = 'cl') {
   const container = document.getElementById('inspi-ingredients-rows');
   const rowId = 'row-ing-' + Date.now() + Math.random().toString(36).slice(2, 6);
