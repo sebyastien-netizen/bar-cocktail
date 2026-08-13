@@ -34,7 +34,13 @@ let filtreDisponible = false;
 let filtreDisponibleVoyage = false;
 let filtreSansLiaison = false;
 let recetteOuverte  = null;
- 
+ const CATEGORIES_ALCOOLISEES = ['liqueurs', 'gin', 'vodka', 'whisky', 'mezcal-tequila', 'rhum', 'eaux-de-vie', 'bulles', 'bitters', 'vermouth', 'triples-secs'];
+
+function ingredientEstAlcoolise(itemCaveId) {
+  if (!itemCaveId) return false;
+  const cat = categorieDeItemGlobal(itemCaveId);
+  return CATEGORIES_ALCOOLISEES.includes(cat);
+}
 // =============================================
 // INIT & AUTH
 // =============================================
@@ -2413,7 +2419,7 @@ const uniteAffichee = (ing.unite === 'ml') ? 'cl' : (ing.unite || '');
               </div>
               <div class="fiche-ing-body">
                 <div class="fiche-ing-header">
-                  <span class="fiche-ing-nom ${enCave === false && !ing.optionnel ? 'fiche-ing-nom--manquant' : ''}">${ing.nom}${ing.optionnel ? ' <span class="fiche-ing-opt">optionnel</span>' : ''}</span>
+                  <span class="fiche-ing-nom ${enCave === false && !ing.optionnel ? 'fiche-ing-nom--manquant' : ''}">${ing.nom}${ingredientEstAlcoolise(ing.item_cave_id) ? ' <span style="font-size:0.68rem;color:var(--text-warning);font-weight:600">🍸 alcool</span>' : ''}${ing.optionnel ? ' <span class="fiche-ing-opt">optionnel</span>' : ''}</span>
                   <span class="fiche-ing-qte">${qte ? qte + ' ' + uniteAffichee : ''}</span>
                 </div>
                 ${pct > 0 ? `<div class="fiche-ing-barre"><div class="fiche-ing-barre-fill fiche-ing-barre-fill--${couleur}" style="width:${pct}%"></div></div>` : ''}
