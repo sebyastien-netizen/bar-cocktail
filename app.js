@@ -3952,6 +3952,28 @@ container.innerHTML = `
 <div id="analyser-result"></div>
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:0.8rem" onclick="ouvrirHistoriqueAnalyses()">🕐 Historique des analyses</button>
     </div>
+
+<!-- CHERCHER UN COCKTAIL/MOCKTAIL PAR INGRÉDIENT -->
+    <div class="aacheter-groupe">
+      <div class="aacheter-groupe-titre">🔎 Trouver une vraie recette par ingrédient</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:10px">Théo cherche des recettes réellement publiées, jamais inventées.</div>
+      <input type="text" id="recherche-ing-input" list="datalist-recherche-ingredient" placeholder="Ex: Sirop de vanille, Aperol, JNPR N°3…"
+        style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:14px;margin-bottom:8px">
+      <div style="display:flex;gap:14px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer">
+          <input type="checkbox" id="recherche-ing-cocktail" checked> 🍸 Cocktail
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer">
+          <input type="checkbox" id="recherche-ing-mocktail" checked> 🍹 Mocktail
+        </label>
+      </div>
+      <button id="recherche-ing-btn" onclick="lancerRechercheParIngredient()"
+        style="width:100%;padding:10px 16px;border-radius:8px;border:1px solid rgba(255,165,0,0.4);background:rgba(255,165,0,0.1);color:#ffaa00;font-size:14px;cursor:pointer">
+        🔎 Chercher
+      </button>
+      <div id="recherche-ing-result" style="margin-top:12px"></div>
+    </div>
+
 ${stockBas.length > 0 || itemsMasques.length > 0 ? `
 <div class="aacheter-groupe">
   <div class="aacheter-groupe-titre">⚠️ Stock bas — à racheter bientôt</div>
