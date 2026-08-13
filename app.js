@@ -3912,6 +3912,7 @@ async function chargerAAcheter() {
   const container = document.getElementById('aacheter-container');
   if (!container) return;
   container.innerHTML = '<div class="loading-state">Calcul en cours…</div>';
+  peuplerDatalistRechercheIngredient();
 
   // IDs des items détenus en cave
   const caveIds = getItemsCave();
