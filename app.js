@@ -1299,6 +1299,22 @@ async function ajouterSelectionASoireeActive() {
   alert(`${ids.length} cocktail${ids.length > 1 ? 's' : ''} ajouté${ids.length > 1 ? 's' : ''} à ${soireeMenuActive.nom}`);
   renderRecettes();
 }
+async function ajouterSelectionASessionActive() {
+  if (!sessionActive) return;
+  const nouveaux = Array.from(recettesSelectionneesSoiree);
+  if (nouveaux.length === 0) return;
+
+  const fusion = Array.from(new Set([...(sessionActive.recettes_disponibles || []), ...nouveaux]));
+  const { error } = await db.from('sessions_invites').update({ recettes_disponibles: fusion }).eq('id', sessionActive.id);
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  sessionActive.recettes_disponibles = fusion;
+  recettesSelectionneesSoiree.clear();
+  modeSelectionSoiree = false;
+  document.getElementById('barre-selection-soiree')?.remove();
+  renderRecettes();
+  alert(`✅ ${nouveaux.length} recette(s) ajoutée(s) à "${sessionActive.nom_session}".`);
+}
 let voyageActif = null;
 let modeSelectionVoyage = false;
 let bouteillesSelectionneesVoyage = new Set();
@@ -1673,9 +1689,13 @@ function ouvrirBarreSelectionSoiree() {
   barre.innerHTML = `
     <span style="font-size:0.85rem">${recettesSelectionneesSoiree.size} sélectionnée${recettesSelectionneesSoiree.size > 1 ? 's' : ''}</span>
     <div style="display:flex;gap:8px">
-      ${soireeMenuActive ? `
+${soireeMenuActive ? `
       <button class="btn-outline" style="padding:8px 12px;font-size:0.82rem;border-color:var(--accent);color:var(--accent)" onclick="ajouterSelectionASoireeActive()">
         + "${soireeMenuActive.nom}"
+      </button>` : ''}
+    ${sessionActive ? `
+      <button class="btn-outline" style="padding:8px 12px;font-size:0.82rem;border-color:var(--accent);color:var(--accent)" onclick="ajouterSelectionASessionActive()">
+        + "${sessionActive.nom_session}"
       </button>` : ''}
       <button class="btn-primary" style="padding:8px 16px;font-size:0.82rem" onclick="lancerSoireeDepuisSelection()">🎉 Nouvelle soirée</button>
     </div>
