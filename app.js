@@ -5118,6 +5118,11 @@ function setModeSession(mode) {
   if (blocRecettes) blocRecettes.style.display = mode === 'libre' ? 'none' : '';
 }
 function ouvrirChoixTypeSession() {
+  // Récupère automatiquement toute sélection de recettes en attente,
+  // peu importe le bouton "+ Nouvelle soirée" utilisé pour arriver ici
+  if (recettesSelectionneesSoiree.size > 0) {
+    selectionPourSoireeEnAttente = Array.from(recettesSelectionneesSoiree);
+  }
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px';
   modal.innerHTML = `
