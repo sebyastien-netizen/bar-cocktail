@@ -611,9 +611,16 @@
     <button class="modal-close" onclick="fermerModal('modal-ajout-inspiration')">✕</button>
     <h3>💡 Nouvelle inspiration</h3>
     <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
-      <div class="form-group">
+<div class="form-group">
         <label>Nom du cocktail</label>
         <input type="text" id="inspi-nom" placeholder="ex: Mezcal Negroni, Spritz Rhubarbe…">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <div style="display:flex;gap:8px" id="inspi-type-btns">
+          <button type="button" class="config-btn active" data-type="cocktail" onclick="selectInspiType(this)">🍸 Cocktail</button>
+          <button type="button" class="config-btn" data-type="mocktail" onclick="selectInspiType(this)">🍹 Mocktail</button>
+        </div>
       </div>
       <div class="form-group">
         <label>Source</label>
