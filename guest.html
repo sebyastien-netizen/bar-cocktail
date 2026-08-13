@@ -512,7 +512,7 @@ const cadrageStyle = (r) => r.photo_cadrage
         <div class="tuile-cocktail ${cocktailSelectionne === r.id ? 'selectionnee' : ''}" onclick="selectionnerTuile('${r.id}', '${r.nom.replace(/'/g,"\\'")}')">
 <div style="position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:8px;background:#000">
             ${r.photo_url ? `<img src="${r.photo_url}" style="position:absolute;top:50%;left:50%;width:100%;height:auto;max-width:none;${cadrageStyle(r)}">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;opacity:0.3">🍸</div>`}
-           <div style="position:absolute;top:4px;left:4px;background:${r.type === 'mocktail' ? 'rgba(76,175,80,0.9)' : 'rgba(217,164,65,0.9)'};color:#10141f;padding:2px 7px;border-radius:10px;font-size:0.6rem;font-weight:700">${r.type === 'mocktail' ? '🌿 SANS ALCOOL' : '🍸 COCKTAIL'}</div>
+           <div style="position:absolute;top:4px;left:4px;background:${r.type === 'mocktail' ? 'rgba(76,175,80,0.9)' : 'rgba(217,164,65,0.9)'};color:#10141f;padding:2px 7px;border-radius:10px;font-size:0.6rem;font-weight:700">${r.type === 'mocktail' ? '🍹 MOCKTAIL' : '🍸 COCKTAIL'}</div>
             ${cocktailSelectionne === r.id ? `<div style="position:absolute;top:4px;right:4px;background:#d9a441;color:#10141f;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem">✓</div>` : ''}
             <button onclick="event.stopPropagation();ouvrirInfoCocktail('${r.id}')" style="position:absolute;bottom:4px;left:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:0.7rem;display:flex;align-items:center;justify-content:center">i</button>
           </div>
