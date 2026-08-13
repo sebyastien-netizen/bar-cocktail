@@ -634,23 +634,54 @@ async function lancerRechercheParIngredient() {
   btn.textContent = '⏳ Recherche en cours…';
   resultDiv.innerHTML = '<div class="simulateur-vide">Théo cherche de vraies recettes publiées…</div>';
 
-  try {
-    const rep = await fetch('/api/chercher-par-ingredient', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ingredient, types })
-    });
-    const data = await rep.json();
+try {
+    // Vérifie d'abord si cette recherche a déjà été faite récemment (économise Tavily)
+    const { data: cache } = await db.from('recherches_ingredients')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .ilike('ingredient', ingredient)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (!data.success || !data.recettes?.length) {
-      resultDiv.innerHTML = `<div class="simulateur-vide">Aucune recette réelle trouvée pour "${ingredient}". Essaie un nom plus courant ou vérifie l'orthographe.</div>`;
-      btn.disabled = false;
-      btn.textContent = '🔎 Chercher';
-      return;
+    let recettesTrouvees;
+    let depuisCache = false;
+
+    if (cache && JSON.stringify(cache.types.sort()) === JSON.stringify([...types].sort())) {
+      recettesTrouvees = cache.resultats;
+      depuisCache = true;
+    } else {
+      const rep = await fetch('/api/chercher-par-ingredient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredient, types })
+      });
+      const data = await rep.json();
+
+      if (!data.success || !data.recettes?.length) {
+        resultDiv.innerHTML = `<div class="simulateur-vide">Aucune recette réelle trouvée pour "${ingredient}". Essaie un nom plus courant ou vérifie l'orthographe.</div>`;
+        btn.disabled = false;
+        btn.textContent = '🔎 Chercher';
+        return;
+      }
+      recettesTrouvees = data.recettes;
+
+      // Sauvegarde pour réutilisation future
+      await db.from('recherches_ingredients').insert({
+        id: 'recherche-' + Date.now(),
+        user_id: currentUser.id,
+        ingredient,
+        types,
+        resultats: recettesTrouvees
+      });
     }
 
-    window._rechercheIngredientResultats = data.recettes;
-    resultDiv.innerHTML = construireResultatRechercheIngredient(data.recettes, ingredient);
+    window._rechercheIngredientResultats = recettesTrouvees;
+    resultDiv.innerHTML = construireResultatRechercheIngredient(recettesTrouvees, ingredient) +
+      (depuisCache ? `<div style="text-align:center;margin-top:10px">
+        <span style="font-size:0.72rem;color:var(--text-muted)">Résultat mis en cache — évite un nouvel appel</span>
+        <button class="btn-outline" style="display:block;margin:8px auto 0;font-size:0.75rem;padding:6px 12px" onclick="document.getElementById('recherche-ing-input').value='${ingredient.replace(/'/g, "\\'")}';forcerNouvelleRechercheIngredient()">🔄 Relancer une nouvelle recherche</button>
+      </div>` : '');
   } catch (e) {
     resultDiv.innerHTML = '<div class="simulateur-vide">Erreur de connexion. Réessaie.</div>';
   }
@@ -658,7 +689,11 @@ async function lancerRechercheParIngredient() {
   btn.disabled = false;
   btn.textContent = '🔎 Chercher';
 }
-
+async function forcerNouvelleRechercheIngredient() {
+  const ingredient = document.getElementById('recherche-ing-input')?.value?.trim();
+  await db.from('recherches_ingredients').delete().eq('user_id', currentUser.id).ilike('ingredient', ingredient);
+  lancerRechercheParIngredient();
+}
 function construireResultatRechercheIngredient(recettesTrouvees, ingredientCherche) {
   const nomsCaveActive = getNomsCaveActive();
 
@@ -677,7 +712,9 @@ function construireResultatRechercheIngredient(recettesTrouvees, ingredientCherc
       return `
         <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:10px" onclick="toggleDetailCocktailAnalyse('${uid}')">
           <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
-            <span class="simulateur-recette-nom">${r.recetteExistante ? '📖' : '✨'} ${r.type === 'mocktail' ? '🍹' : '🍸'} ${r.nom}</span>
+           <span class="simulateur-recette-nom">${r.recetteExistante ? '📖' : '✨'} ${r.nom}
+              <span style="font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:8px;margin-left:4px;background:${r.type === 'mocktail' ? 'rgba(76,175,80,0.15)' : 'rgba(217,164,65,0.15)'};color:${r.type === 'mocktail' ? '#4caf50' : '#d9a441'}">${r.type === 'mocktail' ? 'MOCKTAIL' : 'COCKTAIL'}</span>
+            </span>
             <span style="font-size:0.72rem;color:var(--text-muted)">▾</span>
           </div>
           <span class="simulateur-recette-gouts">${r.manquants.length ? '⚠️ manque ' + r.manquants.length + ' ingrédient' + (r.manquants.length > 1 ? 's' : '') : '✓ réalisable maintenant'}</span>
