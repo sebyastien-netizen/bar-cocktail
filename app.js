@@ -613,7 +613,131 @@ async function ouvrirHistoriqueAnalyses() {
   window._historiqueAnalyses = historique || [];
   document.body.appendChild(modal);
 }
+async function lancerRechercheParIngredient() {
+  const ingredient = document.getElementById('recherche-ing-input')?.value?.trim();
+  if (!ingredient) return;
 
+  const cocktailCoche = document.getElementById('recherche-ing-cocktail')?.checked;
+  const mocktailCoche = document.getElementById('recherche-ing-mocktail')?.checked;
+  const types = [];
+  if (cocktailCoche) types.push('cocktail');
+  if (mocktailCoche) types.push('mocktail');
+
+  if (types.length === 0) {
+    alert('Coche au moins Cocktail ou Mocktail.');
+    return;
+  }
+
+  const btn = document.getElementById('recherche-ing-btn');
+  const resultDiv = document.getElementById('recherche-ing-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ Recherche en cours…';
+  resultDiv.innerHTML = '<div class="simulateur-vide">Théo cherche de vraies recettes publiées…</div>';
+
+  try {
+    const rep = await fetch('/api/chercher-par-ingredient', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredient, types })
+    });
+    const data = await rep.json();
+
+    if (!data.success || !data.recettes?.length) {
+      resultDiv.innerHTML = `<div class="simulateur-vide">Aucune recette réelle trouvée pour "${ingredient}". Essaie un nom plus courant ou vérifie l'orthographe.</div>`;
+      btn.disabled = false;
+      btn.textContent = '🔎 Chercher';
+      return;
+    }
+
+    window._rechercheIngredientResultats = data.recettes;
+    resultDiv.innerHTML = construireResultatRechercheIngredient(data.recettes, ingredient);
+  } catch (e) {
+    resultDiv.innerHTML = '<div class="simulateur-vide">Erreur de connexion. Réessaie.</div>';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔎 Chercher';
+}
+
+function construireResultatRechercheIngredient(recettesTrouvees, ingredientCherche) {
+  const nomsCaveActive = getNomsCaveActive();
+
+  const enrichies = recettesTrouvees.map(r => {
+    const ings = r.ingredients || [];
+    const manquants = ings.filter(i => !ingredientEnCaveActive(i.nom, nomsCaveActive));
+    const score = ings.length > 0 ? Math.round(((ings.length - manquants.length) / ings.length) * 100) : 0;
+    const recetteExistante = recettes.find(rec => rec.nom.toLowerCase().trim() === r.nom.toLowerCase().trim());
+    return { ...r, manquants, score, recetteExistante };
+  }).sort((a, b) => b.score - a.score);
+
+  return `
+    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:10px">${enrichies.length} recette${enrichies.length > 1 ? 's' : ''} trouvée${enrichies.length > 1 ? 's' : ''} avec "${ingredientCherche}"</div>
+    ${enrichies.map((r, idx) => {
+      const uid = `recherche-ing-carte-${idx}-${Date.now()}`;
+      return `
+        <div class="simulateur-recette" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:10px" onclick="toggleDetailCocktailAnalyse('${uid}')">
+          <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+            <span class="simulateur-recette-nom">${r.recetteExistante ? '📖' : '✨'} ${r.type === 'mocktail' ? '🍹' : '🍸'} ${r.nom}</span>
+            <span style="font-size:0.72rem;color:var(--text-muted)">▾</span>
+          </div>
+          <span class="simulateur-recette-gouts">${r.manquants.length ? '⚠️ manque ' + r.manquants.length + ' ingrédient' + (r.manquants.length > 1 ? 's' : '') : '✓ réalisable maintenant'}</span>
+          <div id="${uid}" style="display:none;width:100%;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            ${(r.ingredients || []).map(ing => {
+              const enCave = ingredientEnCaveActive(ing.nom, nomsCaveActive);
+              return `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:3px 0">
+                <span>${enCave ? '✅' : '❌'} ${ing.nom}</span>
+                <span style="color:var(--text-muted)">${ing.quantite || ''} ${ing.unite || ''}</span>
+              </div>`;
+            }).join('')}
+            ${r.origine ? `<div style="font-size:0.76rem;color:var(--text-secondary);margin-top:8px;font-style:italic">${r.origine}</div>` : ''}
+            <div style="font-size:0.68rem;color:var(--text-muted);margin-top:6px">Source : <a href="${r._source_url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--text-accent)">${r._source_url}</a></div>
+            ${r.recetteExistante ? `
+            <button class="btn-outline" style="font-size:0.72rem;padding:4px 10px;margin-top:8px" onclick="event.stopPropagation(); ouvrirFicheRecette('${r.recetteExistante.id}')">📖 Voir la fiche recette</button>
+            ` : `
+            <button class="btn-primary" style="font-size:0.72rem;padding:4px 10px;margin-top:8px" onclick="event.stopPropagation(); enregistrerRecetteDepuisRechercheIngredient(${idx})">💾 Enregistrer cette recette</button>
+            `}
+          </div>
+        </div>`;
+    }).join('')}
+  `;
+}
+
+async function enregistrerRecetteDepuisRechercheIngredient(idx) {
+  const r = window._rechercheIngredientResultats?.[idx];
+  if (!r) { alert('Donnée introuvable, relance la recherche.'); return; }
+
+  const slug = r.nom.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const id = `recherche-${slug}-${Date.now()}`;
+
+  const { error: errRecette } = await db.from('recettes').insert({
+    id, user_id: currentUser.id, type: r.type === 'mocktail' ? 'mocktail' : 'cocktail',
+    nom: r.nom, difficulte: 'moyen',
+    description_courte: r.origine || `Recette trouvée via recherche par ingrédient — source : ${r._source_url}`
+  });
+  if (errRecette) { alert('Erreur création recette : ' + errRecette.message); return; }
+
+  const ingredientsPayload = (r.ingredients || []).map((ing, i) => ({
+    recette_id: id, user_id: currentUser.id, nom: ing.nom,
+    item_cave_id: trouverItemCaveIdParNom(ing.nom),
+    quantite: parseFloat(ing.quantite) || null, unite: ing.unite || null,
+    optionnel: false, ordre: i + 1
+  }));
+  if (ingredientsPayload.length) {
+    await db.from('recette_ingredients').insert(ingredientsPayload);
+  }
+
+  const etapesPayload = (r.etapes || []).map((desc, i) => ({
+    recette_id: id, user_id: currentUser.id, ordre: i + 1, titre: `Étape ${i + 1}`, description: desc
+  }));
+  if (etapesPayload.length) {
+    await db.from('recette_etapes').insert(etapesPayload);
+  }
+
+  alert(`✅ "${r.nom}" enregistrée dans tes recettes.`);
+  await chargerRecettes();
+}
 function revoirAnalyseHistorique(id) {
   const h = window._historiqueAnalyses?.find(x => x.id === id);
   if (!h) return;
