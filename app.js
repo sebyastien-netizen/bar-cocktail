@@ -6749,11 +6749,20 @@ let voyageIdPourSession = null;
 
 function ouvrirModalNouvelleSession(voyageId = null) {
   voyageIdPourSession = voyageId || null;
-  modeSessionActif = 'libre';
   document.getElementById('session-nom').value = '';
-  document.getElementById('btn-mode-libre').classList.add('active');
-  document.getElementById('bloc-recettes-liste').style.display = 'none';
-  document.getElementById('btn-mode-verrouille').classList.remove('active');
+
+  // Si une sélection de recettes vient de "Recettes", basculer directement en mode verrouillé
+  if (selectionPourSoireeEnAttente) {
+    modeSessionActif = 'verrouille';
+    document.getElementById('btn-mode-libre').classList.remove('active');
+    document.getElementById('bloc-recettes-liste').style.display = '';
+    document.getElementById('btn-mode-verrouille').classList.add('active');
+  } else {
+    modeSessionActif = 'libre';
+    document.getElementById('btn-mode-libre').classList.add('active');
+    document.getElementById('bloc-recettes-liste').style.display = 'none';
+    document.getElementById('btn-mode-verrouille').classList.remove('active');
+  }
 
   quizActif = true;
   document.getElementById('btn-quiz-oui').classList.add('active');
@@ -6811,8 +6820,9 @@ async function creerSession() {
   };
   if (voyageIdPourSession) payload.voyage_id = voyageIdPourSession;
 
-  const { error } = await db.from('sessions_invites').insert(payload);
+const { error } = await db.from('sessions_invites').insert(payload);
   if (error) { alert('Erreur création session : ' + error.message); return; }
+  selectionPourSoireeEnAttente = null;
 
   voyageIdPourSession = null;
   document.getElementById('modal-nouvelle-session').classList.remove('visible');
