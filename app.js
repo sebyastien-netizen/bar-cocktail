@@ -506,8 +506,13 @@ fondEl.style.cssText = `
 function ingredientEnCaveActive(nomIngredient, nomsCave) {
   const key = (nomIngredient || '').toLowerCase().trim();
   if (!key) return false;
-  // Mots vides à ignorer dans la comparaison (ne portent pas l'identité de l'ingrédient)
-  const motsVides = new Set(['frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les', 'd\'', 'l\'']);
+  // Mots vides ET mots génériques de catégorie à ignorer dans la comparaison —
+  // "Hibiscus Berry Gin" ne doit pas matcher "Bombay Sapphire" juste sur "gin"
+  const motsVides = new Set([
+    'frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les', 'd\'', 'l\'',
+    'gin', 'vodka', 'rhum', 'whisky', 'whiskey', 'tequila', 'mezcal', 'cognac',
+    'brandy', 'armagnac', 'liqueur', 'sirop', 'jus', 'sucre', 'eau'
+  ]);
   const motsClesIng = key.split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
   if (motsClesIng.length === 0) return [...nomsCave].some(n => n.includes(key) || key.includes(n));
 
@@ -523,7 +528,13 @@ function ingredientEnCaveActive(nomIngredient, nomsCave) {
 function trouverItemCaveIdParNom(nomIngredient) {
   const key = (nomIngredient || '').toLowerCase().trim();
   if (!key) return null;
-  const motsVides = new Set(['frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les']);
+  // Mots vides ET mots génériques de catégorie (jamais suffisants seuls pour matcher —
+  // "Hibiscus Berry Gin" ne doit pas matcher "Bombay Sapphire" juste sur "gin")
+  const motsVides = new Set([
+    'frais', 'fraiche', 'fraîche', 'jaune', 'vert', 'de', 'du', 'la', 'le', 'les',
+    'gin', 'vodka', 'rhum', 'whisky', 'whiskey', 'tequila', 'mezcal', 'cognac',
+    'brandy', 'armagnac', 'liqueur', 'sirop', 'jus', 'sucre', 'eau'
+  ]);
   const motsClesIng = key.split(/[\s']+/).filter(m => m.length > 2 && !motsVides.has(m));
 
   // Cave active : voyage si actif, sinon cave normale — cohérent avec ingredientEnCaveActive
