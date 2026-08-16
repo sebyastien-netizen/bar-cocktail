@@ -10036,8 +10036,8 @@ async function validerDecrementation() {
   const r = recetteOuverte;
   const date = document.getElementById('choix-real-date').value;
   const portions = parseInt(document.getElementById('choix-real-portions').value) || 1;
-  await decrementerCave(r, portions);
   fermerModal('modal-choix-realisation');
+  ouvrirConfirmationDecrementation(r, portions);
   afficherToastRealisation(r.nom, date);
 }
 
@@ -10053,33 +10053,100 @@ function lancerDepuisChoix() {
 
  
 // =============================================
-// DÉCRÉMENTER LA CAVE (extrait de marquerRealisee)
+// DÉCRÉMENTER LA CAVE — avec confirmation bouteille + dosage
 // =============================================
- 
-async function decrementerCave(r, portions) {
+
+function ouvrirConfirmationDecrementation(r, portions) {
   const caveIds = getItemsCave();
-  const updates = [];
- 
+
+  const ingsTrackables = (r.ingredients || []).filter(ing =>
+    ing.item_cave_id && ing.quantite && ing.unite === 'cl' &&
+    !ing.optionnel && caveIds.has(ing.item_cave_id)
+  );
+
+  if (ingsTrackables.length === 0) {
+    if (!confirm('Marquer cette recette comme réalisée ?')) return;
+    marquerRealiseeConfirmee(r, portions, {});
+    return;
+  }
+
+  const toutesBouteilles = cave?.categories?.flatMap(c => c.items).filter(i => i.detenu !== false) || [];
+
+  const subs = {};
+  ingsTrackables.forEach(ing => { subs[ing.item_cave_id] = ing.item_cave_id; });
+  window._decrementSubs = { ...subs };
+  window._decrementRecette = r;
+  window._decrementPortions = portions;
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-confirmer-decrement';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="max-width:400px;width:100%;background:var(--bg-card);border-radius:16px;padding:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:4px">🍸 ${r.nom}</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">${portions} portion${portions > 1 ? 's' : ''} — vérifie les bouteilles et dosages</div>
+      ${ingsTrackables.map((ing, idx) => {
+        const qteDefaut = ing.quantite * portions;
+        return `
+          <div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <select style="width:100%;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.78rem"
+              onchange="window._decrementSubs['${ing.item_cave_id}']=this.value">
+              ${toutesBouteilles.map(b => `<option value="${b.id}" ${b.id === ing.item_cave_id ? 'selected' : ''}>${b.nom}</option>`).join('')}
+            </select>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:0.75rem;color:var(--text-muted)">Dosage :</span>
+              <input type="number" step="0.5" value="${qteDefaut}" id="decrement-qte-${idx}" data-item="${ing.item_cave_id}"
+                style="width:70px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-primary);font-size:0.78rem">
+              <span style="font-size:0.75rem;color:var(--text-muted)">cl</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-outline" style="flex:1" onclick="document.getElementById('modal-confirmer-decrement').remove()">Annuler</button>
+        <button class="btn-primary" style="flex:1" id="btn-confirmer-decrement">✅ Réalisée</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('btn-confirmer-decrement').addEventListener('click', async () => {
+    const subs = window._decrementSubs;
+    const recette = window._decrementRecette;
+    const portionsVal = window._decrementPortions;
+
+    const dosagesReels = {};
+    ingsTrackables.forEach((ing, idx) => {
+      const input = document.getElementById(`decrement-qte-${idx}`);
+      dosagesReels[ing.item_cave_id] = parseFloat(input?.value) || (ing.quantite * portionsVal);
+    });
+
+    document.getElementById('modal-confirmer-decrement')?.remove();
+    await marquerRealiseeConfirmee(recette, portionsVal, subs, dosagesReels);
+  }, { once: true });
+}
+
+async function marquerRealiseeConfirmee(r, portions, subs, dosagesReels) {
+  const caveIds = getItemsCave();
+
   for (const ing of (r.ingredients || [])) {
     if (!ing.item_cave_id || !ing.quantite || !ing.unite) continue;
     if (!caveIds.has(ing.item_cave_id)) continue;
     if (ing.unite !== 'cl') continue;
- 
+
+    const itemIdReel = subs[ing.item_cave_id] || ing.item_cave_id;
+    const qteReelle = dosagesReels?.[ing.item_cave_id] ?? (ing.quantite * portions);
+
     for (const cat of cave.categories) {
-      const item = cat.items.find(i => i.id === ing.item_cave_id);
+      const item = cat.items.find(i => i.id === itemIdReel);
       if (item && item.cl_restants !== null) {
-        const nouveau = Math.max(0, item.cl_restants - (ing.quantite * portions));
-        updates.push({ item, nouveau });
+        const nouveau = Math.max(0, item.cl_restants - qteReelle);
+        await db.from('items').update({ cl_restants: nouveau }).eq('id', item.id).eq('user_id', currentUser.id);
+        item.cl_restants = nouveau;
       }
     }
   }
- 
-  for (const { item, nouveau } of updates) {
-    await db.from('items').update({ cl_restants: nouveau }).eq('id', item.id).eq('user_id', currentUser.id);
-    item.cl_restants = nouveau;
-  }
 }
- 
 // =============================================
 // HISTORIQUE COMPLET (onglet ou page dédiée)
 // =============================================
