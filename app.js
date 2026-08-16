@@ -10037,8 +10037,7 @@ async function validerDecrementation() {
   const date = document.getElementById('choix-real-date').value;
   const portions = parseInt(document.getElementById('choix-real-portions').value) || 1;
   fermerModal('modal-choix-realisation');
-  ouvrirConfirmationDecrementation(r, portions);
-  afficherToastRealisation(r.nom, date);
+  ouvrirConfirmationDecrementation(r, portions, date);
 }
 
 function lancerDepuisChoix() {
@@ -10056,7 +10055,7 @@ function lancerDepuisChoix() {
 // DÉCRÉMENTER LA CAVE — avec confirmation bouteille + dosage
 // =============================================
 
-function ouvrirConfirmationDecrementation(r, portions) {
+function ouvrirConfirmationDecrementation(r, portions, dateReal) {
   const caveIds = getItemsCave();
 
   const ingsTrackables = (r.ingredients || []).filter(ing =>
@@ -10121,12 +10120,13 @@ function ouvrirConfirmationDecrementation(r, portions) {
       dosagesReels[ing.item_cave_id] = parseFloat(input?.value) || (ing.quantite * portionsVal);
     });
 
-    document.getElementById('modal-confirmer-decrement')?.remove();
-    await marquerRealiseeConfirmee(recette, portionsVal, subs, dosagesReels);
+document.getElementById('modal-confirmer-decrement')?.remove();
+    await marquerRealiseeConfirmee(recette, portionsVal, subs, dosagesReels, dateReal);
+    afficherToastRealisation(recette.nom, dateReal);
   }, { once: true });
 }
 
-async function marquerRealiseeConfirmee(r, portions, subs, dosagesReels) {
+async function marquerRealiseeConfirmee(r, portions, subs, dosagesReels, dateReal) {
   const caveIds = getItemsCave();
 
   for (const ing of (r.ingredients || [])) {
@@ -10137,7 +10137,7 @@ async function marquerRealiseeConfirmee(r, portions, subs, dosagesReels) {
     const itemIdReel = subs[ing.item_cave_id] || ing.item_cave_id;
     const qteReelle = dosagesReels?.[ing.item_cave_id] ?? (ing.quantite * portions);
 
-    for (const cat of cave.categories) {
+for (const cat of cave.categories) {
       const item = cat.items.find(i => i.id === itemIdReel);
       if (item && item.cl_restants !== null) {
         const nouveau = Math.max(0, item.cl_restants - qteReelle);
@@ -10146,6 +10146,15 @@ async function marquerRealiseeConfirmee(r, portions, subs, dosagesReels) {
       }
     }
   }
+
+  // Enregistre dans le journal des réalisations
+  await db.from('realisations').insert({
+    user_id: currentUser.id,
+    recette_id: r.id,
+    recette_nom: r.nom,
+    portions: portions,
+    date: dateReal || new Date().toISOString().split('T')[0]
+  });
 }
 // =============================================
 // HISTORIQUE COMPLET (onglet ou page dédiée)
