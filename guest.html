@@ -573,11 +573,9 @@ ${axesPertinents.length > 0 ? `
           ${barres}
         </div>` : ''}
         ${r.illustration_url ? `
-        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;padding:12px;background:rgba(0,0,0,0.25);border-radius:10px;border:1px solid rgba(232,213,168,0.12)">
-          <div style="flex-shrink:0;width:76px">
-            <img src="${r.illustration_url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:3px solid rgba(232,213,168,0.15);filter:sepia(0.35) contrast(1.05)">
-          </div>
-          <div style="flex:1;min-width:0">
+<div style="margin-bottom:16px;background:rgba(0,0,0,0.25);border-radius:10px;border:1px solid rgba(232,213,168,0.12);overflow:hidden">
+          <img src="${r.illustration_url}" style="width:100%;max-height:200px;object-fit:cover;display:block;filter:sepia(0.35) contrast(1.05)">
+          <div style="padding:10px 12px">
             <div style="font-size:0.68rem;letter-spacing:0.5px;color:rgba(217,164,65,0.7);text-transform:uppercase;margin-bottom:3px">📜 Archive historique</div>
             ${r.illustration_credit ? `<div style="font-size:0.7rem;color:rgba(232,213,168,0.5);font-style:italic;line-height:1.35">${r.illustration_credit}</div>` : ''}
           </div>
@@ -655,12 +653,10 @@ let degEtapeIndex = 0;
   overlay.innerHTML = `
     <button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(232,213,168,0.6);font-size:1.3rem;margin-bottom:12px">✕</button>
     <div style="font-size:1.3rem;font-weight:700;color:#d9a441;margin-bottom:16px">${r.nom}</div>
-    ${r.illustration_url ? `
-    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;padding:12px;background:rgba(0,0,0,0.25);border-radius:10px;border:1px solid rgba(232,213,168,0.12)">
-      <div style="flex-shrink:0;width:76px">
-        <img src="${r.illustration_url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:3px solid rgba(232,213,168,0.15);filter:sepia(0.35) contrast(1.05)">
-      </div>
-      <div style="flex:1;min-width:0">
+  ${r.illustration_url ? `
+    <div style="margin-bottom:16px;background:rgba(0,0,0,0.25);border-radius:10px;border:1px solid rgba(232,213,168,0.12);overflow:hidden">
+      <img src="${r.illustration_url}" style="width:100%;max-height:200px;object-fit:cover;display:block;filter:sepia(0.35) contrast(1.05)">
+      <div style="padding:10px 12px">
         <div style="font-size:0.68rem;letter-spacing:0.5px;color:rgba(217,164,65,0.7);text-transform:uppercase;margin-bottom:3px">📜 Archive historique</div>
         ${r.illustration_credit ? `<div style="font-size:0.7rem;color:rgba(232,213,168,0.5);font-style:italic;line-height:1.35">${r.illustration_credit}</div>` : ''}
       </div>
